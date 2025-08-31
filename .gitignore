@@ -1,0 +1,4 @@
+*.env
+cloud-sql-proxy.exe
+db.sqlite3
+*pycache*

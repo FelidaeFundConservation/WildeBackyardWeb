@@ -1,0 +1,26 @@
+{% extends '_base.html' %}
+{% load static %}
+{% block title %}Logout of Retconn{% endblock %}
+{% block content %}
+    <div class="d-flex justify-content-center align-items-center my-4">
+        <div class="card p-4 shadow-lg" style="width: 40rem;">
+            <h2 class="text-center mb-4">Log Out Your Account</h2>
+            <form method="post" action="{% url 'account_logout' %}" class="pt-1">
+                {% csrf_token %}
+                <div class="text-center mb-4">
+                    <p>Are you sure you want to log out?</p>
+                </div>
+                <div class="mb-4" style="max-width: 40rem;">
+                    <button class="btn btn-primary w-100 mb-3" type="submit" id="logoutButton">I want to log out.</button>
+                    <a href="#" class="btn btn-secondary w-100" id="stayLoggedInButton">Keep me logged in!</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    document.getElementById('stayLoggedInButton').addEventListener('click', function(event) {
+        event.preventDefault();
+        window.history.back();
+    });
+    </script>
+{% endblock content %}

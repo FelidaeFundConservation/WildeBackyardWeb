@@ -1,0 +1,13 @@
+{% #card bevel %}
+<div {% if not notilt %}data-tilt{% endif %} class="{{ class }}">
+    <div class="icon-wrapper mb-3 text-center">
+        <i class="bi bi-{{ icon }} display-4 text-secondary"></i>
+    </div>
+    <p class="card-text mb-0 p-2 text-center">
+        <strong class="{% if typewriter %}typewriter{% endif %}">{{ headline }}</strong>
+        <br>
+        <span class="lead {% if typewriter %}typewriter{% endif %}">{{ description }}</span>
+    </p>
+    <div>{{ children }}</div>
+</div>
+{% /card %}

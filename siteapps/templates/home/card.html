@@ -1,0 +1,15 @@
+<div class="card p-4">
+    <h1 class="card__header display-{{ size }}">{{ heading }}</h1>
+    <div class="card__body">{{ children }}</div>
+</div>
+<style>
+   .card {
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+      border-radius: 10px; /* Optional: Soft rounded corners */
+      background-color: white; /* Ensure contrast */
+    }
+    .card__body {
+      background-color: var(--background-color);
+      filter: brightness(130%);
+    }
+</style>

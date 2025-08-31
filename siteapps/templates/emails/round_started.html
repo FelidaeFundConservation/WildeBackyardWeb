@@ -1,0 +1,82 @@
+{% load tz %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Group Matched</title>
+        <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #e0e0e0;  /* Slightly lighter gray for sides */
+      }
+
+      .content {
+        background-color: #ffffff;
+        padding: 30px;
+        max-width: 480px;  /* Thinner width */
+        margin: 20px auto; /* Center horizontally */
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      .header {
+        background-color: #333333;
+        color: #ffffff;
+        padding: 20px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 24px;
+        background-color: #007BFF;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .footer {
+        text-align: center;
+        color: #888888;
+        font-size: 12px;
+        margin-top: 40px;
+      }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Ready to get started, {{ user.name }}?</h1>
+        </div>
+        <div class="content">
+            <h1>Group Started</h1>
+            <p>You've been matched with a discussion group!</p>
+            <p>Head on over to the site to submit a work for review. Have fun, and leave some good feedback!</p>
+            {% with first_step=round.step.all|first %}
+                <p>
+                    <strong>Deadline:</strong> {{ first_step.deadline|date:"l, F jS \\a\\t g:i A" }}
+                </p>
+            {% endwith %}
+            <hr>
+            {% with steps=round.step.all %}
+                {% if steps %}
+                    <h3>Schedule</h3>
+                    <ul>
+                        {% for step in steps %}
+                            <li>
+                                <strong>{{ step.name|title }}</strong>:
+                                {{ step.start_at|date:"l, F jS" }} - {{ step.deadline|date:"l, F jS" }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No further steps available.</p>
+                {% endif %}
+            {% endwith %}
+            <p>Please make sure not to miss any steps. We're excited to see your contributions!</p>
+            <a href="https://retconn.org" class="button">Meet Your Group</a>
+        </div>
+        <div class="footer">
+            &copy; 2024 - {{ now|date:"Y" }} Justin Yee - Retconn Collaborative Platform. All rights reserved.
+        </div>
+    </body>
+</html>

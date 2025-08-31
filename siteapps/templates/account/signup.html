@@ -1,0 +1,108 @@
+﻿{% extends '_base.html' %}
+{% load socialaccount %}
+{% load static %}
+{% block title %}Sign Up for Retconn{% endblock %}
+{% block content %}
+    <div class="d-flex justify-content-center align-items-center my-4 bevel p-4">
+        <div class="card p-4 shadow-lg" style="width: 40rem;">
+            <h2 class="text-center mb-4">Create Account</h2>
+            <h4 class="text-center mb-4 small">Sign up to use this site.</h4>
+            <form method="post" action="{% url 'account_signup' %}" class="pt-1">
+                {% csrf_token %}
+                {% if redirect_field_value %}
+                    <input type="hidden"
+                           name="{{ redirect_field_name }}"
+                           value="{{ redirect_field_value }}" />
+                {% endif %}
+                {% if form.non_field_errors %}
+                    <p class="form-text error-text p-3 rounded"
+                       style="background-color: #FFADB0">{{ form.non_field_errors.as_text }}</p>
+                {% endif %}
+                <div id="signupFields" class="">
+                    <div class="mb-4">
+                        <label for="id_email" class="form-label">Email Address</label>
+                        <input type="email"
+                               class="form-control shadow-none p-3"
+                               id="id_email"
+                               aria-describedby="emailHelp"
+                               placeholder="example@gmail.com"
+                               name="email">
+                        <p id="emailHelp" class="form-text error-text">{{ form.email.errors.as_text }}</p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_password1" class="form-label">Password</label>
+                        <input type="password"
+                               class="form-control shadow-none p-3"
+                               id="id_password1"
+                               aria-describedby="passwordHelp"
+                               placeholder="Enter your password"
+                               name="password1">
+                        <p id="passwordHelp" class="form-text error-text">{{ form.password1.errors.as_text }}</p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_password2" class="form-label">Confirm Password</label>
+                        <input type="password"
+                               class="form-control shadow-none p-3"
+                               id="id_password2"
+                               aria-describedby="passwordConfirmHelp"
+                               placeholder="Confirm your password"
+                               name="password2">
+                        <p id="passwordConfirmHelp" class="form-text error-text">{{ form.password2.errors.as_text }}</p>
+                    </div>
+                    <div class="cf-turnstile"
+                         data-sitekey="0x4AAAAAABluDJhyT6ZVkkh5"
+                         data-callback="turnstileCb"
+                         data-theme="light"></div>
+                    <div class="d-flex justify-content-between align-items-center mb-5"
+                         style="max-width: 40rem">
+                        <div>
+                            <a href="{% url 'account_login' %}" class="small text-right">Already have an account? Log in</a>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-3 mt-3">
+                        <button class="btn btn-primary d-flex align-items-center justify-content-center"
+                                type="submit"
+                                id="signupButton"
+                                disabled>
+                            <i class="bi bi-envelope-fill me-2"></i> Join [SITE] With Email
+                        </button>
+                        <div class="text-center text-muted">or</div>
+                        <a class="btn btn-danger d-flex align-items-center justify-content-center"
+                           href="{% provider_login_url 'google' %}"
+                           disabled>
+                            <i class="bi bi-google me-2"></i> Join [SITE] With Google
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=_turnstileCb"
+            defer></script>
+    <script>
+        // TODO: Backend token verification
+        function turnstileCb(token) {
+            $('button[disabled]').prop('disabled', false);
+        }
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#id_working_on_story').on('change', function () {
+                const value = $(this).val();
+                const $message = $('#storyStatusMessage');
+                const $conditionalFields = $('#conditionalSignupFields');
+
+                if (value === 'yes') {
+                    $message.text("Great! You may benefit from participating in peer feedback on RCP. Enter your information below...");
+                    $conditionalFields.slideDown();
+                } else if (value === 'no') {
+                    $message.text("RCP is for writers developing their creative works. If you're not interested in writing a story, another platform may suit your needs better.");
+                    $conditionalFields.slideUp();
+                } else {
+                    $message.text('');
+                    $conditionalFields.slideUp();
+                }
+            });
+        });
+    </script>
+{% endblock content %}

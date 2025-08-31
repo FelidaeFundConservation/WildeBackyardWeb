@@ -1,0 +1,41 @@
+{% extends "_base.html" %}
+{% load i18n %}
+{% load allauth %}
+{% block title %}Social Login — Retconn{% endblock %}
+{% block content %}
+    <div class="d-flex justify-content-center align-items-center my-4 bevel p-4">
+        <div class="card p-4 shadow-lg" style="width: 40rem;">
+            <h2 class="text-center mb-4">
+                {% if process == "connect" %}
+                    Connect {{ provider.name }}
+                {% else %}
+                    Sign In Via {{ provider.name }}
+                {% endif %}
+            </h2>
+            {% if process == "connect" %}
+                <p class="text-center text-muted">
+                    You are about to connect a new third-party account from <strong>{{ provider.name }}</strong>.
+                </p>
+            {% else %}
+                <p class="text-center text-muted">
+                    You are about to sign in using a third-party account from <strong>{{ provider.name }}</strong>.
+                </p>
+            {% endif %}
+            {% element form method="post" no_visible_fields=True %}
+            {% slot actions %}
+            {% csrf_token %}
+            <div class="d-grid gap-3 mt-4">
+                <button type="submit"
+                        class="btn btn-danger d-flex align-items-center justify-content-center">
+                    <i class="bi bi-google me-2"></i> Continue with {{ provider.name }}
+                </button>
+                <a href="{% url 'account_login' %}"
+                   class="btn btn-outline-secondary d-flex align-items-center justify-content-center">
+                    <i class="bi bi-arrow-left me-2"></i> Go Back to Login
+                </a>
+            </div>
+        {% endslot %}
+    {% endelement %}
+</div>
+</div>
+{% endblock content %}

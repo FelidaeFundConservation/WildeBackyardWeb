@@ -1,0 +1,33 @@
+<div class="modal {{ classes }} fade"
+     id="{{ id }}"
+     tabindex="-1"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bevel">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ title }}</h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body">{{ children }}</div>
+            <div class="modal-footer gap-2">
+                {% if cancel_text %}
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm p-2"
+                            data-bs-dismiss="modal">
+                        <i class="bi bi-{{ cancel_icon }} me-1"></i> {{ cancel_text }}
+                    </button>
+                {% endif %}
+                {% if confirm_text %}
+                    <button id="{{ confirm_id }}"
+                            type="button"
+                            class="btn btn-outline-danger btn-sm confirm-btn p-2">
+                        <i class="bi bi-{{ confirm_icon }} me-1"></i> {{ confirm_text }}
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

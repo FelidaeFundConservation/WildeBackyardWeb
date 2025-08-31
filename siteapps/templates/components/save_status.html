@@ -1,0 +1,44 @@
+{% load static %}
+<div id="save-status"
+     class="position-relative bottom-0 end-0 p-2 d-flex flex-column align-items-end small">
+    <div id="saving-state" class="d-none d-flex align-items-center">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"
+             role="status">
+            <span class="visually-hidden">Saving...</span>
+        </div>
+        <span class="text-secondary">Saving...</span>
+    </div>
+    <div id="saved-state" class="d-flex align-items-center">
+        <i class="bi bi-check-circle-fill me-2 text-success fs-6"></i>
+        <span class="text-success">Saved</span>
+    </div>
+    <div id="unsaved-state" class="d-none d-flex align-items-center">
+        <i class="bi bi-x-circle-fill me-2 text-danger fs-6"></i>
+        <span class="text-danger">Not Saved</span>
+    </div>
+</div>
+<script>
+    function showSaveState(state) {
+        $('#saving-state').addClass('d-none');
+        $('#saved-state').addClass('d-none');
+        $('#unsaved-state').addClass('d-none');
+
+        if (state === 'saving') {
+            $('#saving-state').removeClass('d-none');
+        } else if (state === 'saved') {
+            $('#saved-state').removeClass('d-none');
+        } else if (state === 'unsaved') {
+            $('#unsaved-state').removeClass('d-none');
+        }
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+        if (
+            !$('#saving-state').hasClass('d-none') ||
+            !$('#unsaved-state').hasClass('d-none')
+        ) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+</script>

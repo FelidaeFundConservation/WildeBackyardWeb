@@ -1,0 +1,21 @@
+{% extends '_base.html' %}
+{% load static %}
+{% block title %}Verify Your Email Address{% endblock %}
+{% block content %}
+    <div class="d-flex justify-content-center align-items-center my-4 bevel p-4">
+        <div class="card p-4 shadow-lg" style="width: 50rem;">
+            <h2 class="text-center mb-4">You're so close... just one more thing.</h2>
+            <p class="text-center mb-4">
+                RCP is for people to connect and help each other.
+                <br>
+                We need to verify that you're a real person.
+                <br>
+                <br>
+                An email has been sent to the address you provided.
+                <br>
+                Please click the link to verify and begin your collaborative expedition.
+            </p>
+            <a href="{% url 'account_login' %}" class="btn btn-secondary w-100">I understand what I need to do.</a>
+        </div>
+    </div>
+{% endblock content %}

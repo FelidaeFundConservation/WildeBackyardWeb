@@ -1,0 +1,94 @@
+{% extends '_base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}Welcome To [SITE]{% endblock %}
+{% block content %}
+    {% #card heading="Welcome To [SITE]" size=4 weight="bold" %}
+    <p class="lead px-2">
+        Welcome to a new website
+    </p>
+    {% if user.is_authenticated %}<hr>{% endif %}
+  
+    {% /card %}
+    <br>
+    <br>
+    <br>
+    <br>
+    {% #card heading="What The Site Offers" size=5 %}
+    <div class="card p-4 mb-4 bevel">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    {% #info_card icon="question" headline="Feature 1" description="This is a feature" typewriter %}
+                    {% /info_card %}
+                </div>
+                <div class="col-lg-6">
+                    {% #info_card icon="question" headline="Feature 1" description="Another feature" typewriter %}
+                    {% /info_card %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% /card %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tilt.js/1.2.1/tilt.jquery.min.js"
+            integrity="sha512-u1L7Dp3BKUP3gijgSRoMTNxmDl/5o+XOHupwwa7jsI1rMzHrllSLKsGOfqjYl8vrEG+8ghnRPNA/SCltmJCZpQ=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+    <script>
+    $('.js-tilt').tilt({
+        glare: true,
+        maxGlare: 0.5,
+        scale: 1.2,
+    })
+
+    gsap.from(".card__header", {
+        opacity: 0,
+        y: 20,
+        duration: 1,
+        stagger: 0.2,
+        ease: "power2.out"
+    });
+
+    function startTyping(el) {
+        const originalHTML = el.innerHTML;
+        el.innerHTML = "";
+        let index = 0;
+
+        function typeNext() {
+            el.innerHTML = originalHTML.slice(0, index);
+            index++;
+            if (index <= originalHTML.length) {
+                setTimeout(typeNext, 10);
+            }
+        }
+
+        typeNext();
+    }
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const el = entry.target;
+                startTyping(el);
+                observer.unobserve(el); // run only once
+            }
+        });
+    }, {
+        threshold: 0.5 // start when 20% of element is visible
+    });
+
+    document.querySelectorAll('.typewriter').forEach(el => {
+        observer.observe(el);
+    });
+
+    </script>
+    <style>
+    #intro-carousel .carousel-inner {
+        min-height: 15rem; /* Adjust based on your content needs */
+    }
+
+    #about-carousel .carousel-inner {
+        min-height: 15rem; /* Adjust based on your content needs */
+    }
+    </style>
+{% endblock content %}

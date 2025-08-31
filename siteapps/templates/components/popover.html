@@ -1,0 +1,28 @@
+<!-- Button (bottom right fixed) -->
+<button id="rules-btn"
+        type="button"
+        class="btn btn-sm btn-primary position-fixed"
+        style="bottom: 1rem;
+               right: 1rem"
+        data-bs-toggle="popover"
+        data-bs-placement="top"
+        data-bs-html="true"
+        title="{{ title }}">
+    <i class="bi bi-info-circle"></i>&nbsp;&nbsp;{{ title }}
+</button>
+<!-- Hidden template for rules -->
+<div id="rules-template" class="d-none">
+    <div class="mb-0" style="max-height:150px; overflow-y:auto;">{{ children }}</div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const btn = document.getElementById("rules-btn");
+        const template = document.getElementById("rules-template").innerHTML;
+
+        new bootstrap.Popover(btn, {
+            html: true,
+            content: template,
+            placement: "top"
+        });
+    });
+</script>
