@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
 {% load socialaccount %}
 {% load static %}
-{% block title %}Login To Retconn{% endblock %}
+{% block title %}Login To Wilde Backyard{% endblock %}
 {% block content %}
     <div class="d-flex justify-content-center align-items-center my-4 bevel p-4">
         <div class="card p-4 shadow-lg" style="width: 40rem;">
-            <h2 class="text-center mb-4">Login To [SITE]</h2>
+            <h2 class="text-center mb-4">Login To Wilde Backyard</h2>
             <form method="post" action="{% url 'account_login' %}" class="pt-1">
                 {% csrf_token %}
                 {% if redirect_field_value %}

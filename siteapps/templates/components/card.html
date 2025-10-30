@@ -5,9 +5,11 @@
     <div class="card__body">{{ children }}</div>
 </div>
 <style>
-   .card {
-      border-radius: 10px; /* Optional: Soft rounded corners */
-      background-color: white; /* Ensure contrast */
+    .card {
+        border-radius: 2rem;
+        background-color: var(--primary-xtra-light);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.2);
+        border: 2px solid var(--primary-dark);
     }
     .card__body {
       background-color: var(--background-color);

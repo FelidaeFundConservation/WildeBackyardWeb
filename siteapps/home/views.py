@@ -7,6 +7,11 @@ from siteapps.users.models import User
 
 
 class HomeView(TemplateView):
+    def get_template_names(self):
+        if not self.request.user.is_authenticated:
+            return ["home/landing.html"]
+        return [self.template_name]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 

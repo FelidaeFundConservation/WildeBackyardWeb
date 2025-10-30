@@ -1,12 +1,12 @@
 ﻿{% extends '_base.html' %}
 {% load socialaccount %}
 {% load static %}
-{% block title %}Sign Up for Retconn{% endblock %}
+{% block title %}Sign Up for Wilde Backyard{% endblock %}
 {% block content %}
     <div class="d-flex justify-content-center align-items-center my-4 bevel p-4">
         <div class="card p-4 shadow-lg" style="width: 40rem;">
             <h2 class="text-center mb-4">Create Account</h2>
-            <h4 class="text-center mb-4 small">Sign up to use this site.</h4>
+            <h4 class="text-center mb-4 small">Sign up to post sightings and discuss with users.</h4>
             <form method="post" action="{% url 'account_signup' %}" class="pt-1">
                 {% csrf_token %}
                 {% if redirect_field_value %}
@@ -64,13 +64,13 @@
                                 type="submit"
                                 id="signupButton"
                                 disabled>
-                            <i class="bi bi-envelope-fill me-2"></i> Join [SITE] With Email
+                            <i class="bi bi-envelope-fill me-2"></i> Join Wilde Backyard With Email
                         </button>
                         <div class="text-center text-muted">or</div>
                         <a class="btn btn-danger d-flex align-items-center justify-content-center"
                            href="{% provider_login_url 'google' %}"
                            disabled>
-                            <i class="bi bi-google me-2"></i> Join [SITE] With Google
+                            <i class="bi bi-google me-2"></i> Join Wilde Backyard With Google
                         </a>
                     </div>
                 </div>

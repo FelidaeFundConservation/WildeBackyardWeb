@@ -6,8 +6,7 @@
             {% block title %}
             {% endblock title %}
         </title>
-        <meta name="description"
-              content="Site description">
+        <meta name="description" content="Site description">
         <meta name="author" content="Justin Yee">
         <script defer
                 src="https://cloud.umami.is/script.js"
@@ -49,46 +48,107 @@
         <link rel="shortcut icon"
               type="image/png"
               href="{% static 'images/favicon.png' %}">
+        <style>
+    :root {
+        --primary-light: rgb(105, 166, 138);
+        --primary-dark: rgb(52, 72, 63);
+        --primary-xtra-light: rgb(212, 233, 224);
+    }
+
+    body {
+        margin: 0;
+        background: var(--primary-dark);
+        position: relative;
+        min-height: 100vh;
+        font-family: "Titillium Web", sans-serif;
+    }
+
+    main {
+        max-width: 90rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    nav {
+        background: var(--primary-dark);
+    }
+
+    .shadow {
+        box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .max_width {
+        max-width: 80rem;
+    }
+
+    .bevel {
+        position: relative;
+        overflow: hidden;
+        background-color: var(--primary-xtra-light);
+        box-shadow:
+            inset 4px 4px 4px rgba(0, 0, 0, 0.32),
+            inset -4px -4px 4px rgba(255, 255, 255, 0.8);
+        border-radius: 6px;
+    }
+
+    .bg-image {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url("{% static 'images/background.jpg' %}") no-repeat center center;
+        background-size: cover;
+        filter: blur(8px);
+        opacity: 0.2;
+        z-index: -2;
+    }
+        </style>
     </head>
     <body class="d-flex flex-column h-100">
         <header class="pb-4">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light px-4 shadow">
-                <a class="navbar-brand opacity-50 p-2" href="/"><i class="bi bi-globe"></i>&nbsp;&nbsp;[New Site Name]</a>
-                <button class="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#navbarSupportedContent"
-                        aria-controls="navbarSupportedContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <div class="ms-auto mx-3 d-flex flex-column flex-lg-row gap-3 p-2">
-                        {% if not user.is_authenticated %}
-                            <a class="btn btn-outline-primary btn-sm bevel w-100 w-lg-auto text-center"
-                               href="{% url 'account_login' %}">
-                                <i class="bi bi-box-arrow-in-right me-1"></i>
-                                <span>Log In</span>
-                            </a>
-                            <a class="btn btn-outline-primary btn-sm bevel w-100 w-lg-auto text-center"
-                               href="{% url 'account_signup' %}">
-                                <i class="bi bi-person-plus me-1"></i>
-                                <span>Create Account</span>
-                            </a>
-                        {% else %}
-                            <a class="btn btn-outline-secondary btn-sm bevel w-100 w-lg-auto text-center"
-                               href="{% url 'account_logout' %}">
-                                <i class="bi bi-box-arrow-right me-1"></i>
-                                <span>Log Out</span>
-                            </a>
-                        {% endif %}
+            <nav class="navbar navbar-light navbar-expand-lg justify-content-center p-0 pt-1">
+                <div class="container">
+                    <a class="navbar-brand d-flex w-50 me-auto" href="{% url 'home:home' %}">
+                        <img class="img-fluid ms-3 ms-lg-4 pb-1"
+                             src="{% static 'images/logo.png' %}"
+                             style="max-height: 80px">
+                    </a>
+                    <button class="navbar-toggler"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#collapsingNavbar"
+                            aria-controls="#collapsingNavbar"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <div class="navbar-collapse collapse w-100" id="collapsingNavbar">
+                        <ul class="navbar-nav ms-auto w-100 justify-content-end text-center gap-2">
+                            {% if user.is_authenticated and user.is_active %}
+                                <li class="nav-item mx-1 {% block nav_home %}{% endblock nav_home %} bevel">
+                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                       aria-current="page"
+                                       href="{% url 'home:home' %}">Home</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'account_signup' %}">Register</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'account_login' %}">Sign In</a>
+                                </li>
+                            {% endif %}
+                        </ul>
                     </div>
                 </div>
             </nav>
             {% csrf_token %}
         </header>
         <main class="flex-shrink-0 py-3 px-5">
+            <div class="bg-image"></div>
             {% block content %}
             {% endblock content %}
         </main>
@@ -97,7 +157,7 @@
                 <div class="container text-center">
                     <p class="mb-0">
                         &copy; 2025-<script type="text/javascript">document.write(new Date().getFullYear());</script>
-                        New Website
+                        Felidae Conservation Fund
                     </p>
                 </div>
             </footer>
@@ -129,85 +189,3 @@
         });
     }}
 </script>
-<style>
-     body {
-      margin: 0;
-      background: #f2f2f2;
-      position: relative;
-      min-height: 100vh;
-    }
-
-    .newspaper-bg {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      color: #111;
-      font-size: 2rem;
-      line-height: 1.4;
-      opacity: 0.16;
-      filter: blur(4px) brightness(0.5);
-      pointer-events: none;
-      white-space: pre-wrap;
-      padding: 2rem;
-      font-family: 'Courier New', monospace;
-    }
-
-    .shadow {
-        box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .bevel {
-        position: relative;
-        overflow: hidden;
-        background-color: #fafafa;
-        box-shadow:
-            inset 2px 2px 4px rgba(0, 0, 0, 0.12),
-            inset -2px -2px 4px rgba(255, 255, 255, 0.8);
-        border-radius: 6px;
-    }
-
-    .garage-door::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 100%;
-        background: white;
-        z-index: 2;
-        animation: slideUp 1.5s ease-out forwards;
-        box-shadow:
-        inset 2px 2px 4px rgba(0, 0, 0, 0.12),
-        inset -2px -2px 4px rgba(255, 255, 255, 0.8);
-        animation-delay: 0.4s;
-        opacity: 0.98;
-    }
-
-    @keyframes slideUp {
-        0% {
-            transform: translateY(0%);
-        }
-        100% {
-            transform: translateY(-100%);
-        }
-    }
-
-    @keyframes fadeIn {
-        to {
-            opacity: 1;
-        }
-    }
-
-    @media (min-width: 992px) {
-    .d-flex.flex-lg-row > a.btn {
-        flex-grow: 0 !important;
-        flex-shrink: 0 !important;
-        flex-basis: auto !important;
-        width: auto !important;
-        min-width: 0 !important;
-    }
-    }
-
-
-</style>
