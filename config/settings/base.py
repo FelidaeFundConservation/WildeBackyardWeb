@@ -71,6 +71,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "slippers",
     "siteapps.users",
+    "siteapps.socialmedia",
+    "siteapps.mapbox",
+    "siteapps.species",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -237,11 +240,23 @@ register_components(
         "popover": "components/popover.html",
         "save_status": "components/save_status.html",
         "confirmation_modal": "components/confirmation_modal.html",
-
-
     }
 )
 
 ####################
 # VARIABLES
 ####################
+# Mapbox
+MAPBOX_SECRET_TOKEN = env.str("MAPBOX_SECRET_TOKEN")
+
+
+# CUSTOM VARIABLES
+# ------------------------------------------------------------------------------
+# Put your variables here.
+PRIVACY_SETTING_PUBLIC = "public"
+PRIVACY_SETTING_OBSCURED = "obscured"
+PRIVACY_SETTING_PRIVATE = "private"
+
+PHOTO_MAX_SIZE = (2048, 2048)
+
+READABLE_DATE_FORMAT = "%B %d, %Y %I:%M %p"
