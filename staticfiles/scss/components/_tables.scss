@@ -1,0 +1,12 @@
+@use '../core';
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 1.25rem;
+    font-size: 1.2em;
+}
+
+table th {
+    text-align: left;
+}
