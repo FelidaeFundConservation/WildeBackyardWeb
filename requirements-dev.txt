@@ -1,0 +1,34 @@
+# Development and Pre-commit Dependencies
+# These packages are required for running pre-commit hooks and development tools
+
+# Pre-commit framework
+pre-commit==3.6.0
+
+# Code formatting
+black==24.1.1
+isort==5.13.2
+
+# Linting and code quality
+flake8==6.1.0
+flake8-bugbear
+flake8-comprehensions
+flake8-mutable
+flake8-print
+flake8-simplify
+
+# Import management
+pycln==2.6.0
+
+# Django template linting
+djlint==1.34.1
+
+# Jupyter notebook tools
+jupytext==1.16.1
+jupyter
+nbconvert
+
+# Testing
+pytest==9.0.2
+pytest-django==4.11.1
+pytest-cov==7.0.0
+coverage[toml]>=7.10.6
