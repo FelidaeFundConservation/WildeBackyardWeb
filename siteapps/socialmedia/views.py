@@ -5,8 +5,6 @@ import logging
 from io import BytesIO
 
 import requests
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
 from dateutil import parser
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -21,7 +19,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from siteapps.species.models import SpeciesName
-from siteapps.users.models import BannedEmail
 
 from .mixins import LatLngValidationMixin, PostInputsValidationMixin, PrivacySettingValidationMixin, createResponse400
 from .models import InappropriateContentReport, Media, MediaPost, TextComment
@@ -280,11 +277,11 @@ class CreateCommentView(APIView):
         media_post = MediaPost.objects.filter(id=parent_post_id)
 
         # Check if user is banned
-        if BannedEmail.objects.filter(email=request.user.email).exists():
-            return Response(
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
-                data={"error": "This account is not allowed to make comments."},
-            )
+        # if BannedEmail.objects.filter(email=request.user.email).exists():
+        # return Response(
+        # status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        # data={"error": "This account is not allowed to make comments."},
+        # )
 
         # Input validation
         if parent_post_id is None:
@@ -310,14 +307,14 @@ class PostViewValidation:
             data = data[0]
 
         # Check if the user is banned from posting
-        if BannedEmail.objects.filter(email=request.user.email).exists():
-            return (
-                Response(
-                    status=status.HTTP_405_METHOD_NOT_ALLOWED,
-                    data={"error": "This account is not allowed to make posts."},
-                ),
-                None,
-            )
+        # if BannedEmail.objects.filter(email=request.user.email).exists():
+        # return (
+        # Response(
+        # status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        # if BannedEmail.objects.filter(email=request.user.email).exists():
+        # ),
+        # None,
+        # )
 
         return None, data
 
@@ -388,7 +385,7 @@ class PostViewValidation:
         # The saved locality, country, and zip code string of the location
         geocoded_location_locality = data.get("geocodedLocationLocality")
         geocoded_location_state = data.get("geocodedLocationState")
-        geocoded_location_country = data.get("geocodedLocationCountry")
+        _ = data.get("geocodedLocationCountry")
         geocoded_location_zip_code = data.get("geocodedLocationZipCode")
 
         # The brand and type of camera used to take the media (if any)
@@ -515,21 +512,24 @@ def convert_base64_bytes(media_bytes_base64, is_video=False):
 
 
 def create_media(media_bytes, content_hash, request, is_video=False):
-    file_extension = "MP4" if is_video else "JPEG"
+    _ = "MP4" if is_video else "JPEG"
 
-    blob_service_client = BlobServiceClient(
-        account_url=f"https://{settings.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/",
-        credential=DefaultAzureCredential(),
-    )
+    # blob_service_client = BlobServiceClient(
+    # account_url=f"https://{settings.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/",
+    # credential=DefaultAzureCredential(),
+    # )
 
-    blob_client = blob_service_client.get_blob_client(
-        container=settings.AZURE_STORAGE_CONTAINER_NAME, blob=f"{content_hash}.{file_extension}"
-    )
+    # blob_client = blob_service_client.get_blob_client(
+    # container=settings.AZURE_STORAGE_CONTAINER_NAME, blob=f"{content_hash}.{file_extension}"
+    # )
 
-    blob_client.upload_blob(media_bytes, blob_type="BlockBlob")
+    # blob_client.upload_blob(media_bytes, blob_type="BlockBlob")
 
     return Media.objects.create(
-        file_cloud_path=blob_client.url, content_hash=content_hash, uploaded_by=request.user, is_video=is_video
+        content_hash=content_hash,
+        uploaded_by=request.user,
+        is_video=is_video,
+        # file_cloud_path=blob_client.url,  # Azure blob disabled
     )
 
 

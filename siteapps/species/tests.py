@@ -33,7 +33,7 @@ class SpeciesAPITestCase(TestCase):
         )
 
         token = json.loads(login_response.content)["key"]
-        headers = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+        _ = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
     def test_get_species_names(self):
         SpeciesName.objects.create(name="Test", scientific_name="Science")

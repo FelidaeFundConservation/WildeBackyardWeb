@@ -1,0 +1,94 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}Register - WildeBackyard{% endblock %}
+{% block content %}
+    <style>
+  .register-container {
+    width: 90%;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 3rem 0;
+  }
+  .register-container .card-body {
+    padding: 3rem;
+  }
+  .register-container .form-label {
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+  .register-container .btn {
+    padding: 1rem;
+    font-size: 1.2rem;
+  }
+  @media (max-width: 768px) {
+    .register-container {
+      width: 95%;
+      padding: 1.5rem 0;
+    }
+    .register-container .card-body {
+      padding: 1.5rem;
+    }
+    .register-container .form-label {
+      font-size: 1rem;
+    }
+    .register-container .btn {
+      padding: 0.75rem;
+      font-size: 1.1rem;
+    }
+    .register-container h2 {
+      font-size: 1.5rem;
+    }
+  }
+    </style>
+    <div class="register-container">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="mb-5 text-center">Register</h2>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <form method="post" action="{% url 'users:register' %}">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Display Name (Optional)</label>
+                        <input type="text" class="form-control" id="name" name="name">
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password"
+                               class="form-control"
+                               id="password"
+                               name="password"
+                               required
+                               minlength="8">
+                        <small class="form-text text-muted">Minimum 8 characters</small>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password_confirm" class="form-label">Confirm Password</label>
+                        <input type="password"
+                               class="form-control"
+                               id="password_confirm"
+                               name="password_confirm"
+                               required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Register</button>
+                </form>
+                <div class="mt-4 text-center">
+                    <p>
+                        Already have an account? <a href="{% url 'users:login' %}">Login here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
