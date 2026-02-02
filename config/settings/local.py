@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
+
 from pathlib import Path
 
 from .base import *  # noqa
@@ -28,11 +29,23 @@ WSGI_APPLICATION = "config.wsgi.local.application"
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 
-IS_HEROKU_APP = "DYNO" in os.environ and not "CI" in os.environ
+IS_HEROKU_APP = "DYNO" in os.environ and "CI" not in os.environ
 if IS_HEROKU_APP:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0"]
+    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0", "192.168.0.177"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5055",
+    "http://127.0.0.1:5055",
+    "http://0.0.0.0:5055",
+    "http://192.168.0.177:5055",
+]
+
+CSRF_COOKIE_HTTPONLY = False
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_SAMESITE = None
+CSRF_COOKIE_DOMAIN = None
 
 
 SITE_ID = 1
@@ -105,35 +118,29 @@ EMAIL_SUBJECT_PREFIX = env(
     default="[Retconn] ",
 )
 
-# Anymail
+# Email Backend - Console for local development
 # ------------------------------------------------------------------------------
-# https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa: F405
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# https://anymail.readthedocs.io/en/stable/esps/sendgrid/
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-ANYMAIL = {
-    "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-}
+# Use console backend to print emails to console instead of sending them
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
 ADMIN_URL = env("DJANGO_ADMIN_URL")
-
+ADMIN_USER_EMAIL = env("DJANGO_ADMIN_USER_EMAIL", default="jnovak@example.com")
+ADMIN_USER_PASSWORD = env("DJANGO_ADMIN_USER_PASSWORD", default="letmein")
 
 # SECURITY
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-ssl-redirect
-SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
+SECURE_SSL_REDIRECT = False
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-secure
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-secure
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
 # https://docs.djangoproject.com/en/dev/topics/security/#ssl-https
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-hsts-seconds
 # TODO: set this to 60 seconds first and then to 518400 once you prove the former works
