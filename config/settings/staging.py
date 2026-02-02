@@ -9,15 +9,17 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
+
 from pathlib import Path
 
 from .base import *  # noqa
 from .base import env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Override BASE_DIR to point to project root (one level up from config/)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-DEBUG = True
+DEBUG = False
 
 WSGI_APPLICATION = "config.wsgi.staging.application"
 
@@ -25,13 +27,11 @@ WSGI_APPLICATION = "config.wsgi.staging.application"
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("DJANGO_SECRET_KEY")
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="staging-insecure-key-change-in-production")
 
-IS_HEROKU_APP = "DYNO" in os.environ and not "CI" in os.environ
-if IS_HEROKU_APP:
-    ALLOWED_HOSTS = ["*"]
-else:
-    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0"]
+# HOSTS CONFIG
+# ------------------------------------------------------------------------------
+ALLOWED_HOSTS = ["*"]
 
 SITE_ID = 1
 
@@ -40,8 +40,43 @@ SITE_ID = 1
 
 # DATABASES
 # ------------------------------------------------------------------------------
+# Use same database as backend API
 DATABASES = {"default": env.db("CLOUD_SQL_DATABASE_URL_STAGING")}
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=3600)  # noqa: F405
+
+# Enable Cloud SQL connection when on App Engine
+import os
+if os.getenv("GAE_APPLICATION", None):
+    DATABASES["default"]["HOST"] = f"/cloudsql/{env.str('CLOUD_SQL_CONNECTION_NAME', default='wildepod-339517:us-west2:wildepoddb')}"
+
+# Make Google OAuth optional for staging
+GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
+GOOGLE_CLIENT_SECRET = env("GOOGLE_CLIENT_SECRET", default="")
+
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    SOCIALACCOUNT_PROVIDERS = {
+        "google": {
+            "SCOPE": ["profile", "email"],
+            "APP": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "secret": GOOGLE_CLIENT_SECRET,
+            },
+            "AUTH_PARAMS": {
+                "access_type": "online",
+            },
+        }
+    }
+else:
+    # Disable social account providers if credentials not available
+    SOCIALACCOUNT_PROVIDERS = {}
+    # Remove allauth from authentication backends
+    AUTHENTICATION_BACKENDS = [
+        "siteapps.users.auth_backend.BackendAPIAuthBackend",
+        "django.contrib.auth.backends.ModelBackend",
+    ]
+
+# Email configuration - use console backend for staging
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # Password validation
@@ -79,8 +114,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 GS_DEFAULT_ACL = None
 
-STATIC_URL = "static/"
-MEDIA_URL = "media/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "/media/"
+
+# Use simpler storage backend for staging that doesn't require manifest
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -103,21 +146,27 @@ EMAIL_SUBJECT_PREFIX = env(
 )
 
 # Anymail
+# Email configuration - use Mailgun if configured, otherwise console backend
 # ------------------------------------------------------------------------------
-# https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa: F405
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# https://anymail.readthedocs.io/en/stable/esps/sendgrid/
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-ANYMAIL = {
-    "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-}
+MAILGUN_API_KEY = env("MAILGUN_API_KEY", default="")
+
+if MAILGUN_API_KEY:
+    # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
+    INSTALLED_APPS += ["anymail"]  # noqa: F405
+    # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+    # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
+    # https://anymail.readthedocs.io/en/stable/esps/sendgrid/
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    ANYMAIL = {
+        "MAILGUN_API_KEY": MAILGUN_API_KEY,
+    }
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
-ADMIN_URL = env("DJANGO_ADMIN_URL")
+ADMIN_URL = env("DJANGO_ADMIN_URL", default="admin/")
 
 
 # SECURITY

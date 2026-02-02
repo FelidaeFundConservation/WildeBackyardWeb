@@ -2,6 +2,8 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>
             {% block title %}
             {% endblock title %}
@@ -54,9 +56,26 @@
     }
 
     main {
-        max-width: 90rem;
+        width: 100%;
         margin-left: auto;
         margin-right: auto;
+    }
+
+    /* Responsive utilities */
+    @media (max-width: 576px) {
+        main {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .card {
+            border-radius: 0.5rem;
+        }
+        h1 {
+            font-size: 1.75rem;
+        }
+        h2 {
+            font-size: 1.5rem;
+        }
     }
 
     nav {
@@ -100,9 +119,15 @@
             <nav class="navbar navbar-light navbar-expand-lg justify-content-center p-0 pt-1">
                 <div class="container">
                     <a class="navbar-brand d-flex w-50 me-auto" href="{% url 'home:home' %}">
-                        <img class="img-fluid ms-3 ms-lg-4 pb-1"
+                        <img class="img-fluid ms-2 ms-sm-3 ms-lg-4 pb-1"
                              src="{% static 'images/logo.webp' %}"
-                             style="height: 80px">
+                             style="height: 60px"
+                             alt="WildeBackyard Logo">
+                        <style>
+                            @media (min-width: 768px) {
+                                .navbar-brand img { height: 80px !important; }
+                            }
+                        </style>
                     </a>
                     <button class="navbar-toggler"
                             type="button"
@@ -121,14 +146,34 @@
                                        aria-current="page"
                                        href="{% url 'home:home' %}">Home</a>
                                 </li>
-                            {% else %}
                                 <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
-                                       href="{% url 'account_signup' %}">Register</a>
+                                    <a class="nav-link fs-5 text-white bg-success bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'socialmedia:feed' %}">Feed</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-primary bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'sightings:create' %}">Report Sighting</a>
                                 </li>
                                 <li class="nav-item mx-1 bevel">
                                     <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
-                                       href="{% url 'account_login' %}">Sign In</a>
+                                       href="{% url 'users:profile' %}">Profile</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-danger bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'users:logout' %}">Logout</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-success bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'socialmedia:feed' %}">Feed</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'users:register' %}">Register</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'users:login' %}">Sign In</a>
                                 </li>
                             {% endif %}
                         </ul>
@@ -137,7 +182,7 @@
             </nav>
             {% csrf_token %}
         </header>
-        <main class="flex-shrink-0 py-3 px-5">
+        <main class="flex-shrink-0 py-3 px-2 px-sm-3 px-md-4 px-lg-5">
             <div class="bg-image"></div>
             {% block content %}
             {% endblock content %}

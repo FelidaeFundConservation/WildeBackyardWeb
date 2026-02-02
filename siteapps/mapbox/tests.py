@@ -32,7 +32,7 @@ class MapboxAPITestCase(TestCase):
         )
 
         token = json.loads(login_response.content)["key"]
-        headers = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+        _ = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
     def test_search_suggestions(self):
         response = self.client.post("/mapbox/api/search_suggestions/", {"searchText": "Felidae"}, format="json")

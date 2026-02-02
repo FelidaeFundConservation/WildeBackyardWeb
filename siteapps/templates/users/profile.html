@@ -1,0 +1,168 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}Profile - WildeBackyard{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <h1 class="mb-4 text-white">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </h1>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <!-- Profile Information Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-info-circle"></i> Profile Information
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong><i class="bi bi-envelope"></i> Email:</strong>
+                                <p class="mb-0">{{ user.email }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong><i class="bi bi-person"></i> Display Name:</strong>
+                                <p class="mb-0">{{ user.name|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        {% if profile_data %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-calendar-check"></i> Member Since:</strong>
+                                    <p class="mb-0">{{ profile_data.joined_date }}</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-binoculars"></i> Sightings Posted:</strong>
+                                    <p class="mb-0">{{ profile_data.sightings_count|default:0 }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                {% if profile_data.is_staff %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-shield"></i> Staff</span>
+                                {% endif %}
+                                {% if profile_data.is_superuser %}<span class="badge bg-danger"><i class="bi bi-star"></i> Admin</span>{% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Change Display Name Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pencil"></i> Change Display Name
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'users:change_username' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="new_username" class="form-label">New Display Name</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="new_username"
+                                       name="new_username"
+                                       value="{{ user.name }}"
+                                       required
+                                       minlength="3"
+                                       maxlength="30">
+                                <small class="text-muted">Minimum 3 characters</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Update Name
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- My Sightings Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-list-ul"></i> My Sightings
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'sightings:my_sightings' %}"
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> View My Sightings
+                        </a>
+                        <a href="{% url 'sightings:create' %}" class="btn btn-success ms-2">
+                            <i class="bi bi-plus-circle"></i> Report New Sighting
+                        </a>
+                    </div>
+                </div>
+                <!-- Account Management Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-gear"></i> Account Management
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'users:password_reset' %}"
+                           class="btn btn-outline-secondary mb-3">
+                            <i class="bi bi-key"></i> Change Password
+                        </a>
+                        <hr>
+                        <h5 class="text-danger">Danger Zone</h5>
+                        <p class="text-muted">Once you delete your account, there is no going back. Please be certain.</p>
+                        <button type="button"
+                                class="btn btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteAccountModal">
+                            <i class="bi bi-trash"></i> Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Delete Account Confirmation Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'users:delete_account' %}">
+                    {% csrf_token %}
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Delete Account
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.
+                        </div>
+                        <p>
+                            To confirm deletion, please type your display name: <strong>{{ user.name }}</strong>
+                        </p>
+                        <div class="mb-3">
+                            <label for="confirmation" class="form-label">Confirmation</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="confirmation"
+                                   name="confirmation"
+                                   placeholder="Type your display name"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete My Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

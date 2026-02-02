@@ -1,0 +1,89 @@
+[project]
+name = "wilde-backyard-web"
+version = "1.0.0"
+description = "Wilde Backyard Web Application"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "argon2-cffi>=21.3.0",
+    "crispy-bootstrap5>=2023.10",
+    "dj-rest-auth[with_social]>=5.0.2",
+    "Django>=5.0.1",
+    "django-allauth>=0.61.1",
+    "django-anymail[sendgrid]>=10.2",
+    "django-cors-headers>=4.3.1",
+    "django-crispy-forms>=2.1",
+    "django-environ>=0.11.2",
+    "django-jazzmin",
+    "django-model-utils>=4.3.1",
+    "django-rest-passwordreset>=1.4.1",
+    "django-simple-history>=3.7.0",
+    "django-tasks==0.8.1",
+    "djangorestframework>=3.14.0",
+    "gunicorn>=21.2.0",
+    "Pillow>=10.2.0",
+    "psycopg2>=2.9.9",
+    "python-dateutil>=2.8.2",
+    "slippers>=0.6.2",
+    "whitenoise>=6.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["config", "siteapps"]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["*/migrations/*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.local"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--reuse-db --no-migrations"
+
+[tool.coverage.run]
+source = ["siteapps", "config"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/admin.py",
+    "*/apps.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

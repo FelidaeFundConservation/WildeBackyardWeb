@@ -1,0 +1,216 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}{{ post.title }} - WildeBackyard{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-8">
+                <a href="{% url 'socialmedia:feed' %}"
+                   class="btn btn-outline-light mb-3">
+                    <i class="bi bi-arrow-left"></i> Back to Feed
+                </a>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <!-- Post Content -->
+                <div class="card shadow-sm mb-4">
+                    {% if post.media_url %}
+                        <div class="position-relative">
+                            {% if post.is_video %}
+                                <video class="w-100" style="max-height: 600px; object-fit: contain" controls>
+                                    <source src="{{ post.media_url }}" type="video/mp4">
+                                </video>
+                            {% else %}
+                                <img src="{{ post.media_url }}"
+                                     class="card-img-top"
+                                     style="max-height: 600px;
+                                            object-fit: contain"
+                                     alt="{{ post.title }}">
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h1 class="card-title">{{ post.title }}</h1>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-muted">
+                                <i class="bi bi-person-circle"></i> <strong>{{ post.user_name|default:"Anonymous" }}</strong>
+                                <span class="mx-2">•</span>
+                                <i class="bi bi-calendar"></i> {{ post.created|date:"F d, Y \a\t g:i A" }}
+                            </div>
+                            {% if user.is_authenticated %}
+                                <div class="btn-group">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="document.getElementById('likeForm').submit()">
+                                        <i class="bi bi-heart{% if post.user_has_liked %}-fill{% endif %}"></i>
+                                        {% if post.likes_count %}{{ post.likes_count }}{% endif %}
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#reportModal">
+                                        <i class="bi bi-flag"></i> Report
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if post.species %}
+                            <div class="mb-3">
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-tag"></i> {{ post.species }}
+                                </span>
+                            </div>
+                        {% endif %}
+                        {% if post.body %}
+                            <div class="mb-3">
+                                <p class="card-text" style="white-space: pre-wrap;">{{ post.body }}</p>
+                            </div>
+                        {% endif %}
+                        <hr>
+                        <!-- Post Metadata -->
+                        <div class="row text-muted small">
+                            {% if post.encounter_date %}
+                                <div class="col-md-6 mb-2">
+                                    <i class="bi bi-calendar-event"></i> <strong>Encounter Date:</strong> {{ post.encounter_date }}
+                                </div>
+                            {% endif %}
+                            {% if post.geocoded_location %}
+                                <div class="col-md-6 mb-2">
+                                    <i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ post.geocoded_location }}
+                                </div>
+                            {% endif %}
+                            {% if post.camera_model %}
+                                <div class="col-md-6 mb-2">
+                                    <i class="bi bi-camera"></i> <strong>Camera:</strong> {{ post.camera_model }}
+                                </div>
+                            {% endif %}
+                            {% if post.habitat_type %}
+                                <div class="col-md-6 mb-2">
+                                    <i class="bi bi-tree"></i> <strong>Habitat:</strong> {{ post.habitat_type }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Comments Section -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-chat-dots"></i> Comments
+                            {% if comments %}<span class="badge bg-secondary">{{ comments|length }}</span>{% endif %}
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if user.is_authenticated %}
+                            <!-- Add Comment Form -->
+                            <form method="post"
+                                  action="{% url 'socialmedia:add_comment' post_id %}"
+                                  class="mb-4">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="comment_text" class="form-label">Add a Comment</label>
+                                    <textarea class="form-control"
+                                              id="comment_text"
+                                              name="comment_text"
+                                              rows="3"
+                                              maxlength="500"
+                                              required
+                                              placeholder="Share your thoughts..."></textarea>
+                                    <small class="text-muted"><span id="commentCount">0</span>/500 characters</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Post Comment
+                                </button>
+                            </form>
+                            <hr>
+                        {% else %}
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle"></i>
+                                <a href="{% url 'users:login' %}?next={{ request.path }}">Login</a> to add a comment
+                            </div>
+                        {% endif %}
+                        <!-- Comments List -->
+                        {% if comments %}
+                            <div class="comments-list">
+                                {% for comment in comments %}
+                                    <div class="d-flex mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                                        <div class="flex-shrink-0 me-3">
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width: 40px;
+                                                        height: 40px">
+                                                <i class="bi bi-person text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>{{ comment.user_name|default:"Anonymous" }}</strong>
+                                                    <small class="text-muted ms-2">{{ comment.created|date:"M d, Y \a\t g:i A" }}</small>
+                                                </div>
+                                            </div>
+                                            <p class="mb-0 mt-2">{{ comment.text_content }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center">
+                                <i class="bi bi-chat"></i> No comments yet. Be the first to comment!
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Like Form (hidden) -->
+    <form id="likeForm"
+          method="post"
+          action="{% url 'socialmedia:like_post' post_id %}"
+          style="display: none">
+        {% csrf_token %}
+    </form>
+    <!-- Report Modal -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'socialmedia:report_post' post_id %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">Report Inappropriate Content</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason for Report</label>
+                            <select class="form-select" id="reason" name="reason" required>
+                                <option value="">Select a reason...</option>
+                                <option value="spam">Spam</option>
+                                <option value="inappropriate">Inappropriate Content</option>
+                                <option value="harassment">Harassment</option>
+                                <option value="misinformation">Misinformation</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+// Character counter for comments
+document.getElementById('comment_text').addEventListener('input', function() {
+  document.getElementById('commentCount').textContent = this.value.length;
+});
+    </script>
+{% endblock %}
