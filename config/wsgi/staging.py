@@ -8,9 +8,15 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/wsgi/
 """
 
 import os
+from pathlib import Path
 
 from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.staging")
 
 application = get_wsgi_application()
+
+# Wrap with Whitenoise to serve static files
+from whitenoise import WhiteNoise
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+application = WhiteNoise(application, root=str(BASE_DIR / "staticfiles"))

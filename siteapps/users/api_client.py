@@ -72,7 +72,11 @@ class BackendAPIClient:
             response = requests.post(url, json=data, headers=self.headers, timeout=self.timeout)
 
             if response.status_code in [200, 201]:
-                return response.json()
+                # 201 Created may have empty body
+                if response.text:
+                    return response.json()
+                else:
+                    return {"status": "success"}
             else:
                 logger.warning(f"POST request failed for {endpoint}: {response.status_code}")
                 return None
@@ -90,7 +94,7 @@ class BackendAPIClient:
             name: Optional display name
 
         Returns:
-            dict: Response data if successful, None otherwise
+            tuple: (success: bool, data: dict or error_message: str)
         """
         try:
             url = f"{self.base_url}/v1/users/register/"
@@ -104,14 +108,27 @@ class BackendAPIClient:
 
             response = requests.post(url, json=data, headers=self.headers, timeout=self.timeout)
 
-            if response.status_code in [200, 201]:
-                return response.json()
+            if response.status_code in [200, 201, 204]:
+                # 204 No Content means success but no response body
+                result = response.json() if response.status_code != 204 else {"email": email}
+                return (True, result)
             else:
-                logger.warning(f"User registration failed: {response.status_code} - {response.text}")
-                return None
+                error_data = response.json() if response.headers.get('content-type') == 'application/json' else {}
+                logger.warning(f"User registration failed: {response.status_code} - {error_data}")
+                
+                # Extract error messages
+                error_messages = []
+                for field, errors in error_data.items():
+                    if isinstance(errors, list):
+                        error_messages.extend(errors)
+                    else:
+                        error_messages.append(str(errors))
+                
+                error_text = " ".join(error_messages) if error_messages else "Registration failed. Please try again."
+                return (False, error_text)
         except requests.exceptions.RequestException as e:
             logger.error(f"Backend API connection error during registration: {e}")
-            return None
+            return (False, "Unable to connect to registration service. Please try again later.")
 
     def login(self, email, password):
         """

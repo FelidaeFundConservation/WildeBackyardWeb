@@ -350,18 +350,25 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "APP": {
-            "client_id": env("GOOGLE_CLIENT_ID"),
-            "secret": env("GOOGLE_CLIENT_SECRET"),
-        },
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
+# Social account providers - can be overridden in environment-specific settings
+GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
+GOOGLE_CLIENT_SECRET = env("GOOGLE_CLIENT_SECRET", default="")
+
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    SOCIALACCOUNT_PROVIDERS = {
+        "google": {
+            "SCOPE": ["profile", "email"],
+            "APP": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "secret": GOOGLE_CLIENT_SECRET,
+            },
+            "AUTH_PARAMS": {
+                "access_type": "online",
+            },
+        }
     }
-}
+else:
+    SOCIALACCOUNT_PROVIDERS = {}
 
 AUTH_USER_MODEL = "users.User"
 
@@ -488,7 +495,8 @@ STORAGES = {
     },
 }
 
-ADMINS = [("Justin", env("ADMIN_USER_EMAIL"))]
+ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL", default="admin@example.com")
+ADMINS = [("Justin", ADMIN_USER_EMAIL)]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
