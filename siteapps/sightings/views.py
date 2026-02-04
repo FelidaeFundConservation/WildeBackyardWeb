@@ -1,3 +1,4 @@
+import base64
 import logging
 
 from django.contrib import messages
@@ -59,6 +60,8 @@ class CreateSightingView(View):
             "latitude": float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None,
             "longitude": float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None,
             "privacySetting": request.POST.get("privacy_setting", "public"),
+            "accuracyMeters": float(request.POST.get("location_accuracy_meters", 100)),  # Default 100m accuracy
+            "geocodedLocationCountry": "USA",  # Default country for now
         }
         
         # Optional fields - only include if provided
@@ -67,7 +70,7 @@ class CreateSightingView(View):
         if request.POST.get("post_body"):
             data["postBody"] = request.POST.get("post_body")
         if request.POST.get("location_accuracy_meters"):
-            data["accuracyMeters"] = request.POST.get("location_accuracy_meters")
+            data["accuracyMeters"] = float(request.POST.get("location_accuracy_meters"))
         if request.POST.get("obfuscation_kilometers"):
             data["obfuscationKilometers"] = request.POST.get("obfuscation_kilometers")
         if request.POST.get("camera_model"):
@@ -95,19 +98,27 @@ class CreateSightingView(View):
             messages.error(request, "Location is required.")
             return self.get(request)
 
+        # Handle media upload - convert to base64 if provided
+        media_file = request.FILES.get("media_file")
+        if media_file:
+            try:
+                # Read the file and encode to base64
+                file_bytes = media_file.read()
+                encoded_bytes = base64.b64encode(file_bytes).decode('utf-8')
+                data["mediaBytes"] = encoded_bytes
+                
+                # Determine if it's a video based on content type
+                content_type = media_file.content_type or ""
+                data["isVideo"] = content_type.startswith("video/")
+                
+                logger.info(f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {data['isVideo']}")
+            except Exception as e:
+                logger.error(f"Error encoding media file: {e}")
+                messages.error(request, "Failed to process media file. Please try again.")
+                return self.get(request)
+
         # Submit to backend API
         api_client = BackendAPIClient(auth_token=api_token)
-
-        # If media file exists, upload it first
-        media_url = None
-        if media_file:
-            upload_response = api_client.upload_media(media_file)
-            if upload_response and upload_response.get("status") == "success":
-                media_url = upload_response.get("body", {}).get("media_url")
-
-        # Add media URL to data
-        if media_url:
-            data["media_url"] = media_url
 
         # Submit sighting
         response = api_client.post("/v1/socialmedia/api/posts/create/", data)
