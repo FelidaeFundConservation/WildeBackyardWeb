@@ -19,6 +19,7 @@ django-tasks==0.8.1
 
 # Django REST Framework
 djangorestframework>=3.14.0  # https://github.com/encode/django-rest-framework
+requests>=2.31.0  # https://github.com/psf/requests
 gunicorn>=21.2.0  # https://github.com/benoitc/gunicorn
 Pillow>=10.2.0  # https://github.com/python-pillow/Pillow
 psycopg2>=2.9.9

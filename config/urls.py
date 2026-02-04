@@ -15,7 +15,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from allauth.urls import urlpatterns
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -25,9 +24,13 @@ from django.urls import include, path
 urlpatterns = [
     path("", include(("siteapps.home.urls", "home"), namespace="home")),
     path("admin/", admin.site.urls),
-    path("account/", include("allauth.urls")),
-    path("account/password_reset/", include("django_rest_passwordreset.urls", namespace="password_reset")),
+    # Removed allauth URLs - using custom backend API authentication instead
+    # path("account/", include("allauth.urls")),
     path("users/", include("siteapps.users.urls", namespace="users")),
+    path("sightings/", include("siteapps.sightings.urls", namespace="sightings")),
+    path("feed/", include("siteapps.socialmedia.urls", namespace="socialmedia")),
+    path("species/", include("siteapps.species.urls", namespace="species")),
+    path("mapbox/", include("siteapps.mapbox.urls", namespace="mapbox")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += staticfiles_urlpatterns()

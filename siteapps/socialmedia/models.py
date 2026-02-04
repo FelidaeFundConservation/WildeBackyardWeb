@@ -10,6 +10,7 @@ from siteapps.species.models import SpeciesName
 
 User = get_user_model()
 
+
 # Images or videos
 class Media(TimeStampedModel):
     # UUID for the image

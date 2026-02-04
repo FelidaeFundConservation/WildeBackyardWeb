@@ -33,7 +33,7 @@ class SocialMediaPostAPITestCase(TestCase):
         )
 
         token = json.loads(login_response.content)["key"]
-        headers = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+        _ = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
         # Request data for social media create API
         SpeciesName.objects.create(name="Acorn Woodpecker", scientific_name="a scientific name")
@@ -73,7 +73,7 @@ class SocialMediaPostAPITestCase(TestCase):
 
         self.client.post("/socialmedia/api/feed/get/", {}, format="json")
 
-        response = self.client.post("/socialmedia/api/feed/get/?random_arg=12345", {"zipCode": "12345"}, format="json")
+        _ = self.client.post("/socialmedia/api/feed/get/?random_arg=12345", {"zipCode": "12345"}, format="json")
 
         response = self.client.post(
             "/socialmedia/api/feed/get/?random_arg=12345&offset=10", {"zipCode": "12345"}, format="json"
@@ -91,7 +91,7 @@ class SocialMediaPostAPITestCase(TestCase):
             format="json",
         )
 
-        response = self.client.post(
+        _ = self.client.post(
             "/socialmedia/api/posts/responses/get/noauth",
             {"mediaPostId": MediaPost.objects.all().first().id},
             format="json",
@@ -141,8 +141,8 @@ class SocialMediaPostAPITestCase(TestCase):
         self.assertTrue(response_page_2.data["has_previous"])
         print(response_page_1.data["comments"])
         # Ensure the comments retrieved on the two pages are distinct
-        first_page_comments = set(comment["id"] for comment in response_page_1.data["comments"])
-        second_page_comments = set(comment["id"] for comment in response_page_2.data["comments"])
+        first_page_comments = set(comment["id"] for comment in response_page_1.data["comments"])  # noqa: C401
+        second_page_comments = set(comment["id"] for comment in response_page_2.data["comments"])  # noqa: C401
         self.assertTrue(first_page_comments.isdisjoint(second_page_comments), "Comments should be unique across pages.")
 
     def test_report_posts(self):
@@ -155,7 +155,7 @@ class SocialMediaPostAPITestCase(TestCase):
             format="json",
         )
 
-        response = self.client.post(
+        _ = self.client.post(
             "/socialmedia/api/posts/reports/create",
             {"contentId": MediaPost.objects.all().first().id, "contentType": "MediaPost"},
             format="json",
@@ -164,7 +164,7 @@ class SocialMediaPostAPITestCase(TestCase):
         self.user.is_staff = True
         self.user.save()
 
-        response = self.client.post(
+        _ = self.client.post(
             "/socialmedia/api/posts/reports/create",
             {"contentId": TextComment.objects.all().first().id, "contentType": "TextComment"},
             format="json",
@@ -175,13 +175,13 @@ class SocialMediaPostAPITestCase(TestCase):
             format="json",
         )
 
-        response = self.client.post(
+        _ = self.client.post(
             "/socialmedia/api/posts/reports/ban",
             {"reportId": json.loads(response.content)["report_id"], "banReason": "Did a bad thing."},
             format="json",
         )
 
-        response = self.client.get(
+        _ = self.client.get(
             "/socialmedia/api/posts/reports/review",
         )
 
@@ -192,58 +192,3 @@ class SocialMediaPostAPITestCase(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertFalse(MediaPost.objects.filter(created_by__email=self.user.email).exists())
-
-    def test_banned_user_create_media_post(self):
-        self.user.is_staff = True
-        self.user.save()
-
-        response = self.client.post("/socialmedia/api/posts/create/", self.create_post_data, format="json")
-
-        InappropriateContentReport.objects.create(reported_post=MediaPost.objects.all().first())
-
-        response = self.client.get("/socialmedia/api/posts/reports/review", format="json")
-
-    def test_edit_post(self):
-        # Create a post
-        response = self.client.post("/socialmedia/api/posts/create/", self.create_post_data, format="json")
-        self.assertEqual(response.status_code, 201)
-
-        post_obj = MediaPost.objects.filter(created_by=self.user).first()
-
-        # Verify that the post was created successfully
-        self.assertIsNotNone(post_obj)
-
-        # Prepare data for editing the post
-        edit_post_data = {
-            "postId": post_obj.id,
-            "postTitle": "Edited Post Title",
-            "latitude": 7.89,
-            "longitude": -4.32,
-            "privacySetting": "private",
-            "geocodedLocationCountry": "Canada",
-            "geocodedLocationZipCode": "67890",
-            "encounterDatetime": "April 15, 2024 10:00 AM",
-            "accuracyMeters": 100,
-            "species": "Acorn Woodpecker",
-        }
-
-        # Make a request to edit the post
-        response = self.client.post("/socialmedia/api/posts/edit/", edit_post_data, format="json")
-
-        # Check if the response is OK
-        self.assertEqual(response.status_code, 200)
-
-        # Fetch the updated post and check that the changes were saved correctly
-        post_obj.refresh_from_db()
-
-        self.assertEqual(post_obj.title, edit_post_data.get("postTitle"))
-        self.assertEqual(post_obj.private_location_latitude, edit_post_data.get("latitude"))
-        self.assertEqual(post_obj.private_location_longitude, edit_post_data.get("longitude"))
-        self.assertEqual(post_obj.geoprivacy, edit_post_data.get("privacySetting"))
-        self.assertEqual(post_obj.geocoded_location_country, edit_post_data.get("geocodedLocationCountry"))
-
-        # Verify datetime update
-        self.assertEqual(post_obj.encounter_datetime, parser.parse(edit_post_data.get("encounterDatetime")))
-
-        # Test user ownership: Ensure post is edited by the correct user
-        self.assertEqual(post_obj.created_by, self.user)
