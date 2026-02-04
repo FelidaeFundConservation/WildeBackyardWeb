@@ -1,0 +1,24 @@
+runtime: python310
+service: wildebackyard-web
+instance_class: F1
+
+entrypoint: gunicorn -b :$PORT config.wsgi.staging:application
+
+# Cloud SQL Configuration
+beta_settings:
+  cloud_sql_instances: wildepod-339517:us-west2:wildepoddb
+
+env_variables:
+  DJANGO_SETTINGS_MODULE: "config.settings.staging"
+  PYTHON_ENV: "staging"
+  DJANGO_SECRET_KEY: "TEMPORARY_SECRET_KEY_CHANGE_IN_PRODUCTION"
+  CLOUD_SQL_CONNECTION_NAME: "wildepod-339517:us-west2:wildepoddb"
+  CLOUD_SQL_DATABASE_URL_STAGING: "postgres://wildepod_wildebackyard_api_user:%2FnoABg6yCIUL5IMmueBRyYcqPMwvouxPBPXRbI%2BP%2BMU%3D@/wildebackyard_api_staging?host=/cloudsql/wildepod-339517:us-west2:wildepoddb"
+  BACKEND_API_URL: "https://wildebackyard-api-dot-wildepod-339517.wl.r.appspot.com"
+
+automatic_scaling:
+  min_idle_instances: 0
+  max_idle_instances: 2
+  min_pending_latency: 1000ms
+  max_pending_latency: 3000ms
+  max_concurrent_requests: 50

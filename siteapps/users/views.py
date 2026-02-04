@@ -85,9 +85,9 @@ class RegisterView(View):
 
         # Register via Backend API
         api_client = BackendAPIClient()
-        result = api_client.register_user(email, password, name)
+        success, result = api_client.register_user(email, password, name)
 
-        if result:
+        if success:
             # Auto-login after successful registration
             user = authenticate(request, email=email, password=password)
             if user is not None:
@@ -103,7 +103,8 @@ class RegisterView(View):
                 )
                 return redirect("users:login")
         else:
-            messages.error(request, "Registration failed. Email may already be in use.")
+            # Display the specific error from the API
+            messages.error(request, result)
             return render(request, self.template_name)
 
 
