@@ -1,0 +1,157 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}Wildlife Feed - WildeBackyard{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Sidebar Filters -->
+            <div class="col-md-3 col-lg-2 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Filters</h5>
+                        <form method="get" action="{% url 'socialmedia:feed' %}">
+                            <div class="mb-3">
+                                <label for="species" class="form-label">Species</label>
+                                <select class="form-select form-select-sm"
+                                        id="species"
+                                        name="species"
+                                        onchange="this.form.submit()">
+                                    <option value="">All Species</option>
+                                    {% for species in species_list %}
+                                        <option value="{{ species }}"
+                                                {% if current_species == species %}selected{% endif %}>
+                                            {{ species }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Location</label>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="location"
+                                           id="global"
+                                           value="global"
+                                           {% if location_filter == 'global' %}checked{% endif %}
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label" for="global">Global</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="location"
+                                           id="local"
+                                           value="local"
+                                           {% if location_filter == 'local' %}checked{% endif %}
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label" for="local">Local (50km)</label>
+                                </div>
+                            </div>
+                        </form>
+                        {% if user.is_authenticated %}
+                            <hr>
+                            <a href="{% url 'sightings:create' %}"
+                               class="btn btn-primary w-100 btn-sm">
+                                <i class="bi bi-plus-circle"></i> Report Sighting
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Feed Content -->
+            <div class="col-md-9 col-lg-10">
+                <h1 class="mb-4 text-white">
+                    <i class="bi bi-grid"></i> Wildlife Feed
+                    {% if current_species %}<span class="badge bg-success">{{ current_species }}</span>{% endif %}
+                </h1>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                {% if not posts %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No sightings found. Be the first to report one!
+                    </div>
+                {% endif %}
+                <div class="row">
+                    {% for post in posts %}
+                        <div class="col-12 col-lg-6 col-xl-4 mb-4">
+                            <div class="card shadow-sm h-100">
+                                {% if post.media_url %}
+                                    <div class="position-relative">
+                                        {% if post.is_video %}
+                                            <video class="card-img-top"
+                                                   style="max-height: 300px;
+                                                          object-fit: cover"
+                                                   controls>
+                                                <source src="{{ post.media_url }}" type="video/mp4">
+                                            </video>
+                                        {% else %}
+                                            <img src="{{ post.media_url }}"
+                                                 class="card-img-top"
+                                                 style="max-height: 300px;
+                                                        object-fit: cover"
+                                                 alt="{{ post.title }}">
+                                        {% endif %}
+                                        {% if post.species %}
+                                            <span class="badge bg-success position-absolute top-0 end-0 m-2">{{ post.species }}</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ post.title }}</h5>
+                                    <p class="card-text text-muted small">
+                                        <i class="bi bi-person"></i> {{ post.user_name|default:"Anonymous" }}
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-calendar"></i> {{ post.created|date:"M d, Y" }}
+                                    </p>
+                                    {% if post.body %}<p class="card-text">{{ post.body|truncatewords:30 }}</p>{% endif %}
+                                    {% if post.geocoded_location %}
+                                        <p class="card-text text-muted small">
+                                            <i class="bi bi-geo-alt"></i> {{ post.geocoded_location }}
+                                        </p>
+                                    {% endif %}
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="{% url 'socialmedia:post_detail' post.id %}"
+                                           class="btn btn-sm btn-outline-primary">View Details</a>
+                                        <div>
+                                            {% if post.likes_count %}
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-heart"></i> {{ post.likes_count }}
+                                                </span>
+                                            {% endif %}
+                                            {% if post.comments_count %}
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-chat"></i> {{ post.comments_count }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if posts %}
+                    <div class="text-center mt-4">
+                        <button class="btn btn-outline-light" onclick="loadMore()">
+                            <i class="bi bi-arrow-down-circle"></i> Load More
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <script>
+function loadMore() {
+  // Implement pagination/infinite scroll
+  alert('Load more functionality to be implemented');
+}
+    </script>
+{% endblock %}

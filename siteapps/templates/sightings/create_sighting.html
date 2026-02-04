@@ -1,0 +1,400 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}Report a Sighting - WildeBackyard{% endblock %}
+{% block header_includes %}
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
+          rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <style>
+  #map {
+    width: 100%;
+    height: 400px;
+    border-radius: 0.5rem;
+  }
+  .form-section {
+    background: white;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .form-section h3 {
+    color: var(--primary-dark);
+    border-bottom: 2px solid var(--primary-light);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .media-preview {
+    max-width: 100%;
+    max-height: 300px;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+  }
+  .required-field::after {
+    content: " *";
+    color: red;
+  }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-9">
+                <h1 class="text-center mb-4 text-white">Report a Wildlife Sighting</h1>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <form method="post" enctype="multipart/form-data" id="sightingForm">
+                    {% csrf_token %}
+                    <!-- Media Upload Section -->
+                    <div class="form-section">
+                        <h3>
+                            <i class="bi bi-camera"></i> Media Upload
+                        </h3>
+                        <div class="mb-3">
+                            <label for="media_file" class="form-label">Photo or Video</label>
+                            <input type="file"
+                                   class="form-control"
+                                   id="media_file"
+                                   name="media_file"
+                                   accept="image/*,video/*"
+                                   onchange="previewMedia(this)">
+                            <small class="text-muted">Upload a photo or video of your sighting</small>
+                        </div>
+                        <div id="mediaPreview"></div>
+                    </div>
+                    <!-- Species Selection Section -->
+                    <div class="form-section">
+                        <h3>
+                            <i class="bi bi-search"></i> Species Identification
+                        </h3>
+                        <div class="mb-3">
+                            <label for="species" class="form-label">Species</label>
+                            <select class="form-select" id="species" name="species">
+                                <option value="">Select a species...</option>
+                                {% for species in species_list %}<option value="{{ species }}">{{ species }}</option>{% endfor %}
+                            </select>
+                            <small class="text-muted">Select the species you observed</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_species" class="form-label">Or Add New Species</label>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control"
+                                       id="new_species"
+                                       placeholder="Enter new species name">
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        onclick="addNewSpecies()">
+                                    <i class="bi bi-plus-circle"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Location Section -->
+                    <div class="form-section">
+                        <h3 class="required-field">
+                            <i class="bi bi-geo-alt"></i> Location
+                        </h3>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="location_latitude" class="form-label required-field">Latitude</label>
+                                <input type="number"
+                                       step="any"
+                                       class="form-control"
+                                       id="location_latitude"
+                                       name="location_latitude"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="location_longitude" class="form-label required-field">Longitude</label>
+                                <input type="number"
+                                       step="any"
+                                       class="form-control"
+                                       id="location_longitude"
+                                       name="location_longitude"
+                                       required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="getCurrentLocation()">
+                                <i class="bi bi-crosshair"></i> Use Current Location
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    onclick="pickLocationOnMap()">
+                                <i class="bi bi-map"></i> Pick on Map
+                            </button>
+                        </div>
+                        <div id="map" class="mb-3"></div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="privacy_setting" class="form-label">Privacy Setting</label>
+                                <select class="form-select" id="privacy_setting" name="privacy_setting">
+                                    <option value="public">Public (Exact Location)</option>
+                                    <option value="approximate">Approximate (Obfuscated)</option>
+                                    <option value="hidden">Hidden (No Location Shown)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="obfuscation_kilometers" class="form-label">Obfuscation Radius (km)</label>
+                                <input type="number"
+                                       step="0.1"
+                                       class="form-control"
+                                       id="obfuscation_kilometers"
+                                       name="obfuscation_kilometers"
+                                       value="1"
+                                       min="0.1"
+                                       max="50">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="location_accuracy_meters" class="form-label">Location Accuracy (meters)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="location_accuracy_meters"
+                                   name="location_accuracy_meters"
+                                   value="0"
+                                   readonly>
+                        </div>
+                    </div>
+                    <!-- Encounter Date/Time Section -->
+                    <div class="form-section">
+                        <h3 class="required-field">
+                            <i class="bi bi-calendar"></i> When Did You See It?
+                        </h3>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="encounter_date" class="form-label required-field">Date</label>
+                                <input type="date"
+                                       class="form-control"
+                                       id="encounter_date"
+                                       name="encounter_date"
+                                       required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="encounter_time" class="form-label">Time</label>
+                                <input type="time"
+                                       class="form-control"
+                                       id="encounter_time"
+                                       name="encounter_time">
+                            </div>
+                        </div>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                onclick="useCurrentDateTime()">
+                            <i class="bi bi-clock"></i> Use Current Date/Time
+                        </button>
+                    </div>
+                    <!-- Post Content Section -->
+                    <div class="form-section">
+                        <h3 class="required-field">
+                            <i class="bi bi-pencil"></i> Description
+                        </h3>
+                        <div class="mb-3">
+                            <label for="post_title" class="form-label required-field">Title</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="post_title"
+                                   name="post_title"
+                                   maxlength="200"
+                                   required
+                                   placeholder="Give your sighting a descriptive title">
+                            <small class="text-muted"><span id="titleCount">0</span>/200 characters</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="post_body" class="form-label">Details</label>
+                            <textarea class="form-control"
+                                      id="post_body"
+                                      name="post_body"
+                                      rows="5"
+                                      maxlength="2000"
+                                      placeholder="Describe what you saw, behavior, habitat, etc."></textarea>
+                            <small class="text-muted"><span id="bodyCount">0</span>/2000 characters</small>
+                        </div>
+                    </div>
+                    <!-- Additional Information Section -->
+                    <div class="form-section">
+                        <h3>
+                            <i class="bi bi-info-circle"></i> Additional Information
+                        </h3>
+                        <div class="mb-3">
+                            <label for="camera_model" class="form-label">Camera Model</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="camera_model"
+                                   name="camera_model"
+                                   placeholder="e.g., Canon EOS 5D Mark IV">
+                        </div>
+                        <div class="mb-3">
+                            <label for="camera_deployment_date" class="form-label">Camera Deployment Date</label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="camera_deployment_date"
+                                   name="camera_deployment_date">
+                        </div>
+                        <div class="mb-3">
+                            <label for="habitat_type" class="form-label">Habitat Type</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="habitat_type"
+                                   name="habitat_type"
+                                   placeholder="e.g., Forest, Grassland, Urban">
+                        </div>
+                        <div class="mb-3">
+                            <label for="timestamp_offset_details" class="form-label">Timestamp Offset Details</label>
+                            <textarea class="form-control"
+                                      id="timestamp_offset_details"
+                                      name="timestamp_offset_details"
+                                      rows="2"
+                                      placeholder="Any notes about camera time accuracy"></textarea>
+                        </div>
+                    </div>
+                    <!-- Submit Button -->
+                    <div class="text-center mb-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-check-circle"></i> Submit Sighting
+                        </button>
+                        <a href="{% url 'home:home' %}"
+                           class="btn btn-outline-secondary btn-lg px-5 ms-2">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+mapboxgl.accessToken = 'REDACTED_KEY';
+let map, marker;
+
+// Initialize map
+document.addEventListener('DOMContentLoaded', function() {
+  map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/outdoors-v12',
+    center: [-122.4194, 37.7749], // Default to San Francisco
+    zoom: 10
+  });
+
+  map.addControl(new mapboxgl.NavigationControl());
+
+  // Set today's date as default
+  document.getElementById('encounter_date').valueAsDate = new Date();
+
+  // Character counters
+  document.getElementById('post_title').addEventListener('input', function() {
+    document.getElementById('titleCount').textContent = this.value.length;
+  });
+
+  document.getElementById('post_body').addEventListener('input', function() {
+    document.getElementById('bodyCount').textContent = this.value.length;
+  });
+});
+
+function getCurrentLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = Math.round(position.coords.accuracy);
+
+      document.getElementById('location_latitude').value = lat.toFixed(6);
+      document.getElementById('location_longitude').value = lng.toFixed(6);
+      document.getElementById('location_accuracy_meters').value = accuracy;
+
+      updateMapMarker(lng, lat);
+      map.flyTo({center: [lng, lat], zoom: 14});
+    }, function(error) {
+      alert('Error getting location: ' + error.message);
+    });
+  } else {
+    alert('Geolocation is not supported by your browser');
+  }
+}
+
+function pickLocationOnMap() {
+  alert('Click on the map to select a location');
+  map.once('click', function(e) {
+    const lng = e.lngLat.lng;
+    const lat = e.lngLat.lat;
+
+    document.getElementById('location_latitude').value = lat.toFixed(6);
+    document.getElementById('location_longitude').value = lng.toFixed(6);
+
+    updateMapMarker(lng, lat);
+  });
+}
+
+function updateMapMarker(lng, lat) {
+  if (marker) marker.remove();
+  marker = new mapboxgl.Marker()
+    .setLngLat([lng, lat])
+    .addTo(map);
+}
+
+function useCurrentDateTime() {
+  const now = new Date();
+  document.getElementById('encounter_date').valueAsDate = now;
+  document.getElementById('encounter_time').value = now.toTimeString().slice(0, 5);
+}
+
+function addNewSpecies() {
+  const newSpecies = document.getElementById('new_species').value.trim();
+  if (newSpecies) {
+    const select = document.getElementById('species');
+    const option = new Option(newSpecies, newSpecies);
+    select.add(option);
+    select.value = newSpecies;
+    document.getElementById('new_species').value = '';
+  }
+}
+
+function previewMedia(input) {
+  const preview = document.getElementById('mediaPreview');
+  preview.innerHTML = '';
+
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      if (file.type.startsWith('image/')) {
+        preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
+      } else if (file.type.startsWith('video/')) {
+        preview.innerHTML = `<video controls class="media-preview"><source src="${e.target.result}" type="${file.type}"></video>`;
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }
+}
+
+// Update map when coordinates are manually entered
+document.getElementById('location_latitude').addEventListener('change', function() {
+  const lat = parseFloat(this.value);
+  const lng = parseFloat(document.getElementById('location_longitude').value);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    updateMapMarker(lng, lat);
+    map.flyTo({center: [lng, lat], zoom: 14});
+  }
+});
+
+document.getElementById('location_longitude').addEventListener('change', function() {
+  const lat = parseFloat(document.getElementById('location_latitude').value);
+  const lng = parseFloat(this.value);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    updateMapMarker(lng, lat);
+    map.flyTo({center: [lng, lat], zoom: 14});
+  }
+});
+    </script>
+{% endblock %}
