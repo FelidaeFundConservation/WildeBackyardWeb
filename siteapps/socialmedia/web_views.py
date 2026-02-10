@@ -75,6 +75,13 @@ def post_detail_view(request, post_id):
         if not post:
             messages.error(request, "Post not found.")
             return redirect("socialmedia:feed")
+
+        # Fetch comments with like information
+        comments_response = api_client.post(
+            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
+        )
+        if comments_response and comments_response.get("comments"):
+            comments = comments_response.get("comments", [])
     else:
         messages.error(request, "Please log in to view posts.")
         return redirect("login")
@@ -155,3 +162,24 @@ def report_post(request, post_id):
         return redirect("socialmedia:post_detail", post_id=post_id)
 
     return render(request, "socialmedia/report_post.html", {"post_id": post_id})
+
+
+@login_required
+def like_comment(request, post_id, comment_id):
+    """Like/unlike a comment"""
+    api_token = request.session.get("backend_api_token")
+    if api_token:
+        api_client = BackendAPIClient(auth_token=api_token)
+        response = api_client.post("/v1/socialmedia/api/comments/like/", {"commentId": str(comment_id)})
+
+        if response and response.get("status") == "success":
+            # Show appropriate message based on the action
+            is_liked = response.get("is_liked", True)
+            if is_liked:
+                messages.success(request, "Comment liked!")
+            else:
+                messages.success(request, "Comment unliked!")
+        else:
+            messages.error(request, "Failed to update comment.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
