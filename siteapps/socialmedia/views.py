@@ -186,16 +186,26 @@ def get_post_responses(request):
             media_post_obj = MediaPost.objects.get(id=media_post_id)
 
             # Query all comments related to the post and order by creation date
-            comments_query = media_post_obj.replies.order_by("-created").values(
-                "created_by__name", "text_content", "created", "id"
-            )
+            comments_queryset = media_post_obj.replies.order_by("-created")
 
             # Set up pagination for comments
-            paginator = Paginator(comments_query, page_size)
+            paginator = Paginator(comments_queryset, page_size)
             comments_page = paginator.get_page(page)
 
-            # Serialize the paginated comments data
-            comments_data = list(comments_page)
+            # Serialize the paginated comments data with like information
+            comments_data = []
+            for comment in comments_page:
+                comment_dict = {
+                    "id": str(comment.id),
+                    "created_by__name": comment.created_by.name if comment.created_by else None,
+                    "text_content": comment.text_content,
+                    "created": comment.created,
+                    "like_count": comment.upvoted_by.count(),
+                    "liked_by_current_user": check_comment_is_liked_by(comment_obj=comment, user=request.user)
+                    if request.user.is_authenticated
+                    else False,
+                }
+                comments_data.append(comment_dict)
 
             return Response(
                 status=status.HTTP_200_OK,
@@ -261,6 +271,54 @@ class LikePostView(APIView):
             except Exception:
                 return Response(
                     status=status.HTTP_404_NOT_FOUND,
+                )
+
+
+def check_comment_is_liked_by(comment_obj, user):
+    return comment_obj.upvoted_by.filter(id=user.id).exists()
+
+
+class LikeCommentView(APIView):
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = json.loads(request.body)
+
+        comment_id = data.get("commentId")
+
+        if comment_id is None:
+            return createResponse400("The comment ID to like/unlike was not provided.")
+        else:
+            try:
+                comment_obj = TextComment.objects.get(id=comment_id)
+
+                # Toggle the like status
+                if check_comment_is_liked_by(comment_obj=comment_obj, user=request.user):
+                    comment_obj.upvoted_by.remove(request.user)
+                    is_liked = False
+                else:
+                    comment_obj.upvoted_by.add(request.user)
+                    is_liked = True
+
+                return Response(
+                    status=status.HTTP_200_OK,
+                    data={
+                        "status": "success",
+                        "like_count": comment_obj.upvoted_by.count(),
+                        "is_liked": is_liked,
+                    },
+                )
+
+            except TextComment.DoesNotExist:
+                return Response(
+                    status=status.HTTP_404_NOT_FOUND,
+                    data={"error": "Comment not found."},
+                )
+            except Exception as e:
+                return Response(
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    data={"error": "An error occurred: " + str(e)},
                 )
 
 
