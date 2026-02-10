@@ -49,7 +49,7 @@
                                             class="btn btn-sm btn-outline-danger"
                                             onclick="document.getElementById('likeForm').submit()">
                                         <i class="bi bi-heart{% if post.user_has_liked %}-fill{% endif %}"></i>
-                                        {% if post.likes_count %}{{ post.likes_count }}{% endif %}
+                                        <span class="ms-1">{{ post.likes_count|default:0 }}</span>
                                     </button>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-warning"
@@ -162,7 +162,7 @@
                                                                 class="btn btn-sm btn-outline-danger"
                                                                 title="Like comment">
                                                             <i class="bi bi-heart{% if comment.liked_by_current_user %}-fill{% endif %}"></i>
-                                                            {% if comment.like_count %}{{ comment.like_count }}{% endif %}
+                                                            <span class="ms-1">{{ comment.like_count|default:0 }}</span>
                                                         </button>
                                                     </form>
                                                 {% endif %}
