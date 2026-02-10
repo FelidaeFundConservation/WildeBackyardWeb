@@ -1,5 +1,6 @@
-import json
+import os
 
+import requests
 from allauth.account.models import EmailAddress
 from dateutil import parser
 from django.test import TestCase
@@ -16,8 +17,8 @@ from siteapps.users.models import User
 class SpeciesAPITestCase(TestCase):
     def setUp(self):
         # Setup a test account
-        test_email = "wildebackyard@fakeemail.com"
-        test_password = "fakepassword"
+        test_email = "jnovak@example.com"
+        test_password = "letmein"
 
         self.user = User.objects.create(email=test_email)
         self.user.set_password(test_password)
@@ -27,13 +28,16 @@ class SpeciesAPITestCase(TestCase):
         self.client = APIClient()
         self.client.login(email=test_email, password=test_password)
 
-        # Get the auth token from the test account
-        login_response = self.client.post(
-            "/users/login/", {"email": test_email, "password": test_password}, format="json"
-        )
+        # Create a local auth token for the test user
+        token, _ = Token.objects.get_or_create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
-        token = json.loads(login_response.content)["key"]
-        _ = self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+        # Also authenticate with backend API to get backend token for proxied requests
+        backend_api_url = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
+        backend_login_response = requests.post(
+            f"{backend_api_url}/v1/users/login/", json={"email": test_email, "password": test_password}
+        )
+        self.backend_token = backend_login_response.json()["key"]
 
     def test_get_species_names(self):
         SpeciesName.objects.create(name="Test", scientific_name="Science")
