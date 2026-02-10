@@ -296,16 +296,29 @@ class LikeCommentView(APIView):
                 # Toggle the like status
                 if check_comment_is_liked_by(comment_obj=comment_obj, user=request.user):
                     comment_obj.upvoted_by.remove(request.user)
+                    is_liked = False
                 else:
                     comment_obj.upvoted_by.add(request.user)
+                    is_liked = True
 
                 return Response(
                     status=status.HTTP_200_OK,
+                    data={
+                        "status": "success",
+                        "like_count": comment_obj.upvoted_by.count(),
+                        "is_liked": is_liked,
+                    },
                 )
 
-            except Exception:
+            except TextComment.DoesNotExist:
                 return Response(
                     status=status.HTTP_404_NOT_FOUND,
+                    data={"error": "Comment not found."},
+                )
+            except Exception as e:
+                return Response(
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    data={"error": "An error occurred: " + str(e)},
                 )
 
 
