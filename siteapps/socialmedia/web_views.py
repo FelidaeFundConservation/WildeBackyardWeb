@@ -80,8 +80,12 @@ def post_detail_view(request, post_id):
         comments_response = api_client.post(
             "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
         )
-        if comments_response and comments_response.get("comments"):
+        if comments_response:
             comments = comments_response.get("comments", [])
+            # Update post with like information from response
+            if post:
+                post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
+                post["likes_count"] = comments_response.get("like_count", 0)
     else:
         messages.error(request, "Please log in to view posts.")
         return redirect("login")
@@ -108,8 +112,8 @@ def add_comment(request, post_id):
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
             data = {
-                "post_id": post_id,
-                "comment_text": comment_text,
+                "parentPostId": str(post_id),
+                "commentText": comment_text,
             }
             response = api_client.post("/v1/socialmedia/api/comments/create/", data)
 
@@ -129,7 +133,7 @@ def like_post(request, post_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/v1/socialmedia/api/posts/like/", {"post_id": post_id})
+        response = api_client.post("/v1/socialmedia/api/posts/like/", {"mediaPostId": str(post_id)})
 
         if response and response.get("status") == "success":
             messages.success(request, "Post liked!")
