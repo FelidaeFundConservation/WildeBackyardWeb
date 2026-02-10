@@ -101,8 +101,8 @@ def add_comment(request, post_id):
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
             data = {
-                "post_id": post_id,
-                "comment_text": comment_text,
+                "parentPostId": post_id,
+                "commentText": comment_text,
             }
             response = api_client.post("/v1/socialmedia/api/comments/create/", data)
 
@@ -122,7 +122,7 @@ def like_post(request, post_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/v1/socialmedia/api/posts/like/", {"post_id": post_id})
+        response = api_client.post("/v1/socialmedia/api/posts/like/", {"mediaPostId": post_id})
 
         if response and response.get("status") == "success":
             messages.success(request, "Post liked!")
