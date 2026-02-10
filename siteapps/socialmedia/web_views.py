@@ -147,14 +147,12 @@ def like_post(request, post_id):
 def report_post(request, post_id):
     """Report inappropriate content"""
     if request.method == "POST":
-        reason = request.POST.get("reason")
-
         api_token = request.session.get("backend_api_token")
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
             data = {
-                "post_id": post_id,
-                "reason": reason,
+                "contentId": int(post_id),
+                "contentType": "MediaPost",
             }
             response = api_client.post("/v1/socialmedia/api/posts/reports/create", data)
 
