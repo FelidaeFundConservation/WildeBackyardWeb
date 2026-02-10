@@ -150,9 +150,22 @@
                                         <div class="flex-grow-1">
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
-                                                    <strong>{{ comment.user_name|default:"Anonymous" }}</strong>
+                                                    <strong>{{ comment.created_by__name|default:"Anonymous" }}</strong>
                                                     <small class="text-muted ms-2">{{ comment.created|date:"M d, Y \a\t g:i A" }}</small>
                                                 </div>
+                                                {% if user.is_authenticated %}
+                                                    <form method="post"
+                                                          action="{% url 'socialmedia:like_comment' post_id comment.id %}"
+                                                          style="display: inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit"
+                                                                class="btn btn-sm btn-outline-danger"
+                                                                title="Like comment">
+                                                            <i class="bi bi-heart{% if comment.liked_by_current_user %}-fill{% endif %}"></i>
+                                                            {% if comment.like_count %}{{ comment.like_count }}{% endif %}
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
                                             </div>
                                             <p class="mb-0 mt-2">{{ comment.text_content }}</p>
                                         </div>
