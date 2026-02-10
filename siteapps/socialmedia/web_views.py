@@ -75,6 +75,13 @@ def post_detail_view(request, post_id):
         if not post:
             messages.error(request, "Post not found.")
             return redirect("socialmedia:feed")
+
+        # Fetch comments for the post
+        comments_response = api_client.post(
+            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
+        )
+        if comments_response and comments_response.get("comments"):
+            comments = comments_response.get("comments", [])
     else:
         messages.error(request, "Please log in to view posts.")
         return redirect("login")
