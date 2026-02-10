@@ -173,8 +173,13 @@ def like_comment(request, post_id, comment_id):
         response = api_client.post("/v1/socialmedia/api/comments/like/", {"commentId": str(comment_id)})
 
         if response and response.get("status") == "success":
-            messages.success(request, "Comment liked!")
+            # Show appropriate message based on the action
+            is_liked = response.get("is_liked", True)
+            if is_liked:
+                messages.success(request, "Comment liked!")
+            else:
+                messages.success(request, "Comment unliked!")
         else:
-            messages.error(request, "Failed to like comment.")
+            messages.error(request, "Failed to update comment.")
 
     return redirect("socialmedia:post_detail", post_id=post_id)
