@@ -192,3 +192,74 @@ class SocialMediaPostAPITestCase(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertFalse(MediaPost.objects.filter(created_by__email=self.user.email).exists())
+
+    def test_like_comment(self):
+        # Create a post
+        self.client.post("/socialmedia/api/posts/create/", self.create_post_data, format="json")
+        post_id = MediaPost.objects.all().first().id
+
+        # Create a comment
+        self.client.post(
+            "/socialmedia/api/comments/create/",
+            {"parentPostId": post_id, "commentText": "Test Comment"},
+            format="json",
+        )
+
+        comment_id = TextComment.objects.all().first().id
+
+        # Like the comment
+        response = self.client.post(
+            "/socialmedia/api/comments/like/", {"commentId": str(comment_id)}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Verify the comment is liked by the user
+        comment = TextComment.objects.get(id=comment_id)
+        self.assertTrue(comment.upvoted_by.filter(id=self.user.id).exists())
+
+        # Unlike the comment
+        response = self.client.post(
+            "/socialmedia/api/comments/like/", {"commentId": str(comment_id)}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Verify the comment is not liked by the user
+        comment = TextComment.objects.get(id=comment_id)
+        self.assertFalse(comment.upvoted_by.filter(id=self.user.id).exists())
+
+    def test_get_comments_with_like_info(self):
+        # Create a post
+        self.client.post("/socialmedia/api/posts/create/", self.create_post_data, format="json")
+        post_id = MediaPost.objects.all().first().id
+
+        # Create some comments
+        for i in range(3):
+            self.client.post(
+                "/socialmedia/api/comments/create/",
+                {"parentPostId": post_id, "commentText": f"Test Comment {i + 1}"},
+                format="json",
+            )
+
+        # Like the first comment
+        first_comment_id = TextComment.objects.all().first().id
+        self.client.post("/socialmedia/api/comments/like/", {"commentId": str(first_comment_id)}, format="json")
+
+        # Get post responses with like info
+        response = self.client.post(
+            "/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        comments = response.data["comments"]
+
+        # Verify that comments have like_count and liked_by_current_user fields
+        for comment in comments:
+            self.assertIn("like_count", comment)
+            self.assertIn("liked_by_current_user", comment)
+
+        # Verify the first comment is liked
+        first_comment = next(c for c in comments if c["id"] == str(first_comment_id))
+        self.assertEqual(first_comment["like_count"], 1)
+        self.assertTrue(first_comment["liked_by_current_user"])
