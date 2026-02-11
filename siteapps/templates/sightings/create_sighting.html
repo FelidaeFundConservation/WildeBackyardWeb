@@ -63,9 +63,9 @@
                                    class="form-control"
                                    id="media_file"
                                    name="media_file"
-                                   accept="image/*,video/*"
+                                   accept="image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo"
                                    onchange="previewMedia(this)">
-                            <small class="text-muted">Upload a photo or video of your sighting</small>
+                            <small class="text-muted">Upload a photo or video (Max 500MB for videos). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
                         </div>
                         <div id="mediaPreview"></div>
                     </div>
@@ -364,13 +364,23 @@ function previewMedia(input) {
 
   if (input.files && input.files[0]) {
     const file = input.files[0];
+    const maxSize = 500 * 1024 * 1024; // 500MB
+    
+    // Validate file size
+    if (file.size > maxSize) {
+      alert('File is too large. Maximum size is 500MB.');
+      input.value = ''; // Clear the input
+      return;
+    }
+    
     const reader = new FileReader();
 
     reader.onload = function(e) {
       if (file.type.startsWith('image/')) {
         preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
       } else if (file.type.startsWith('video/')) {
-        preview.innerHTML = `<video controls class="media-preview"><source src="${e.target.result}" type="${file.type}"></video>`;
+        const sizeInfo = `<small class="text-muted">File size: ${(file.size / (1024*1024)).toFixed(2)}MB</small>`;
+        preview.innerHTML = `<video controls class="media-preview" preload="metadata"><source src="${e.target.result}" type="${file.type}"></video><br>${sizeInfo}`;
       }
     };
 

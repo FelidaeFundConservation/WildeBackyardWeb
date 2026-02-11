@@ -104,14 +104,23 @@ class CreateSightingView(View):
             try:
                 # Read the file and encode to base64
                 file_bytes = media_file.read()
-                encoded_bytes = base64.b64encode(file_bytes).decode('utf-8')
-                data["mediaBytes"] = encoded_bytes
                 
                 # Determine if it's a video based on content type
                 content_type = media_file.content_type or ""
-                data["isVideo"] = content_type.startswith("video/")
+                is_video = content_type.startswith("video/")
                 
-                logger.info(f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {data['isVideo']}")
+                # Validate video size (max 500MB)
+                if is_video:
+                    max_video_size = 500 * 1024 * 1024  # 500MB
+                    if len(file_bytes) > max_video_size:
+                        messages.error(request, f"Video file is too large. Maximum size is 500MB. Your file: {len(file_bytes)/(1024*1024):.1f}MB")
+                        return self.get(request)
+                
+                encoded_bytes = base64.b64encode(file_bytes).decode('utf-8')
+                data["mediaBytes"] = encoded_bytes
+                data["isVideo"] = is_video
+                
+                logger.info(f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {is_video}, content_type: {content_type}")
             except Exception as e:
                 logger.error(f"Error encoding media file: {e}")
                 messages.error(request, "Failed to process media file. Please try again.")
