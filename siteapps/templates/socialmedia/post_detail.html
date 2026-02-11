@@ -29,7 +29,10 @@
                             {% else %}
                                 <img src="{{ post.media_url }}"
                                      class="card-img-top"
-                                     style="max-height: 600px;
+                                     style="max-width: 2048px;
+                                            max-height: 2048px;
+                                            width: 100%;
+                                            height: auto;
                                             object-fit: contain"
                                      alt="{{ post.title }}">
                             {% endif %}
