@@ -23,8 +23,14 @@
                     {% if post.media_url %}
                         <div class="position-relative">
                             {% if post.is_video %}
-                                <video class="w-100" style="max-height: 600px; object-fit: contain" controls>
+                                <video class="w-100"
+                                       style="max-height: 600px; object-fit: contain"
+                                       controls
+                                       preload="metadata"
+                                       controlsList="nodownload">
                                     <source src="{{ post.media_url }}" type="video/mp4">
+                                    <source src="{{ post.media_url }}" type="video/webm">
+                                    Your browser does not support the video tag.
                                 </video>
                             {% else %}
                                 {# djlint:off H006 #}
