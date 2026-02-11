@@ -86,6 +86,11 @@ def post_detail_view(request, post_id):
             if post:
                 post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
                 post["likes_count"] = comments_response.get("like_count", 0)
+                
+                # Extract media fields for template compatibility
+                if post.get("media"):
+                    post["media_url"] = post["media"].get("url")
+                    post["is_video"] = post["media"].get("is_video", False)
     else:
         messages.error(request, "Please log in to view posts.")
         return redirect("login")
