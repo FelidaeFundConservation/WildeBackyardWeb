@@ -419,10 +419,10 @@ function extractExifGPS(dataUrl) {
           const latField = document.getElementById('location_latitude');
           const lngField = document.getElementById('location_longitude');
           
-          if (!latField.value) {
+          if (latField.value === '') {
             latField.value = latitude.toFixed(6);
           }
-          if (!lngField.value) {
+          if (lngField.value === '') {
             lngField.value = longitude.toFixed(6);
           }
           
