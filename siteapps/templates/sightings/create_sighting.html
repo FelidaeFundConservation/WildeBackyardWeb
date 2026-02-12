@@ -392,48 +392,60 @@ function previewMedia(input) {
 }
 
 function extractExifGPS(dataUrl) {
+  // Check if EXIF library is loaded
+  if (typeof EXIF === 'undefined') {
+    console.warn('EXIF library not loaded, skipping GPS extraction');
+    return;
+  }
+  
   // Convert dataURL to image element for EXIF parsing
   const img = document.createElement('img');
   img.src = dataUrl;
   
   img.onload = function() {
-    EXIF.getData(img, function() {
-      const lat = EXIF.getTag(this, 'GPSLatitude');
-      const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
-      const lng = EXIF.getTag(this, 'GPSLongitude');
-      const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
-      
-      if (lat && lng && latRef && lngRef) {
-        // Convert GPS coordinates to decimal degrees
-        const latitude = convertDMSToDD(lat, latRef);
-        const longitude = convertDMSToDD(lng, lngRef);
+    try {
+      EXIF.getData(img, function() {
+        const lat = EXIF.getTag(this, 'GPSLatitude');
+        const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+        const lng = EXIF.getTag(this, 'GPSLongitude');
+        const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
         
-        // Only populate if fields are empty or zero
-        const latField = document.getElementById('location_latitude');
-        const lngField = document.getElementById('location_longitude');
-        
-        if (!latField.value || latField.value === '0') {
-          latField.value = latitude.toFixed(6);
+        if (lat && lng && latRef && lngRef) {
+          // Convert GPS coordinates to decimal degrees
+          const latitude = convertDMSToDD(lat, latRef);
+          const longitude = convertDMSToDD(lng, lngRef);
+          
+          // Only populate if fields are empty or zero
+          const latField = document.getElementById('location_latitude');
+          const lngField = document.getElementById('location_longitude');
+          
+          if (!latField.value || latField.value === '0') {
+            latField.value = latitude.toFixed(6);
+          }
+          if (!lngField.value || lngField.value === '0') {
+            lngField.value = longitude.toFixed(6);
+          }
+          
+          // Update map with EXIF location (only if map is initialized)
+          if (typeof map !== 'undefined' && map) {
+            updateMapMarker(longitude, latitude);
+            map.flyTo({center: [longitude, latitude], zoom: 14});
+          }
+          
+          // Show notification
+          const preview = document.getElementById('mediaPreview');
+          const notification = document.createElement('div');
+          notification.className = 'alert alert-success mt-2';
+          notification.innerHTML = '<i class="bi bi-check-circle"></i> GPS coordinates extracted from image EXIF data';
+          preview.appendChild(notification);
+          
+          // Remove notification after 5 seconds
+          setTimeout(() => notification.remove(), 5000);
         }
-        if (!lngField.value || lngField.value === '0') {
-          lngField.value = longitude.toFixed(6);
-        }
-        
-        // Update map with EXIF location
-        updateMapMarker(longitude, latitude);
-        map.flyTo({center: [longitude, latitude], zoom: 14});
-        
-        // Show notification
-        const preview = document.getElementById('mediaPreview');
-        const notification = document.createElement('div');
-        notification.className = 'alert alert-success mt-2';
-        notification.innerHTML = '<i class="bi bi-check-circle"></i> GPS coordinates extracted from image EXIF data';
-        preview.appendChild(notification);
-        
-        // Remove notification after 5 seconds
-        setTimeout(() => notification.remove(), 5000);
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error extracting EXIF GPS data:', error);
+    }
   };
 }
 
