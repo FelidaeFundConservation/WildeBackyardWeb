@@ -200,9 +200,16 @@ def load_more_posts(request):
     if not api_token:
         return JsonResponse({"error": "Authentication required"}, status=401)
     
-    # Get pagination parameters
-    offset = int(request.GET.get("offset", 0))
-    limit = int(request.GET.get("limit", 10))
+    # Get and validate pagination parameters
+    try:
+        offset = int(request.GET.get("offset", 0))
+        limit = int(request.GET.get("limit", 10))
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
+    
+    # Validate limit to prevent abuse
+    if limit < 1 or limit > 100:
+        return JsonResponse({"error": "Limit must be between 1 and 100"}, status=400)
     
     # Get filter parameters
     species_filter = request.GET.get("species")
