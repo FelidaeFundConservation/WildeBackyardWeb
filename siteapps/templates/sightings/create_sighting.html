@@ -322,7 +322,6 @@ function getCurrentLocation() {
 }
 
 function pickLocationOnMap() {
-  alert('Click on the map to select a location');
   map.once('click', function(e) {
     const lng = e.lngLat.lng;
     const lat = e.lngLat.lat;
