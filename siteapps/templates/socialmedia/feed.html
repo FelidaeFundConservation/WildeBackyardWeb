@@ -194,6 +194,7 @@ function createPostCard(post) {
     let mediaHtml = '';
     if (post.media_url) {
         if (post.is_video) {
+            // For videos, place species badge at top-start to avoid overlap with video controls badge
             mediaHtml = `
                 <div class="position-relative">
                     <div class="position-absolute top-0 end-0 m-2">

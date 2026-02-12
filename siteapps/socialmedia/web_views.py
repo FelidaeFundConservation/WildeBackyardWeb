@@ -13,6 +13,9 @@ from .models import MediaPost, TextComment
 
 logger = logging.getLogger(__name__)
 
+# Pagination constants
+MAX_POSTS_PER_REQUEST = 100
+
 
 def feed_view(request):
     """Display social media feed"""
@@ -204,12 +207,12 @@ def load_more_posts(request):
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 10))
-    except (ValueError, TypeError):
+    except ValueError:
         return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
     
     # Validate limit to prevent abuse
-    if limit < 1 or limit > 100:
-        return JsonResponse({"error": "Limit must be between 1 and 100"}, status=400)
+    if limit < 1 or limit > MAX_POSTS_PER_REQUEST:
+        return JsonResponse({"error": f"Limit must be between 1 and {MAX_POSTS_PER_REQUEST}"}, status=400)
     
     # Get filter parameters
     species_filter = request.GET.get("species")
@@ -224,9 +227,11 @@ def load_more_posts(request):
     
     if species_filter:
         data["species"] = species_filter
-    if location_filter == "local":
-        data["distanceRadius"] = 50  # 50km default
-        # Would need user's location here
+    # Note: Local location filtering not yet implemented - requires user location
+    # if location_filter == "local":
+    #     data["distanceRadius"] = 50
+    #     data["userLatitude"] = user_latitude
+    #     data["userLongitude"] = user_longitude
     
     # Fetch posts from backend
     response = api_client.post("/v1/socialmedia/api/feed/get/", data)
