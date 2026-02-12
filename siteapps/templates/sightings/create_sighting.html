@@ -473,7 +473,7 @@ function convertDMSToDD(dms, ref) {
       // Validate denominator exists and is not zero
       if (value.denominator === undefined || value.denominator === 0) {
         console.warn('Invalid EXIF rational number:', value);
-        return 0;
+        return NaN;
       }
       return value.numerator / value.denominator;
     }
