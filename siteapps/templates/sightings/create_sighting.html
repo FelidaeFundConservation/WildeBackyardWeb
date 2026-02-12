@@ -5,6 +5,7 @@
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
           rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
   #map {
     width: 100%;
@@ -377,6 +378,9 @@ function previewMedia(input) {
     reader.onload = function(e) {
       if (file.type.startsWith('image/')) {
         preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
+        
+        // Extract EXIF data for images
+        extractExifGPS(e.target.result);
       } else if (file.type.startsWith('video/')) {
         const sizeInfo = `<small class="text-muted">File size: ${(file.size / (1024*1024)).toFixed(2)}MB</small>`;
         preview.innerHTML = `<video controls class="media-preview" preload="metadata"><source src="${e.target.result}" type="${file.type}"></video><br>${sizeInfo}`;
@@ -385,6 +389,78 @@ function previewMedia(input) {
 
     reader.readAsDataURL(file);
   }
+}
+
+function extractExifGPS(dataUrl) {
+  // Convert dataURL to image element for EXIF parsing
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  
+  img.onload = function() {
+    EXIF.getData(img, function() {
+      const lat = EXIF.getTag(this, 'GPSLatitude');
+      const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+      const lng = EXIF.getTag(this, 'GPSLongitude');
+      const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
+      
+      if (lat && lng && latRef && lngRef) {
+        // Convert GPS coordinates to decimal degrees
+        const latitude = convertDMSToDD(lat, latRef);
+        const longitude = convertDMSToDD(lng, lngRef);
+        
+        // Only populate if fields are empty or zero
+        const latField = document.getElementById('location_latitude');
+        const lngField = document.getElementById('location_longitude');
+        
+        if (!latField.value || latField.value === '0') {
+          latField.value = latitude.toFixed(6);
+        }
+        if (!lngField.value || lngField.value === '0') {
+          lngField.value = longitude.toFixed(6);
+        }
+        
+        // Update map with EXIF location
+        updateMapMarker(longitude, latitude);
+        map.flyTo({center: [longitude, latitude], zoom: 14});
+        
+        // Show notification
+        const preview = document.getElementById('mediaPreview');
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success mt-2';
+        notification.innerHTML = '<i class="bi bi-check-circle"></i> GPS coordinates extracted from image EXIF data';
+        preview.appendChild(notification);
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => notification.remove(), 5000);
+      }
+    });
+  };
+}
+
+function convertDMSToDD(dms, ref) {
+  // DMS is typically [degrees, minutes, seconds]
+  // EXIF.js returns these as rational numbers (with numerator/denominator) or plain numbers
+  
+  // Convert each component, handling both rational and plain number formats
+  const toDecimal = (value) => {
+    if (typeof value === 'object' && value.numerator !== undefined) {
+      return value.numerator / value.denominator;
+    }
+    return value;
+  };
+  
+  const degrees = toDecimal(dms[0]);
+  const minutes = toDecimal(dms[1]);
+  const seconds = toDecimal(dms[2]);
+  
+  let dd = degrees + minutes/60 + seconds/3600;
+  
+  // If South or West, make negative
+  if (ref === 'S' || ref === 'W') {
+    dd = dd * -1;
+  }
+  
+  return dd;
 }
 
 // Update map when coordinates are manually entered
