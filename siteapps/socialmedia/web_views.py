@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from siteapps.users.api_client import BackendAPIClient
@@ -11,6 +12,9 @@ from siteapps.users.api_client import BackendAPIClient
 from .models import MediaPost, TextComment
 
 logger = logging.getLogger(__name__)
+
+# Pagination constants
+MAX_POSTS_PER_REQUEST = 100
 
 
 def feed_view(request):
@@ -30,7 +34,9 @@ def feed_view(request):
             data["distanceRadius"] = 50  # 50km default
             # Would need user's location here
 
-        response = api_client.post("/v1/socialmedia/api/feed/get/", data)
+        # Build URL with query parameters for pagination
+        endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
+        response = api_client.post(endpoint, data)
         if response:
             # Backend returns DRF paginated response with 'results' key
             posts = response.get("results", [])
@@ -190,3 +196,83 @@ def like_comment(request, post_id, comment_id):
             messages.error(request, "Failed to update comment.")
 
     return redirect("socialmedia:post_detail", post_id=post_id)
+
+
+def load_more_posts(request):
+    """AJAX endpoint to load more posts for infinite scroll"""
+    api_token = request.session.get("backend_api_token")
+    
+    if not api_token:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    
+    # Get and validate pagination parameters
+    try:
+        offset = int(request.GET.get("offset", 0))
+        limit = int(request.GET.get("limit", 10))
+    except ValueError:
+        return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
+    
+    # Validate limit to prevent abuse
+    if limit < 1 or limit > MAX_POSTS_PER_REQUEST:
+        return JsonResponse({"error": f"Limit must be between 1 and {MAX_POSTS_PER_REQUEST}"}, status=400)
+    
+    # Get filter parameters
+    species_filter = request.GET.get("species")
+    location_filter = request.GET.get("location", "global")
+    
+    # Build API request data
+    api_client = BackendAPIClient(auth_token=api_token)
+    data = {}
+    
+    if species_filter:
+        data["species"] = species_filter
+    # Note: Local location filtering not yet implemented - requires user location
+    # if location_filter == "local":
+    #     data["distanceRadius"] = 50
+    #     data["userLatitude"] = user_latitude
+    #     data["userLongitude"] = user_longitude
+    
+    # Build URL with query parameters for pagination
+    endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
+    
+    # Fetch posts from backend
+    response = api_client.post(endpoint, data)
+    
+    if not response:
+        return JsonResponse({"error": "Failed to fetch posts"}, status=500)
+    
+    # Backend returns paginated response with 'results', 'next', 'count' keys
+    posts = response.get("results", [])
+    next_url = response.get("next")
+    total_count = response.get("count", 0)
+    
+    # Format posts data for frontend
+    posts_data = []
+    for post in posts:
+        # Extract media URL and video flag if media exists
+        media_url = None
+        is_video = False
+        if post.get("media"):
+            media_url = post["media"].get("url")
+            is_video = post["media"].get("is_video", False)
+        
+        post_data = {
+            "id": post.get("id"),
+            "title": post.get("title"),
+            "body": post.get("body"),
+            "species": post.get("species"),
+            "media_url": media_url,
+            "is_video": is_video,
+            "user_name": post.get("created_by"),
+            "created": post.get("encounter_datetime"),
+            "geocoded_location": post.get("geocoded_location"),
+            "likes_count": post.get("likes_count", 0),
+            "comments_count": post.get("comments_count", 0),
+        }
+        posts_data.append(post_data)
+    
+    return JsonResponse({
+        "posts": posts_data,
+        "has_more": next_url is not None,
+        "total_count": total_count,
+    })
