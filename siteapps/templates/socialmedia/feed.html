@@ -79,7 +79,7 @@
                         <i class="bi bi-info-circle"></i> No sightings found. Be the first to report one!
                     </div>
                 {% endif %}
-                <div class="row">
+                <div class="row" id="posts-container">
                     {% for post in posts %}
                         <div class="col-12 col-lg-6 col-xl-4 mb-4">
                             <div class="card shadow-sm h-100">
@@ -148,19 +148,182 @@
                     {% endfor %}
                 </div>
                 {% if posts %}
-                    <div class="text-center mt-4">
-                        <button class="btn btn-outline-light" onclick="loadMore()">
+                    <div class="text-center mt-4" id="load-more-container">
+                        <button class="btn btn-outline-light" id="load-more-btn" onclick="loadMore()">
                             <i class="bi bi-arrow-down-circle"></i> Load More
                         </button>
+                        <div id="loading-spinner" class="d-none">
+                            <div class="spinner-border text-light" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
     <script>
-function loadMore() {
-  // Implement pagination/infinite scroll
-  alert('Load more functionality to be implemented');
+let currentOffset = {{ posts|length }};
+const currentSpecies = "{{ current_species|default:'' }}";
+const currentLocation = "{{ location_filter|default:'global' }}";
+let isLoading = false;
+let hasMore = true;
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+}
+
+function truncateWords(text, wordLimit) {
+    if (!text) return '';
+    const words = text.split(' ');
+    if (words.length <= wordLimit) return text;
+    return words.slice(0, wordLimit).join(' ') + '...';
+}
+
+function createPostCard(post) {
+    let mediaHtml = '';
+    if (post.media_url) {
+        if (post.is_video) {
+            mediaHtml = `
+                <div class="position-relative">
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-dark bg-opacity-75">
+                            <i class="bi bi-play-circle"></i> Video
+                        </span>
+                    </div>
+                    <video class="card-img-top" 
+                           style="max-height: 300px; object-fit: cover" 
+                           controls 
+                           preload="metadata" 
+                           controlsList="nodownload">
+                        <source src="${escapeHtml(post.media_url)}" type="video/mp4">
+                        <source src="${escapeHtml(post.media_url)}" type="video/webm">
+                        Your browser does not support the video tag.
+                    </video>
+                    ${post.species ? `<span class="badge bg-success position-absolute top-0 end-0 m-2">${escapeHtml(post.species)}</span>` : ''}
+                </div>
+            `;
+        } else {
+            mediaHtml = `
+                <div class="position-relative">
+                    <img src="${escapeHtml(post.media_url)}" 
+                         class="card-img-top" 
+                         style="max-height: 300px; object-fit: cover" 
+                         alt="${escapeHtml(post.title)}">
+                    ${post.species ? `<span class="badge bg-success position-absolute top-0 end-0 m-2">${escapeHtml(post.species)}</span>` : ''}
+                </div>
+            `;
+        }
+    }
+    
+    const bodyHtml = post.body ? `<p class="card-text">${escapeHtml(truncateWords(post.body, 30))}</p>` : '';
+    const locationHtml = post.geocoded_location ? 
+        `<p class="card-text text-muted small">
+            <i class="bi bi-geo-alt"></i> ${escapeHtml(post.geocoded_location)}
+        </p>` : '';
+    
+    const likesHtml = post.likes_count ? 
+        `<span class="badge bg-light text-dark">
+            <i class="bi bi-heart"></i> ${post.likes_count}
+        </span>` : '';
+    
+    const commentsHtml = post.comments_count ? 
+        `<span class="badge bg-light text-dark">
+            <i class="bi bi-chat"></i> ${post.comments_count}
+        </span>` : '';
+    
+    return `
+        <div class="col-12 col-lg-6 col-xl-4 mb-4">
+            <div class="card shadow-sm h-100">
+                ${mediaHtml}
+                <div class="card-body">
+                    <h5 class="card-title">${escapeHtml(post.title)}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="bi bi-person"></i> ${escapeHtml(post.user_name || 'Anonymous')}
+                        <span class="mx-2">•</span>
+                        <i class="bi bi-calendar"></i> ${formatDate(post.created)}
+                    </p>
+                    ${bodyHtml}
+                    ${locationHtml}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="/v1/socialmedia/post/${post.id}/" 
+                           class="btn btn-sm btn-outline-primary">View Details</a>
+                        <div>
+                            ${likesHtml}
+                            ${commentsHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function loadMore() {
+    if (isLoading || !hasMore) return;
+    
+    isLoading = true;
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    // Show loading state
+    loadMoreBtn.classList.add('d-none');
+    loadingSpinner.classList.remove('d-none');
+    
+    try {
+        // Build query parameters
+        const params = new URLSearchParams({
+            offset: currentOffset,
+            limit: 10
+        });
+        
+        if (currentSpecies) {
+            params.append('species', currentSpecies);
+        }
+        if (currentLocation) {
+            params.append('location', currentLocation);
+        }
+        
+        const response = await fetch(`/v1/socialmedia/feed/load-more/?${params}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load more posts');
+        }
+        
+        const data = await response.json();
+        
+        // Append new posts to container
+        const container = document.getElementById('posts-container');
+        data.posts.forEach(post => {
+            container.insertAdjacentHTML('beforeend', createPostCard(post));
+        });
+        
+        // Update state
+        currentOffset += data.posts.length;
+        hasMore = data.has_more;
+        
+        // Hide load more button if no more posts
+        if (!hasMore) {
+            document.getElementById('load-more-container').innerHTML = 
+                '<p class="text-center text-muted">No more posts to load</p>';
+        }
+    } catch (error) {
+        console.error('Error loading more posts:', error);
+        alert('Failed to load more posts. Please try again.');
+    } finally {
+        isLoading = false;
+        loadMoreBtn.classList.remove('d-none');
+        loadingSpinner.classList.add('d-none');
+    }
 }
     </script>
 {% endblock %}
