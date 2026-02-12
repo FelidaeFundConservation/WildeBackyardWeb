@@ -415,6 +415,14 @@ function extractExifGPS(dataUrl) {
           const latitude = convertDMSToDD(lat, latRef);
           const longitude = convertDMSToDD(lng, lngRef);
           
+          // Validate coordinates are within valid ranges and are finite numbers
+          if (!isFinite(latitude) || !isFinite(longitude) ||
+              latitude < -90 || latitude > 90 ||
+              longitude < -180 || longitude > 180) {
+            console.warn('Invalid GPS coordinates extracted from EXIF:', {latitude, longitude});
+            return;
+          }
+          
           // Only populate if fields are empty
           const latField = document.getElementById('location_latitude');
           const lngField = document.getElementById('location_longitude');
@@ -452,6 +460,12 @@ function extractExifGPS(dataUrl) {
 function convertDMSToDD(dms, ref) {
   // DMS is typically [degrees, minutes, seconds]
   // EXIF.js returns these as rational numbers (with numerator/denominator) or plain numbers
+  
+  // Validate dms is an array with at least 3 elements
+  if (!Array.isArray(dms) || dms.length < 3) {
+    console.warn('Invalid DMS array format:', dms);
+    return NaN;
+  }
   
   // Convert each component, handling both rational and plain number formats
   const toDecimal = (value) => {
