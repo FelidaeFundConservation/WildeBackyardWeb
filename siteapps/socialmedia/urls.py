@@ -18,13 +18,14 @@ from siteapps.socialmedia.views import (
     LikeCommentView,
     LikePostView,
 )
-from siteapps.socialmedia.web_views import add_comment, feed_view, like_comment, like_post, post_detail_view, report_post
+from siteapps.socialmedia.web_views import add_comment, feed_view, like_comment, like_post, load_more_posts, post_detail_view, report_post
 
 app_name = "socialmedia"
 
 urlpatterns = [
     # Web views
     path("feed/", feed_view, name="feed"),
+    path("feed/load-more/", load_more_posts, name="load_more_posts"),
     path("post/<uuid:post_id>/", post_detail_view, name="post_detail"),
     path("post/<uuid:post_id>/comment/", add_comment, name="add_comment"),
     path("post/<uuid:post_id>/like/", like_post, name="like_post"),
