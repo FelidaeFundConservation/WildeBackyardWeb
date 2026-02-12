@@ -27,7 +27,10 @@ def feed_view(request):
     # Get posts from backend (requires authentication)
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        data = {}
+        data = {
+            "limit": 10,  # Match PAGE_SIZE from JavaScript
+            "offset": 0,
+        }
         if species_filter:
             data["species"] = species_filter
         if location_filter == "local":
