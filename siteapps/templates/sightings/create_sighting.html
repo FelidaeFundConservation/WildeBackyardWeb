@@ -415,14 +415,14 @@ function extractExifGPS(dataUrl) {
           const latitude = convertDMSToDD(lat, latRef);
           const longitude = convertDMSToDD(lng, lngRef);
           
-          // Only populate if fields are empty or zero
+          // Only populate if fields are empty
           const latField = document.getElementById('location_latitude');
           const lngField = document.getElementById('location_longitude');
           
-          if (!latField.value || latField.value === '0') {
+          if (!latField.value) {
             latField.value = latitude.toFixed(6);
           }
-          if (!lngField.value || lngField.value === '0') {
+          if (!lngField.value) {
             lngField.value = longitude.toFixed(6);
           }
           
@@ -455,7 +455,12 @@ function convertDMSToDD(dms, ref) {
   
   // Convert each component, handling both rational and plain number formats
   const toDecimal = (value) => {
-    if (typeof value === 'object' && value.numerator !== undefined) {
+    if (typeof value === 'object' && value !== null && value.numerator !== undefined) {
+      // Validate denominator exists and is not zero
+      if (value.denominator === undefined || value.denominator === 0) {
+        console.warn('Invalid EXIF rational number:', value);
+        return 0;
+      }
       return value.numerator / value.denominator;
     }
     return value;
