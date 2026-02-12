@@ -27,17 +27,16 @@ def feed_view(request):
     # Get posts from backend (requires authentication)
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        data = {
-            "limit": 10,  # Match PAGE_SIZE from JavaScript
-            "offset": 0,
-        }
+        data = {}
         if species_filter:
             data["species"] = species_filter
         if location_filter == "local":
             data["distanceRadius"] = 50  # 50km default
             # Would need user's location here
 
-        response = api_client.post("/v1/socialmedia/api/feed/get/", data)
+        # Build URL with query parameters for pagination
+        endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
+        response = api_client.post(endpoint, data)
         if response:
             # Backend returns DRF paginated response with 'results' key
             posts = response.get("results", [])
@@ -223,10 +222,7 @@ def load_more_posts(request):
     
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
-    data = {
-        "offset": offset,
-        "limit": limit,
-    }
+    data = {}
     
     if species_filter:
         data["species"] = species_filter
@@ -236,8 +232,11 @@ def load_more_posts(request):
     #     data["userLatitude"] = user_latitude
     #     data["userLongitude"] = user_longitude
     
+    # Build URL with query parameters for pagination
+    endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
+    
     # Fetch posts from backend
-    response = api_client.post("/v1/socialmedia/api/feed/get/", data)
+    response = api_client.post(endpoint, data)
     
     if not response:
         return JsonResponse({"error": "Failed to fetch posts"}, status=500)
