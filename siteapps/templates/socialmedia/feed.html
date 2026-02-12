@@ -163,6 +163,7 @@
         </div>
     </div>
     <script>
+const PAGE_SIZE = 10;
 let currentOffset = {{ posts|length }};
 const currentSpecies = "{{ current_species|default:'' }}";
 const currentLocation = "{{ location_filter|default:'global' }}";
@@ -209,7 +210,7 @@ function createPostCard(post) {
                         <source src="${escapeHtml(post.media_url)}" type="video/webm">
                         Your browser does not support the video tag.
                     </video>
-                    ${post.species ? `<span class="badge bg-success position-absolute top-0 end-0 m-2">${escapeHtml(post.species)}</span>` : ''}
+                    ${post.species ? `<span class="badge bg-success position-absolute top-0 start-0 m-2">${escapeHtml(post.species)}</span>` : ''}
                 </div>
             `;
         } else {
@@ -283,7 +284,7 @@ async function loadMore() {
         // Build query parameters
         const params = new URLSearchParams({
             offset: currentOffset,
-            limit: 10
+            limit: PAGE_SIZE
         });
         
         if (currentSpecies) {
@@ -315,13 +316,17 @@ async function loadMore() {
         if (!hasMore) {
             document.getElementById('load-more-container').innerHTML = 
                 '<p class="text-center text-muted">No more posts to load</p>';
+        } else {
+            // Show button again only if there are more posts
+            loadMoreBtn.classList.remove('d-none');
         }
     } catch (error) {
         console.error('Error loading more posts:', error);
         alert('Failed to load more posts. Please try again.');
+        // Show button again on error
+        loadMoreBtn.classList.remove('d-none');
     } finally {
         isLoading = false;
-        loadMoreBtn.classList.remove('d-none');
         loadingSpinner.classList.add('d-none');
     }
 }
