@@ -5,6 +5,7 @@
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
           rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
   #map {
     width: 100%;
@@ -377,6 +378,9 @@ function previewMedia(input) {
     reader.onload = function(e) {
       if (file.type.startsWith('image/')) {
         preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
+        
+        // Extract EXIF data for images
+        extractExifGPS(e.target.result);
       } else if (file.type.startsWith('video/')) {
         const sizeInfo = `<small class="text-muted">File size: ${(file.size / (1024*1024)).toFixed(2)}MB</small>`;
         preview.innerHTML = `<video controls class="media-preview" preload="metadata"><source src="${e.target.result}" type="${file.type}"></video><br>${sizeInfo}`;
@@ -385,6 +389,116 @@ function previewMedia(input) {
 
     reader.readAsDataURL(file);
   }
+}
+
+function extractExifGPS(dataUrl) {
+  // Check if EXIF library is loaded
+  if (typeof EXIF === 'undefined') {
+    console.warn('EXIF library not loaded, skipping GPS extraction');
+    return;
+  }
+  
+  // Convert dataURL to image element for EXIF parsing
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  
+  img.onload = function() {
+    try {
+      EXIF.getData(img, function() {
+        const lat = EXIF.getTag(this, 'GPSLatitude');
+        const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+        const lng = EXIF.getTag(this, 'GPSLongitude');
+        const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
+        
+        if (lat && lng && latRef && lngRef) {
+          // Convert GPS coordinates to decimal degrees
+          const latitude = convertDMSToDD(lat, latRef);
+          const longitude = convertDMSToDD(lng, lngRef);
+          
+          // Validate coordinates are within valid ranges and are finite numbers
+          if (!isFinite(latitude) || !isFinite(longitude) ||
+              latitude < -90 || latitude > 90 ||
+              longitude < -180 || longitude > 180) {
+            console.warn('Invalid GPS coordinates extracted from EXIF:', {latitude, longitude});
+            return;
+          }
+          
+          // Only populate if fields are empty
+          const latField = document.getElementById('location_latitude');
+          const lngField = document.getElementById('location_longitude');
+          
+          if (latField.value === '') {
+            latField.value = latitude.toFixed(6);
+          }
+          if (lngField.value === '') {
+            lngField.value = longitude.toFixed(6);
+          }
+          
+          // Update map with EXIF location (only if map is initialized)
+          if (typeof map !== 'undefined' && map) {
+            updateMapMarker(longitude, latitude);
+            map.flyTo({center: [longitude, latitude], zoom: 14});
+          }
+          
+          // Show notification
+          const preview = document.getElementById('mediaPreview');
+          const notification = document.createElement('div');
+          notification.className = 'alert alert-success mt-2';
+          
+          const icon = document.createElement('i');
+          icon.className = 'bi bi-check-circle';
+          notification.appendChild(icon);
+          
+          const message = document.createTextNode(' GPS coordinates extracted from image EXIF data');
+          notification.appendChild(message);
+          
+          preview.appendChild(notification);
+          
+          // Remove notification after 5 seconds
+          setTimeout(() => notification.remove(), 5000);
+        }
+      });
+    } catch (error) {
+      console.error('Error extracting EXIF GPS data:', error);
+    }
+  };
+}
+
+function convertDMSToDD(dms, ref) {
+  // DMS is typically [degrees, minutes, seconds]
+  // EXIF.js returns these as rational numbers (with numerator/denominator) or plain numbers
+  
+  // Validate dms is an array with at least 3 elements
+  if (!Array.isArray(dms) || dms.length < 3) {
+    console.warn('Invalid DMS array format:', dms);
+    return NaN;
+  }
+  
+  // Convert each component, handling both rational and plain number formats
+  const toDecimal = (value) => {
+    if (typeof value === 'object' && value !== null && value.numerator !== undefined) {
+      // Validate denominator exists and is not zero
+      if (value.denominator === undefined || value.denominator === 0) {
+        console.warn('Invalid EXIF rational number:', value);
+        return NaN;
+      }
+      return value.numerator / value.denominator;
+    }
+    return value;
+  };
+  
+  const degrees = toDecimal(dms[0]);
+  const minutes = toDecimal(dms[1]);
+  const seconds = toDecimal(dms[2]);
+  
+  let dd = degrees + minutes/60 + seconds/3600;
+  
+  // If South or West, make negative
+  if (ref === 'S' || ref === 'W') {
+    dd = dd * -1;
+  }
+  
+  return dd;
 }
 
 // Update map when coordinates are manually entered
