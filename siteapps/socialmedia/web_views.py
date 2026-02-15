@@ -22,7 +22,12 @@ def feed_view(request):
     api_token = request.session.get("backend_api_token")
     posts = []
     species_filter = request.GET.get("species")
-    location_filter = request.GET.get("location", "global")  # global or local
+    location_filter = request.GET.get("location", "global")  # global or custom
+    
+    # Get custom location parameters
+    latitude = request.GET.get("latitude")
+    longitude = request.GET.get("longitude")
+    radius = request.GET.get("radius")
 
     # Get posts from backend (requires authentication)
     if api_token:
@@ -30,9 +35,16 @@ def feed_view(request):
         data = {}
         if species_filter:
             data["species"] = species_filter
-        if location_filter == "local":
-            data["distanceRadius"] = 50  # 50km default
-            # Would need user's location here
+        
+        # Apply custom location filter if provided
+        if location_filter == "custom" and latitude and longitude and radius:
+            try:
+                data["userLatitude"] = float(latitude)
+                data["userLongitude"] = float(longitude)
+                data["distanceRadius"] = float(radius)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid location parameters: lat={latitude}, lon={longitude}, radius={radius}")
+                messages.error(request, "Invalid location parameters. Please enter valid numbers.")
 
         # Build URL with query parameters for pagination
         endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
@@ -56,6 +68,9 @@ def feed_view(request):
         "species_list": species_list,
         "current_species": species_filter,
         "location_filter": location_filter,
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius": radius,
     }
     return render(request, "socialmedia/feed.html", context)
 
@@ -219,6 +234,9 @@ def load_more_posts(request):
     # Get filter parameters
     species_filter = request.GET.get("species")
     location_filter = request.GET.get("location", "global")
+    latitude = request.GET.get("latitude")
+    longitude = request.GET.get("longitude")
+    radius = request.GET.get("radius")
     
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
@@ -226,11 +244,16 @@ def load_more_posts(request):
     
     if species_filter:
         data["species"] = species_filter
-    # Note: Local location filtering not yet implemented - requires user location
-    # if location_filter == "local":
-    #     data["distanceRadius"] = 50
-    #     data["userLatitude"] = user_latitude
-    #     data["userLongitude"] = user_longitude
+    
+    # Apply custom location filter if provided
+    if location_filter == "custom" and latitude and longitude and radius:
+        try:
+            data["userLatitude"] = float(latitude)
+            data["userLongitude"] = float(longitude)
+            data["distanceRadius"] = float(radius)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid location parameters in load_more: lat={latitude}, lon={longitude}, radius={radius}")
+            return JsonResponse({"error": "Invalid location parameters"}, status=400)
     
     # Build URL with query parameters for pagination
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
