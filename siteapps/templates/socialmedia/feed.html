@@ -34,19 +34,46 @@
                                            id="global"
                                            value="global"
                                            {% if location_filter == 'global' %}checked{% endif %}
-                                           onchange="this.form.submit()">
+                                           onchange="toggleCustomLocationInputs(); this.form.submit()">
                                     <label class="form-check-label" for="global">Global</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input"
                                            type="radio"
                                            name="location"
-                                           id="local"
-                                           value="local"
-                                           {% if location_filter == 'local' %}checked{% endif %}
-                                           onchange="this.form.submit()">
-                                    <label class="form-check-label" for="local">Local (50km)</label>
+                                           id="custom"
+                                           value="custom"
+                                           {% if location_filter == 'custom' %}checked{% endif %}
+                                           onchange="toggleCustomLocationInputs()">
+                                    <label class="form-check-label" for="custom">Custom Location</label>
                                 </div>
+                            </div>
+                            <div id="custom-location-inputs" class="mb-3" style="display: {% if location_filter == 'custom' %}block{% else %}none{% endif %};">
+                                <label for="latitude" class="form-label small">Latitude</label>
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       id="latitude"
+                                       name="latitude"
+                                       step="any"
+                                       value="{{ latitude|default:'' }}"
+                                       placeholder="e.g., 37.7749">
+                                <label for="longitude" class="form-label small mt-2">Longitude</label>
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       id="longitude"
+                                       name="longitude"
+                                       step="any"
+                                       value="{{ longitude|default:'' }}"
+                                       placeholder="e.g., -122.4194">
+                                <label for="radius" class="form-label small mt-2">Radius (km)</label>
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       id="radius"
+                                       name="radius"
+                                       min="1"
+                                       value="{{ radius|default:'50' }}"
+                                       placeholder="50">
+                                <button type="submit" class="btn btn-sm btn-primary mt-2 w-100">Apply Filter</button>
                             </div>
                         </form>
                         {% if user.is_authenticated %}
@@ -167,8 +194,21 @@ const PAGE_SIZE = 10;
 let currentOffset = {{ posts|length }};
 const currentSpecies = "{{ current_species|default:'' }}";
 const currentLocation = "{{ location_filter|default:'global' }}";
+const currentLatitude = "{{ latitude|default:'' }}";
+const currentLongitude = "{{ longitude|default:'' }}";
+const currentRadius = "{{ radius|default:'' }}";
 let isLoading = false;
 let hasMore = true;
+
+function toggleCustomLocationInputs() {
+    const customRadio = document.getElementById('custom');
+    const customInputs = document.getElementById('custom-location-inputs');
+    if (customRadio.checked) {
+        customInputs.style.display = 'block';
+    } else {
+        customInputs.style.display = 'none';
+    }
+}
 
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -285,6 +325,15 @@ async function loadMore() {
         }
         if (currentLocation) {
             params.append('location', currentLocation);
+        }
+        if (currentLatitude) {
+            params.append('latitude', currentLatitude);
+        }
+        if (currentLongitude) {
+            params.append('longitude', currentLongitude);
+        }
+        if (currentRadius) {
+            params.append('radius', currentRadius);
         }
 
         const response = await fetch(`/feed/feed/load-more/?${params}`);
