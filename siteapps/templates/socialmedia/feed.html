@@ -57,6 +57,8 @@
                                        id="latitude"
                                        name="latitude"
                                        step="any"
+                                       min="-90"
+                                       max="90"
                                        value="{{ latitude|default:'' }}"
                                        placeholder="e.g., 37.7749">
                                 <label for="longitude" class="form-label small mt-2">Longitude</label>
@@ -65,6 +67,8 @@
                                        id="longitude"
                                        name="longitude"
                                        step="any"
+                                       min="-180"
+                                       max="180"
                                        value="{{ longitude|default:'' }}"
                                        placeholder="e.g., -122.4194">
                                 <label for="radius" class="form-label small mt-2">Radius (km)</label>

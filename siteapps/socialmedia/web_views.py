@@ -17,6 +17,45 @@ logger = logging.getLogger(__name__)
 MAX_POSTS_PER_REQUEST = 100
 
 
+def validate_location_parameters(latitude, longitude, radius):
+    """
+    Validate custom location filter parameters.
+
+    Args:
+        latitude: Latitude value (string or None)
+        longitude: Longitude value (string or None)
+        radius: Radius value (string or None)
+
+    Returns:
+        tuple: (is_valid: bool, data: dict or error_msg: str)
+            If valid: (True, {"userLatitude": float, "userLongitude": float, "distanceRadius": float})
+            If invalid: (False, "error message")
+    """
+    if not (latitude and longitude and radius):
+        return False, "Custom location requires latitude, longitude, and radius values."
+
+    try:
+        lat_float = float(latitude)
+        lon_float = float(longitude)
+        radius_float = float(radius)
+
+        # Validate geographic ranges
+        if not (-90 <= lat_float <= 90):
+            return False, f"Latitude must be between -90 and 90, got {lat_float}"
+        if not (-180 <= lon_float <= 180):
+            return False, f"Longitude must be between -180 and 180, got {lon_float}"
+        if not (1 <= radius_float <= 20000):
+            return False, f"Radius must be between 1 and 20000 km, got {radius_float}"
+
+        return True, {
+            "userLatitude": lat_float,
+            "userLongitude": lon_float,
+            "distanceRadius": radius_float,
+        }
+    except (ValueError, TypeError) as e:
+        return False, f"Invalid location parameters: {str(e)}"
+
+
 def feed_view(request):
     """Display social media feed"""
     api_token = request.session.get("backend_api_token")
@@ -38,28 +77,12 @@ def feed_view(request):
 
         # Apply custom location filter if provided
         if location_filter == "custom":
-            if latitude and longitude and radius:
-                try:
-                    lat_float = float(latitude)
-                    lon_float = float(longitude)
-                    radius_float = float(radius)
-
-                    # Validate geographic ranges
-                    if not (-90 <= lat_float <= 90):
-                        raise ValueError(f"Latitude must be between -90 and 90, got {lat_float}")
-                    if not (-180 <= lon_float <= 180):
-                        raise ValueError(f"Longitude must be between -180 and 180, got {lon_float}")
-                    if not (1 <= radius_float <= 20000):
-                        raise ValueError(f"Radius must be between 1 and 20000 km, got {radius_float}")
-
-                    data["userLatitude"] = lat_float
-                    data["userLongitude"] = lon_float
-                    data["distanceRadius"] = radius_float
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Invalid location parameters: {e}")
-                    messages.error(request, f"Invalid location parameters: {str(e)}")
+            is_valid, result = validate_location_parameters(latitude, longitude, radius)
+            if is_valid:
+                data.update(result)
             else:
-                messages.error(request, "Custom location requires latitude, longitude, and radius values.")
+                logger.warning(f"Invalid location parameters: {result}")
+                messages.error(request, result)
 
         # Build URL with query parameters for pagination
         endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
@@ -262,33 +285,12 @@ def load_more_posts(request):
 
     # Apply custom location filter if provided
     if location_filter == "custom":
-        if latitude and longitude and radius:
-            try:
-                lat_float = float(latitude)
-                lon_float = float(longitude)
-                radius_float = float(radius)
-
-                # Validate geographic ranges
-                if not (-90 <= lat_float <= 90):
-                    logger.warning(f"Invalid latitude in load_more: {lat_float}")
-                    return JsonResponse({"error": "Latitude must be between -90 and 90"}, status=400)
-                if not (-180 <= lon_float <= 180):
-                    logger.warning(f"Invalid longitude in load_more: {lon_float}")
-                    return JsonResponse({"error": "Longitude must be between -180 and 180"}, status=400)
-                if not (1 <= radius_float <= 20000):
-                    logger.warning(f"Invalid radius in load_more: {radius_float}")
-                    return JsonResponse({"error": "Radius must be between 1 and 20000 km"}, status=400)
-
-                data["userLatitude"] = lat_float
-                data["userLongitude"] = lon_float
-                data["distanceRadius"] = radius_float
-            except (ValueError, TypeError) as e:
-                logger.warning(f"Invalid location parameters in load_more: {e}")
-                return JsonResponse({"error": "Invalid location parameters"}, status=400)
+        is_valid, result = validate_location_parameters(latitude, longitude, radius)
+        if is_valid:
+            data.update(result)
         else:
-            return JsonResponse(
-                {"error": "Custom location requires latitude, longitude, and radius values"}, status=400
-            )
+            logger.warning(f"Invalid location parameters in load_more: {result}")
+            return JsonResponse({"error": result}, status=400)
 
     # Build URL with query parameters for pagination
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
