@@ -49,8 +49,8 @@ def feed_view(request):
                         raise ValueError(f"Latitude must be between -90 and 90, got {lat_float}")
                     if not (-180 <= lon_float <= 180):
                         raise ValueError(f"Longitude must be between -180 and 180, got {lon_float}")
-                    if not (0 < radius_float <= 20000):
-                        raise ValueError(f"Radius must be between 0 and 20000 km, got {radius_float}")
+                    if not (1 <= radius_float <= 20000):
+                        raise ValueError(f"Radius must be between 1 and 20000 km, got {radius_float}")
 
                     data["userLatitude"] = lat_float
                     data["userLongitude"] = lon_float
@@ -275,9 +275,9 @@ def load_more_posts(request):
                 if not (-180 <= lon_float <= 180):
                     logger.warning(f"Invalid longitude in load_more: {lon_float}")
                     return JsonResponse({"error": "Longitude must be between -180 and 180"}, status=400)
-                if not (0 < radius_float <= 20000):
+                if not (1 <= radius_float <= 20000):
                     logger.warning(f"Invalid radius in load_more: {radius_float}")
-                    return JsonResponse({"error": "Radius must be between 0 and 20000 km"}, status=400)
+                    return JsonResponse({"error": "Radius must be between 1 and 20000 km"}, status=400)
 
                 data["userLatitude"] = lat_float
                 data["userLongitude"] = lon_float
