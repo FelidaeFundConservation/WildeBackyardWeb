@@ -48,7 +48,9 @@
                                     <label class="form-check-label" for="custom">Custom Location</label>
                                 </div>
                             </div>
-                            <div id="custom-location-inputs" class="mb-3" style="display: {% if location_filter == 'custom' %}block{% else %}none{% endif %};">
+                            <div id="custom-location-inputs"
+                                 class="mb-3"
+                                 style="display: {% if location_filter == 'custom' %}block{% else %}none{% endif %}">
                                 <label for="latitude" class="form-label small">Latitude</label>
                                 <input type="number"
                                        class="form-control form-control-sm"
