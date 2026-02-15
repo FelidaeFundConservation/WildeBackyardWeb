@@ -55,7 +55,6 @@ class CreateSightingView(View):
         
         # Required fields
         data = {
-            "userId": str(request.user.id),
             "postTitle": request.POST.get("post_title"),
             "encounterDatetime": encounter_datetime,
             "latitude": float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None,
