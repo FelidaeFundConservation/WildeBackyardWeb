@@ -54,6 +54,7 @@ class CreateSightingView(View):
         encounter_datetime = f"{encounter_date} {encounter_time}" if encounter_date else None
         
         # Required fields
+        # Note: userId is not included - the backend API derives the user from the Authorization token
         data = {
             "postTitle": request.POST.get("post_title"),
             "encounterDatetime": encounter_datetime,
