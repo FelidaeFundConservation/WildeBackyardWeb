@@ -55,8 +55,12 @@ class CreateSightingView(View):
         encounter_datetime = f"{encounter_date} {encounter_time}" if encounter_date else None
         
         # Get coordinates
-        latitude = float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None
-        longitude = float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+        try:
+            latitude = float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None
+            longitude = float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid latitude or longitude values.")
+            return self.get(request)
         
         # Reverse geocode the coordinates using Nominatim
         geocoded_location = None

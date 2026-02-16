@@ -29,7 +29,7 @@ def reverse_geocode_with_nominatim(latitude, longitude):
         "lon": longitude,
         "format": "json",
         "addressdetails": 1,
-        "zoom": 18,  # Highest detail level
+        "zoom": 14,  # Town/city level detail, appropriate for wildlife sightings
     }
 
     try:

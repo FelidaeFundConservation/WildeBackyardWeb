@@ -99,7 +99,7 @@ class ReverseGeocodeWithNominatim(APIView):
         latitude = data.get("latitude")
         longitude = data.get("longitude")
 
-        if not latitude or not longitude:
+        if latitude is None or longitude is None:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
                 data={"error": "latitude and longitude are required"}
