@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+  
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  ENVIRONMENT: staging
 
 jobs:
   test:
