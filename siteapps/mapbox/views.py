@@ -12,12 +12,18 @@ from rest_framework.views import APIView
 from .throttles import (
     GeocodePerDayThrottle,
     GeocodePerMinuteThrottle,
+    ReverseGeocodePerDayThrottle,
+    ReverseGeocodePerMinuteThrottle,
     SearchSuggestionsPerDayThrottle,
     SearchSuggestionsPerMinuteThrottle,
 )
+from .utils import reverse_geocode_with_nominatim
 
 
 # Create your views here.
+# Note: MapLibre GL JS is used for map rendering in the frontend,
+# but these geocoding/search APIs still use Mapbox services since
+# MapLibre doesn't provide geocoding functionality.
 class GetMapboxLocationSearchSuggestions(APIView):
     authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -69,4 +75,43 @@ class GetMapboxGeocode(APIView):
         else:
             return Response(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ReverseGeocodeWithNominatim(APIView):
+    """
+    Reverse geocode lat/lon coordinates using Nominatim API.
+    This is used to get human-readable location information from coordinates.
+    """
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ReverseGeocodePerMinuteThrottle, ReverseGeocodePerDayThrottle]
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={"error": "Invalid JSON in request body"}
+            )
+
+        latitude = data.get("latitude")
+        longitude = data.get("longitude")
+
+        if latitude is None or longitude is None:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={"error": "latitude and longitude are required"}
+            )
+
+        # Use the shared utility function for reverse geocoding
+        location_data = reverse_geocode_with_nominatim(latitude, longitude)
+        
+        if location_data:
+            return Response(status=status.HTTP_200_OK, data=location_data)
+        else:
+            return Response(
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                data={"error": "Failed to reverse geocode coordinates"}
             )
