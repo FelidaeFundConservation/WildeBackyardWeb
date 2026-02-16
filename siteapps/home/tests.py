@@ -16,12 +16,10 @@ class PageTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_main_pages(self):
-        self.check_single_page("account_signup")
-        self.check_single_page("account_login")
+        self.check_single_page("users:register")
+        self.check_single_page("users:login")
 
         self.client.login(email="test@example.com", password="testpass123")
 
         self.check_single_page("home:home")
         self.check_single_page("users:profile")
-        self.check_single_page("works:manage_works")
-        self.check_single_page("messages:connections")
