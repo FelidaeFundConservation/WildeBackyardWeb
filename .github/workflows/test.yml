@@ -184,6 +184,7 @@ jobs:
         continue-on-error: true
         env:
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          CLOUD_SQL_DATABASE_URL_STAGING: ${{ secrets.CLOUD_SQL_DATABASE_URL_STAGING }}
         run: |
           # Attempt to collect static files (dummy DB URL not needed for collectstatic)
           python manage.py collectstatic --noinput --settings=config.settings.staging || echo "Static collection skipped"
