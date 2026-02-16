@@ -106,3 +106,84 @@ jobs:
           # Basic YAML validation
           python -c "import yaml; yaml.safe_load(open('app.yaml'))"
           echo "✓ app.yaml is valid"
+
+  # Job 3: Deploy to App Engine
+  deploy:
+    name: Deploy to App Engine
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Validate GCP credentials
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "Error: GCP_SA_KEY secret is not set or is empty"
+            echo "Please configure the GCP_SA_KEY secret in your repository settings:"
+            echo "1. Go to Settings → Secrets and variables → Actions"
+            echo "2. Add a new secret named 'GCP_SA_KEY'"
+            echo "3. Paste the contents of your service account JSON key"
+            echo ""
+            echo "To create a service account key, follow the guide in gcp_deployment/DEPLOYMENT_GUIDE.md"
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update version.py with deployment commit hash
+        shell: bash
+        run: |
+          SHORT_HASH=$(git rev-parse --short HEAD)
+          RELEASE_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "staging")
+
+          # Export variables for Python to access
+          export SHORT_HASH RELEASE_TAG
+
+          python3 << 'PYTHON'
+          import os
+          short_hash = os.environ.get('SHORT_HASH', 'unknown')
+          release_tag = os.environ.get('RELEASE_TAG', 'unknown')
+
+          with open('config/version.py', 'w') as f:
+              f.write('"""\n')
+              f.write('Version information for the application.\n')
+              f.write('This file is automatically updated by the GitHub Actions workflow during deployment.\n')
+              f.write('"""\n')
+              f.write('\n')
+              f.write('VERSION = {\n')
+              f.write(f'    "commit_hash": "{short_hash}",\n')
+              f.write(f'    "release_tag": "{release_tag}",\n')
+              f.write('}\n')
+          print(f'✓ Updated version.py with commit hash: {short_hash} and release tag: {release_tag}')
+          PYTHON
+
+      - name: Collect static files
+        continue-on-error: true
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        run: |
+          # Attempt to collect static files (dummy DB URL not needed for collectstatic)
+          python manage.py collectstatic --noinput --settings=config.settings.staging || echo "Static collection skipped"
