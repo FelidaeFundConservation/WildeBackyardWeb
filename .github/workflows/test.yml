@@ -11,6 +11,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+    
     env:
       # Django settings
       DJANGO_SECRET_KEY: test-secret-key-for-ci
