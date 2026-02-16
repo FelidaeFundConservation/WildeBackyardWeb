@@ -18,6 +18,9 @@ from .throttles import (
 
 
 # Create your views here.
+# Note: MapLibre GL JS is used for map rendering in the frontend,
+# but these geocoding/search APIs still use Mapbox services since
+# MapLibre doesn't provide geocoding functionality.
 class GetMapboxLocationSearchSuggestions(APIView):
     authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [IsAuthenticated]

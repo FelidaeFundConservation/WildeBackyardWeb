@@ -2,9 +2,9 @@
 {% load static %}
 {% block title %}Report a Sighting - WildeBackyard{% endblock %}
 {% block header_includes %}
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
+    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
           rel='stylesheet' />
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <script src='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <style>
   #map {
@@ -274,19 +274,19 @@
         </div>
     </div>
     <script>
-mapboxgl.accessToken = 'pk.eyJ1IjoiaGV0emVycnIiLCJhIjoiY21reWtzNjBiMDhiajNkcHQ1YXRsa24wbyJ9.aZ3wCRNGdFw326r3yn2RtQ';
+// MapLibre GL JS does not require an access token for base maps
 let map, marker;
 
 // Initialize map
 document.addEventListener('DOMContentLoaded', function() {
-  map = new mapboxgl.Map({
+  map = new maplibregl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/outdoors-v12',
+    style: 'https://demotiles.maplibre.org/style.json', // Free demo style
     center: [-122.4194, 37.7749], // Default to San Francisco
     zoom: 10
   });
 
-  map.addControl(new mapboxgl.NavigationControl());
+  map.addControl(new maplibregl.NavigationControl());
 
   // Set today's date as default
   document.getElementById('encounter_date').valueAsDate = new Date();
@@ -336,7 +336,7 @@ function pickLocationOnMap() {
 
 function updateMapMarker(lng, lat) {
   if (marker) marker.remove();
-  marker = new mapboxgl.Marker()
+  marker = new maplibregl.Marker()
     .setLngLat([lng, lat])
     .addTo(map);
 }
