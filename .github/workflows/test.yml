@@ -1,0 +1,43 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    env:
+      # Django settings
+      DJANGO_SECRET_KEY: test-secret-key-for-ci
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_ADMIN_URL: admin/
+      # Backend API URL for staging
+      BACKEND_API_URL: https://wildebackyard-api-dot-wildepod-339517.wl.r.appspot.com
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv sync
+        uv pip install -r requirements-dev.txt
+    
+    - name: Run tests
+      run: |
+        uv run pytest --verbose --tb=short
