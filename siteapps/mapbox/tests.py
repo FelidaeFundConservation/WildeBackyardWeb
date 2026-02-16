@@ -51,3 +51,21 @@ class MapboxAPITestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_reverse_geocode(self):
+        # Test reverse geocoding with San Francisco coordinates
+        response = self.client.post(
+            "/mapbox/api/reverse_geocode/",
+            {"latitude": 37.7749, "longitude": -122.4194},
+            format="json",
+        )
+
+        # Should return 200 with location data
+        self.assertEqual(response.status_code, 200)
+        
+        # Response should contain location fields
+        data = response.json()
+        self.assertIn("locality", data)
+        self.assertIn("state", data)
+        self.assertIn("country", data)
+        self.assertIn("zip_code", data)

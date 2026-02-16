@@ -12,6 +12,8 @@ from rest_framework.views import APIView
 from .throttles import (
     GeocodePerDayThrottle,
     GeocodePerMinuteThrottle,
+    ReverseGeocodePerDayThrottle,
+    ReverseGeocodePerMinuteThrottle,
     SearchSuggestionsPerDayThrottle,
     SearchSuggestionsPerMinuteThrottle,
 )
@@ -72,4 +74,83 @@ class GetMapboxGeocode(APIView):
         else:
             return Response(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ReverseGeocodeWithNominatim(APIView):
+    """
+    Reverse geocode lat/lon coordinates using Nominatim API.
+    This is used to get human-readable location information from coordinates.
+    """
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ReverseGeocodePerMinuteThrottle, ReverseGeocodePerDayThrottle]
+
+    def post(self, request):
+        data = json.loads(request.body)
+
+        latitude = data.get("latitude")
+        longitude = data.get("longitude")
+
+        if not latitude or not longitude:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={"error": "latitude and longitude are required"}
+            )
+
+        # Nominatim API endpoint for reverse geocoding
+        # Using OpenStreetMap's public Nominatim instance
+        api_url = "https://nominatim.openstreetmap.org/reverse"
+        
+        # Per Nominatim usage policy, we must include a User-Agent
+        headers = {
+            "User-Agent": "WildeBackyard/1.0 (wildlife conservation platform)"
+        }
+
+        params = {
+            "lat": latitude,
+            "lon": longitude,
+            "format": "json",
+            "addressdetails": 1,
+            "zoom": 18,  # Highest detail level
+        }
+
+        try:
+            response = requests.get(api_url, params=params, headers=headers, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Extract address components
+                address = data.get("address", {})
+                
+                # Build location data from Nominatim response
+                location_data = {
+                    "locality": (
+                        address.get("city") or 
+                        address.get("town") or 
+                        address.get("village") or 
+                        address.get("hamlet") or
+                        address.get("suburb") or
+                        None
+                    ),
+                    "state": (
+                        address.get("state") or 
+                        address.get("province") or
+                        None
+                    ),
+                    "country": address.get("country"),
+                    "zip_code": address.get("postcode"),
+                }
+
+                return Response(status=status.HTTP_200_OK, data=location_data)
+            else:
+                return Response(
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    data={"error": "Failed to reverse geocode coordinates"}
+                )
+        except requests.exceptions.RequestException as e:
+            return Response(
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                data={"error": f"Request failed: {str(e)}"}
             )
