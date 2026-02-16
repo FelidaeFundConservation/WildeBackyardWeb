@@ -1,6 +1,8 @@
 import base64
 import logging
 
+import requests
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
@@ -10,6 +12,61 @@ from django.views import View
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
+
+
+def reverse_geocode_with_nominatim(latitude, longitude):
+    """
+    Reverse geocode coordinates using Nominatim API.
+    Returns a dict with locality, state, country, and zip_code.
+    """
+    api_url = "https://nominatim.openstreetmap.org/reverse"
+    
+    # Per Nominatim usage policy, we must include a User-Agent
+    headers = {
+        "User-Agent": "WildeBackyard/1.0 (wildlife conservation platform)"
+    }
+
+    params = {
+        "lat": latitude,
+        "lon": longitude,
+        "format": "json",
+        "addressdetails": 1,
+        "zoom": 18,  # Highest detail level
+    }
+
+    try:
+        response = requests.get(api_url, params=params, headers=headers, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Extract address components
+            address = data.get("address", {})
+            
+            # Build location data from Nominatim response
+            return {
+                "locality": (
+                    address.get("city") or 
+                    address.get("town") or 
+                    address.get("village") or 
+                    address.get("hamlet") or
+                    address.get("suburb") or
+                    None
+                ),
+                "state": (
+                    address.get("state") or 
+                    address.get("province") or
+                    None
+                ),
+                "country": address.get("country"),
+                "zip_code": address.get("postcode"),
+            }
+        else:
+            logger.warning(f"Reverse geocoding failed with status {response.status_code}")
+            return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Reverse geocoding request failed: {e}")
+        return None
 
 
 @method_decorator(login_required, name="dispatch")
@@ -53,16 +110,37 @@ class CreateSightingView(View):
         encounter_time = request.POST.get("encounter_time", "12:00")
         encounter_datetime = f"{encounter_date} {encounter_time}" if encounter_date else None
         
+        # Get coordinates
+        latitude = float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None
+        longitude = float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+        
+        # Reverse geocode the coordinates using Nominatim
+        geocoded_location = None
+        if latitude and longitude:
+            geocoded_location = reverse_geocode_with_nominatim(latitude, longitude)
+            if geocoded_location:
+                logger.info(f"Reverse geocoded location: {geocoded_location}")
+        
         # Required fields
         data = {
             "postTitle": request.POST.get("post_title"),
             "encounterDatetime": encounter_datetime,
-            "latitude": float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None,
-            "longitude": float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None,
+            "latitude": latitude,
+            "longitude": longitude,
             "privacySetting": request.POST.get("privacy_setting", "public"),
             "accuracyMeters": float(request.POST.get("location_accuracy_meters", 100)),  # Default 100m accuracy
-            "geocodedLocationCountry": "USA",  # Default country for now
         }
+        
+        # Add geocoded location data if available
+        if geocoded_location:
+            if geocoded_location.get("country"):
+                data["geocodedLocationCountry"] = geocoded_location["country"]
+            if geocoded_location.get("state"):
+                data["geocodedLocationState"] = geocoded_location["state"]
+            if geocoded_location.get("locality"):
+                data["geocodedLocationLocality"] = geocoded_location["locality"]
+            if geocoded_location.get("zip_code"):
+                data["geocodedLocationZipCode"] = geocoded_location["zip_code"]
         
         # Optional fields - only include if provided
         if request.POST.get("species"):
