@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
 from django.views import View
 
+from siteapps.mapbox.utils import reverse_geocode_with_nominatim
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
@@ -53,16 +54,41 @@ class CreateSightingView(View):
         encounter_time = request.POST.get("encounter_time", "12:00")
         encounter_datetime = f"{encounter_date} {encounter_time}" if encounter_date else None
         
+        # Get coordinates
+        try:
+            latitude = float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None
+            longitude = float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid latitude or longitude values.")
+            return self.get(request)
+        
+        # Reverse geocode the coordinates using Nominatim
+        geocoded_location = None
+        if latitude and longitude:
+            geocoded_location = reverse_geocode_with_nominatim(latitude, longitude)
+            if geocoded_location:
+                logger.info(f"Reverse geocoded location: {geocoded_location}")
+        
         # Required fields
         data = {
             "postTitle": request.POST.get("post_title"),
             "encounterDatetime": encounter_datetime,
-            "latitude": float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None,
-            "longitude": float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None,
+            "latitude": latitude,
+            "longitude": longitude,
             "privacySetting": request.POST.get("privacy_setting", "public"),
             "accuracyMeters": float(request.POST.get("location_accuracy_meters", 100)),  # Default 100m accuracy
-            "geocodedLocationCountry": "USA",  # Default country for now
         }
+        
+        # Add geocoded location data if available
+        if geocoded_location:
+            if geocoded_location.get("country"):
+                data["geocodedLocationCountry"] = geocoded_location["country"]
+            if geocoded_location.get("state"):
+                data["geocodedLocationState"] = geocoded_location["state"]
+            if geocoded_location.get("locality"):
+                data["geocodedLocationLocality"] = geocoded_location["locality"]
+            if geocoded_location.get("zip_code"):
+                data["geocodedLocationZipCode"] = geocoded_location["zip_code"]
         
         # Optional fields - only include if provided
         if request.POST.get("species"):
