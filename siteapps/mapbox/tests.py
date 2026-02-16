@@ -3,6 +3,7 @@ import os
 import requests
 from allauth.account.models import EmailAddress
 from dateutil import parser
+from django.conf import settings
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, force_authenticate
@@ -32,9 +33,8 @@ class MapboxAPITestCase(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
         # Also authenticate with backend API to get backend token for proxied requests
-        backend_api_url = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
         backend_login_response = requests.post(
-            f"{backend_api_url}/v1/users/login/", json={"email": test_email, "password": test_password}
+            f"{settings.BACKEND_API_URL}/v1/users/login/", json={"email": test_email, "password": test_password}
         )
         self.backend_token = backend_login_response.json()["key"]
 
