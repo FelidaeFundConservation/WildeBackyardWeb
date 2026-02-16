@@ -4,6 +4,7 @@ import os
 import requests
 from allauth.account.models import EmailAddress
 from dateutil import parser
+from django.conf import settings
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, force_authenticate
@@ -34,9 +35,8 @@ class SocialMediaPostAPITestCase(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
         # Also authenticate with backend API to get backend token for proxied requests
-        backend_api_url = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
         backend_login_response = requests.post(
-            f"{backend_api_url}/v1/users/login/", json={"email": test_email, "password": test_password}
+            f"{settings.BACKEND_API_URL}/v1/users/login/", json={"email": test_email, "password": test_password}
         )
         self.backend_token = backend_login_response.json()["key"]
 
@@ -165,10 +165,8 @@ class SocialMediaPostAPITestCase(TestCase):
         )
 
         # Report endpoints are on the backend API
-        backend_api_url = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
-
         _ = requests.post(
-            f"{backend_api_url}/v1/socialmedia/api/posts/reports/create",
+            f"{settings.BACKEND_API_URL}/v1/socialmedia/api/posts/reports/create",
             json={"contentId": str(MediaPost.objects.all().first().id), "contentType": "MediaPost"},
             headers={"Authorization": f"Token {self.backend_token}"},
         )
@@ -177,26 +175,26 @@ class SocialMediaPostAPITestCase(TestCase):
         self.user.save()
 
         _ = requests.post(
-            f"{backend_api_url}/v1/socialmedia/api/posts/reports/create",
+            f"{settings.BACKEND_API_URL}/v1/socialmedia/api/posts/reports/create",
             json={"contentId": str(TextComment.objects.all().first().id), "contentType": "TextComment"},
             headers={"Authorization": f"Token {self.backend_token}"},
         )
 
         response = requests.get(
-            f"{backend_api_url}/v1/socialmedia/api/posts/reports/review",
+            f"{settings.BACKEND_API_URL}/v1/socialmedia/api/posts/reports/review",
             headers={"Authorization": f"Token {self.backend_token}"},
         )
 
         self.assertEqual(response.status_code, 200, f"Review endpoint failed: {response.status_code} - {response.text}")
 
         _ = requests.post(
-            f"{backend_api_url}/v1/socialmedia/api/posts/reports/ban",
+            f"{settings.BACKEND_API_URL}/v1/socialmedia/api/posts/reports/ban",
             json={"reportId": response.json()["report_id"], "banReason": "Did a bad thing."},
             headers={"Authorization": f"Token {self.backend_token}"},
         )
 
         _ = requests.get(
-            f"{backend_api_url}/v1/socialmedia/api/posts/reports/review",
+            f"{settings.BACKEND_API_URL}/v1/socialmedia/api/posts/reports/review",
             headers={"Authorization": f"Token {self.backend_token}"},
         )
 
