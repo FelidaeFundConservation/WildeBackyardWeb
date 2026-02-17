@@ -75,8 +75,8 @@ class CreateSightingView(View):
             "encounterDatetime": encounter_datetime,
             "latitude": latitude,
             "longitude": longitude,
-            "privacySetting": request.POST.get("privacy_setting", "public"),
-            "accuracyMeters": float(request.POST.get("location_accuracy_meters", 100)),  # Default 100m accuracy
+            "privacySetting": request.POST.get("privacy_setting", "approximate"),
+            "accuracyMeters": float(request.POST.get("location_accuracy_meters", 5)),  # Default 5m accuracy
         }
         
         # Add geocoded location data if available

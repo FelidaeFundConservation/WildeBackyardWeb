@@ -141,7 +141,7 @@
                                 <label for="privacy_setting" class="form-label">Privacy Setting</label>
                                 <select class="form-select" id="privacy_setting" name="privacy_setting">
                                     <option value="public">Public (Exact Location)</option>
-                                    <option value="approximate">Approximate (Obfuscated)</option>
+                                    <option value="approximate" selected>Approximate (Obfuscated)</option>
                                     <option value="hidden">Hidden (No Location Shown)</option>
                                 </select>
                             </div>
@@ -152,7 +152,7 @@
                                        class="form-control"
                                        id="obfuscation_kilometers"
                                        name="obfuscation_kilometers"
-                                       value="1"
+                                       value="0.5"
                                        min="0.1"
                                        max="50">
                             </div>
@@ -163,7 +163,7 @@
                                    class="form-control"
                                    id="location_accuracy_meters"
                                    name="location_accuracy_meters"
-                                   value="0"
+                                   value="5"
                                    readonly>
                         </div>
                     </div>
