@@ -273,8 +273,8 @@ document.getElementById('comment_text').addEventListener('input', function() {
 // Initialize map if location data is available
 {% if post.latitude and post.longitude %}
 document.addEventListener('DOMContentLoaded', function() {
-  const latitude = {{ post.latitude|escapejs }};
-  const longitude = {{ post.longitude|escapejs }};
+  const latitude = {{ post.latitude }};
+  const longitude = {{ post.longitude }};
   
   const map = new maplibregl.Map({
     container: 'map',
@@ -294,10 +294,10 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
   // Calculate center of the obfuscation box
   // Note: GeoJSON coordinates are [longitude, latitude] order
-  const corner1 = [{{ post.corner_1_longitude|escapejs }}, {{ post.corner_1_latitude|escapejs }}];
-  const corner2 = [{{ post.corner_2_longitude|escapejs }}, {{ post.corner_2_latitude|escapejs }}];
-  const corner3 = [{{ post.corner_3_longitude|escapejs }}, {{ post.corner_3_latitude|escapejs }}];
-  const corner4 = [{{ post.corner_4_longitude|escapejs }}, {{ post.corner_4_latitude|escapejs }}];
+  const corner1 = [{{ post.corner_1_longitude }}, {{ post.corner_1_latitude }}];
+  const corner2 = [{{ post.corner_2_longitude }}, {{ post.corner_2_latitude }}];
+  const corner3 = [{{ post.corner_3_longitude }}, {{ post.corner_3_latitude }}];
+  const corner4 = [{{ post.corner_4_longitude }}, {{ post.corner_4_latitude }}];
   
   const centerLng = (corner1[0] + corner2[0] + corner3[0] + corner4[0]) / 4;
   const centerLat = (corner1[1] + corner2[1] + corner3[1] + corner4[1]) / 4;
