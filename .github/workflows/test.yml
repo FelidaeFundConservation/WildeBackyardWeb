@@ -188,3 +188,19 @@ jobs:
         run: |
           # Attempt to collect static files (dummy DB URL not needed for collectstatic)
           python manage.py collectstatic --noinput --settings=config.settings.staging || echo "Static collection skipped"
+
+      - name: Deploy to App Engine
+        run: |
+          gcloud app deploy app.yaml \
+            --project=$GCP_PROJECT_ID \
+            --verbosity=debug \
+            --no-promote \
+            --version=$(echo $GITHUB_SHA | cut -c1-7)
+
+      - name: Get deployment info
+        id: deployment
+        run: |
+          VERSION=$(echo $GITHUB_SHA | cut -c1-7)
+          URL="https://${VERSION}-dot-staging-dot-${GCP_PROJECT_ID}.appspot.com"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
