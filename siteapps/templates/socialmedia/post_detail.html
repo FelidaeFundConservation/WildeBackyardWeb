@@ -293,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% elif post.corner_1_latitude and post.corner_1_longitude %}
 document.addEventListener('DOMContentLoaded', function() {
   // Calculate center of the obfuscation box
+  // Note: GeoJSON coordinates are [longitude, latitude] order
   const corner1 = [{{ post.corner_1_longitude|escapejs }}, {{ post.corner_1_latitude|escapejs }}];
   const corner2 = [{{ post.corner_2_longitude|escapejs }}, {{ post.corner_2_latitude|escapejs }}];
   const corner3 = [{{ post.corner_3_longitude|escapejs }}, {{ post.corner_3_latitude|escapejs }}];
