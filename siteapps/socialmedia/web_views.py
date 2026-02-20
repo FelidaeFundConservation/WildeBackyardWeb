@@ -13,6 +13,21 @@ logger = logging.getLogger(__name__)
 MAX_POSTS_PER_REQUEST = 100
 
 
+def _parse_radius_params(request):
+    """Parse and validate center lat/lon and radius_km from request GET params.
+
+    Returns a tuple (center_lat, center_lon, radius_km) where each value is a
+    float or None if missing / invalid.
+    """
+    try:
+        center_lat = float(request.GET.get("center_lat")) if request.GET.get("center_lat") else None
+        center_lon = float(request.GET.get("center_lon")) if request.GET.get("center_lon") else None
+        radius_km = float(request.GET.get("radius_km")) if request.GET.get("radius_km") else None
+    except (ValueError, TypeError):
+        return None, None, None
+    return center_lat, center_lon, radius_km
+
+
 def _normalize_post(post):
     """Map API field names to the field names expected by feed/sightings templates."""
     media = post.get("media") or {}
@@ -31,7 +46,10 @@ def feed_view(request):
     api_token = request.session.get("backend_api_token")
     posts = []
     species_filter = request.GET.get("species")
-    location_filter = request.GET.get("location", "global")  # global or local
+    location_filter = request.GET.get("location", "global")  # global or radius
+
+    # Custom radius filter parameters
+    center_lat, center_lon, radius_km = _parse_radius_params(request)
 
     # Get posts from backend (requires authentication)
     if api_token:
@@ -39,9 +57,10 @@ def feed_view(request):
         data = {}
         if species_filter:
             data["species"] = species_filter
-        if location_filter == "local":
-            data["distanceRadius"] = 50  # 50km default
-            # Would need user's location here
+        if location_filter == "radius" and center_lat is not None and center_lon is not None and radius_km is not None and radius_km > 0:
+            data["distanceRadius"] = radius_km
+            data["centerLatitude"] = center_lat
+            data["centerLongitude"] = center_lon
 
         # Build URL with query parameters for pagination
         endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
@@ -65,6 +84,9 @@ def feed_view(request):
         "species_list": species_list,
         "current_species": species_filter,
         "location_filter": location_filter,
+        "center_lat": center_lat,
+        "center_lon": center_lon,
+        "radius_km": radius_km,
     }
     return render(request, "socialmedia/feed.html", context)
 
@@ -214,8 +236,10 @@ def load_more_posts(request):
 
     # Get filter parameters
     species_filter = request.GET.get("species")
-    # TODO: implement local filtering - requires user location
-    # location_filter = request.GET.get("location", "global")
+    location_filter = request.GET.get("location", "global")
+
+    # Custom radius filter parameters
+    center_lat, center_lon, radius_km = _parse_radius_params(request)
 
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
@@ -223,6 +247,11 @@ def load_more_posts(request):
 
     if species_filter:
         data["species"] = species_filter
+
+    if location_filter == "radius" and center_lat is not None and center_lon is not None and radius_km is not None and radius_km > 0:
+        data["distanceRadius"] = radius_km
+        data["centerLatitude"] = center_lat
+        data["centerLongitude"] = center_lon
 
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
 

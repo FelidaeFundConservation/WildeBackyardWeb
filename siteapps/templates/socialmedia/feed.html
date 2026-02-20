@@ -33,19 +33,55 @@
                                            name="location"
                                            id="global"
                                            value="global"
-                                           {% if location_filter == 'global' %}checked{% endif %}
-                                           onchange="this.form.submit()">
+                                           {% if location_filter != 'radius' %}checked{% endif %}
+                                           onchange="document.getElementById('radius-inputs').classList.add('d-none'); this.form.submit()">
                                     <label class="form-check-label" for="global">Global</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input"
                                            type="radio"
                                            name="location"
-                                           id="local"
-                                           value="local"
-                                           {% if location_filter == 'local' %}checked{% endif %}
-                                           onchange="this.form.submit()">
-                                    <label class="form-check-label" for="local">Local (50km)</label>
+                                           id="radius"
+                                           value="radius"
+                                           {% if location_filter == 'radius' %}checked{% endif %}
+                                           onchange="document.getElementById('radius-inputs').classList.remove('d-none')">
+                                    <label class="form-check-label" for="radius">Custom Radius</label>
+                                </div>
+                                <div id="radius-inputs"
+                                     class="mt-2 {% if location_filter != 'radius' %}d-none{% endif %}">
+                                    <label for="center_lat" class="form-label small mb-1">Center Latitude</label>
+                                    <input type="number"
+                                           class="form-control form-control-sm mb-2"
+                                           id="center_lat"
+                                           name="center_lat"
+                                           placeholder="e.g. 38.5"
+                                           step="any"
+                                           min="-90"
+                                           max="90"
+                                           value="{{ center_lat|default:'' }}">
+                                    <label for="center_lon" class="form-label small mb-1">Center Longitude</label>
+                                    <input type="number"
+                                           class="form-control form-control-sm mb-2"
+                                           id="center_lon"
+                                           name="center_lon"
+                                           placeholder="e.g. -121.5"
+                                           step="any"
+                                           min="-180"
+                                           max="180"
+                                           value="{{ center_lon|default:'' }}">
+                                    <label for="radius_km" class="form-label small mb-1">Radius (km)</label>
+                                    <input type="number"
+                                           class="form-control form-control-sm mb-2"
+                                           id="radius_km"
+                                           name="radius_km"
+                                           placeholder="e.g. 50"
+                                           step="any"
+                                           min="1"
+                                           max="5000"
+                                           value="{{ radius_km|default:50 }}">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                        <i class="bi bi-funnel-fill"></i> Apply
+                                    </button>
                                 </div>
                             </div>
                         </form>
@@ -171,6 +207,9 @@ const PAGE_SIZE = 10;
 let currentOffset = {{ posts|length }};
 const currentSpecies = "{{ current_species|default:'' }}";
 const currentLocation = "{{ location_filter|default:'global' }}";
+const currentCenterLat = "{{ center_lat|default:'' }}";
+const currentCenterLon = "{{ center_lon|default:'' }}";
+const currentRadiusKm = "{{ radius_km|default:'' }}";
 let isLoading = false;
 let hasMore = true;
 
@@ -289,6 +328,11 @@ async function loadMore() {
         }
         if (currentLocation) {
             params.append('location', currentLocation);
+        }
+        if (currentLocation === 'radius' && currentCenterLat && currentCenterLon && currentRadiusKm) {
+            params.append('center_lat', currentCenterLat);
+            params.append('center_lon', currentCenterLon);
+            params.append('radius_km', currentRadiusKm);
         }
 
         const response = await fetch(`/feed/feed/load-more/?${params}`);
