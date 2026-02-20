@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 
 from django.contrib import messages
@@ -56,22 +57,24 @@ class CreateSightingView(View):
         encounter_date = request.POST.get("encounter_date")
         encounter_time = request.POST.get("encounter_time", "12:00")
         encounter_datetime = f"{encounter_date} {encounter_time}" if encounter_date else None
-        
+
         # Get coordinates
         try:
             latitude = float(request.POST.get("location_latitude")) if request.POST.get("location_latitude") else None
-            longitude = float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+            longitude = (
+                float(request.POST.get("location_longitude")) if request.POST.get("location_longitude") else None
+            )
         except (ValueError, TypeError):
             messages.error(request, "Invalid latitude or longitude values.")
             return self.get(request)
-        
+
         # Reverse geocode the coordinates using Nominatim
         geocoded_location = None
         if latitude and longitude:
             geocoded_location = reverse_geocode_with_nominatim(latitude, longitude)
             if geocoded_location:
                 logger.info(f"Reverse geocoded location: {geocoded_location}")
-        
+
         # Required fields
         data = {
             "postTitle": request.POST.get("post_title"),
@@ -81,7 +84,7 @@ class CreateSightingView(View):
             "privacySetting": request.POST.get("privacy_setting", "approximate"),
             "accuracyMeters": float(request.POST.get("location_accuracy_meters", 5)),  # Default 5m accuracy
         }
-        
+
         # Add geocoded location data if available
         if geocoded_location:
             if geocoded_location.get("country"):
@@ -92,7 +95,7 @@ class CreateSightingView(View):
                 data["geocodedLocationLocality"] = geocoded_location["locality"]
             if geocoded_location.get("zip_code"):
                 data["geocodedLocationZipCode"] = geocoded_location["zip_code"]
-        
+
         # Optional fields - only include if provided
         if request.POST.get("species"):
             data["species"] = request.POST.get("species")
@@ -133,23 +136,28 @@ class CreateSightingView(View):
             try:
                 # Read the file and encode to base64
                 file_bytes = media_file.read()
-                
+
                 # Determine if it's a video based on content type
                 content_type = media_file.content_type or ""
                 is_video = content_type.startswith("video/")
-                
+
                 # Validate video size (max 500MB)
                 if is_video:
                     max_video_size = 500 * 1024 * 1024  # 500MB
                     if len(file_bytes) > max_video_size:
-                        messages.error(request, f"Video file is too large. Maximum size is 500MB. Your file: {len(file_bytes)/(1024*1024):.1f}MB")
+                        messages.error(
+                            request,
+                            f"Video file is too large. Maximum size is 500MB. Your file: {len(file_bytes)/(1024*1024):.1f}MB",
+                        )
                         return self.get(request)
-                
-                encoded_bytes = base64.b64encode(file_bytes).decode('utf-8')
+
+                encoded_bytes = base64.b64encode(file_bytes).decode("utf-8")
                 data["mediaBytes"] = encoded_bytes
                 data["isVideo"] = is_video
-                
-                logger.info(f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {is_video}, content_type: {content_type}")
+
+                logger.info(
+                    f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {is_video}, content_type: {content_type}"
+                )
             except Exception as e:
                 logger.error(f"Error encoding media file: {e}")
                 messages.error(request, "Failed to process media file. Please try again.")
@@ -186,3 +194,53 @@ def my_sightings(request):
         "sightings": sightings,
     }
     return render(request, "sightings/my_sightings.html", context)
+
+
+@login_required
+def sightings_map(request):
+    """Display all sightings on an interactive map with clustering"""
+    api_token = request.session.get("backend_api_token")
+    features = []
+
+    if api_token:
+        api_client = BackendAPIClient(auth_token=api_token)
+        # Fetch a large batch of sightings for the map
+        response = api_client.post("/v1/socialmedia/api/feed/get/?limit=500&offset=0", {})
+        if response and response.get("results"):
+            for post in response["results"]:
+                lat = post.get("latitude")
+                lng = post.get("longitude")
+
+                # Fall back to center of obfuscation box if exact coords unavailable
+                if lat is None or lng is None:
+                    corners = [
+                        (post.get("corner_1_latitude"), post.get("corner_1_longitude")),
+                        (post.get("corner_2_latitude"), post.get("corner_2_longitude")),
+                        (post.get("corner_3_latitude"), post.get("corner_3_longitude")),
+                        (post.get("corner_4_latitude"), post.get("corner_4_longitude")),
+                    ]
+                    valid = [(la, lo) for la, lo in corners if la is not None and lo is not None]
+                    if valid:
+                        lat = sum(la for la, lo in valid) / len(valid)
+                        lng = sum(lo for la, lo in valid) / len(valid)
+
+                if lat is not None and lng is not None:
+                    features.append(
+                        {
+                            "type": "Feature",
+                            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+                            "properties": {
+                                "id": str(post.get("id", "")),
+                                "title": post.get("title", ""),
+                                "species": post.get("species", ""),
+                                "encounter_date": post.get("encounter_datetime", ""),
+                                "geocoded_location": post.get("geocoded_location", ""),
+                            },
+                        }
+                    )
+
+    context = {
+        "sightings_geojson": json.dumps({"type": "FeatureCollection", "features": features}),
+        "sightings_count": len(features),
+    }
+    return render(request, "sightings/sightings_map.html", context)

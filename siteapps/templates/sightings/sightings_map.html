@@ -1,0 +1,213 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}Sightings Map - WildeBackyard{% endblock %}
+{% block header_includes %}
+    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js'></script>
+    <style>
+  #sightings-map {
+    width: 100%;
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    border-radius: 0.5rem;
+  }
+  .map-legend {
+    background: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .legend-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .maplibregl-popup-content {
+    padding: 0.75rem 1rem;
+    min-width: 200px;
+  }
+  .maplibregl-popup-content h6 {
+    margin-bottom: 0.25rem;
+  }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid py-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="text-white mb-0">
+                <i class="bi bi-map"></i> Sightings Map
+            </h1>
+            <div class="d-flex gap-2">
+                <span class="badge bg-light text-dark fs-6 align-self-center">
+                    <i class="bi bi-geo-alt-fill"></i> {{ sightings_count }} sighting{{ sightings_count|pluralize }}
+                </span>
+                <a href="{% url 'sightings:create' %}" class="btn btn-success btn-sm">
+                    <i class="bi bi-plus-circle"></i> Report Sighting
+                </a>
+            </div>
+        </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="position-relative">
+            <div id="sightings-map"></div>
+            <!-- Legend overlay -->
+            <div class="position-absolute bottom-0 start-0 m-3 map-legend shadow">
+                <div class="legend-item">
+                    <div class="legend-circle" style="background:#2563eb;border:2px solid white;"></div>
+                    <span>Cluster (multiple sightings)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-circle" style="background:#16a34a;border:2px solid white;"></div>
+                    <span>Individual sighting</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+const SIGHTINGS_GEOJSON = {{ sightings_geojson|safe }};
+
+document.addEventListener('DOMContentLoaded', function () {
+  // Default viewport: Northern California
+  const map = new maplibregl.Map({
+    container: 'sightings-map',
+    style: 'https://tiles.openfreemap.org/styles/bright',
+    center: [-121.5, 38.5],
+    zoom: 6
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
+  map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+
+  map.on('load', function () {
+    // Add sightings GeoJSON source with clustering enabled
+    map.addSource('sightings', {
+      type: 'geojson',
+      data: SIGHTINGS_GEOJSON,
+      cluster: true,
+      clusterMaxZoom: 13,
+      clusterRadius: 50
+    });
+
+    // Cluster circles – sized by point count
+    map.addLayer({
+      id: 'clusters',
+      type: 'circle',
+      source: 'sightings',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step', ['get', 'point_count'],
+          '#60a5fa',  // < 10  light blue
+          10, '#2563eb',  // 10-49  blue
+          50, '#1e3a8a'   // 50+  dark blue
+        ],
+        'circle-radius': [
+          'step', ['get', 'point_count'],
+          18,
+          10, 26,
+          50, 36
+        ],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
+    });
+
+    // Cluster count labels
+    map.addLayer({
+      id: 'cluster-count',
+      type: 'symbol',
+      source: 'sightings',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': 13
+      },
+      paint: {
+        'text-color': '#ffffff'
+      }
+    });
+
+    // Individual (unclustered) sighting markers
+    map.addLayer({
+      id: 'unclustered-point',
+      type: 'circle',
+      source: 'sightings',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': '#16a34a',
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
+    });
+
+    // Click on a cluster → zoom in
+    map.on('click', 'clusters', function (e) {
+      const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      map.getSource('sightings').getClusterExpansionZoom(clusterId, function (err, zoom) {
+        if (err) return;
+        map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+      });
+    });
+
+    // Click on individual point → show popup
+    map.on('click', 'unclustered-point', function (e) {
+      const props = e.features[0].properties;
+      const coords = e.features[0].geometry.coordinates.slice();
+
+      let speciesBadge = props.species
+        ? `<span class="badge bg-success me-1">${props.species}</span>`
+        : '';
+      let locationLine = props.geocoded_location
+        ? `<p class="mb-1 small text-muted"><i class="bi bi-geo-alt"></i> ${props.geocoded_location}</p>`
+        : '';
+      let dateLine = '';
+      if (props.encounter_date) {
+        const d = new Date(props.encounter_date);
+        const dateStr = isNaN(d.getTime()) ? props.encounter_date : d.toLocaleDateString();
+        dateLine = `<p class="mb-1 small text-muted"><i class="bi bi-calendar"></i> ${dateStr}</p>`;
+      }
+      let detailLink = props.id
+        ? `<a href="/feed/post/${props.id}/" class="btn btn-sm btn-outline-primary mt-1">View Details</a>`
+        : '';
+
+      new maplibregl.Popup()
+        .setLngLat(coords)
+        .setHTML(`
+          <h6 class="mb-1">${props.title || 'Untitled Sighting'}</h6>
+          ${speciesBadge}
+          ${locationLine}
+          ${dateLine}
+          ${detailLink}
+        `)
+        .addTo(map);
+    });
+
+    // Pointer cursor on hoverable layers
+    ['clusters', 'unclustered-point'].forEach(function (layer) {
+      map.on('mouseenter', layer, function () {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', layer, function () {
+        map.getCanvas().style.cursor = '';
+      });
+    });
+  });
+});
+    </script>
+{% endblock %}

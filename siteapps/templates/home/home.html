@@ -37,6 +37,15 @@
                             <strong class="small">Browse Wildlife Feed</strong>
                         </a>
                     </div>
+                    {% if user.is_authenticated %}
+                        <div class="my-1">
+                            <a class="btn btn-outline-info d-flex w-100 p-3 bevel align-items-center justify-content-center"
+                               href="{% url 'sightings:map' %}">
+                                <i class="bi bi-map me-2"></i>
+                                <strong class="small">View Sightings Map</strong>
+                            </a>
+                        </div>
+                    {% endif %}
                     {% /card %}
                 </div>
                 <div class="col-md-6 text-center">
