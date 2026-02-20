@@ -8,6 +8,9 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from siteapps.mapbox.utils import reverse_geocode_with_nominatim
+from siteapps.socialmedia.models import MediaPost
+from siteapps.socialmedia.views import format_post
+from siteapps.socialmedia.web_views import _normalize_post
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
@@ -172,16 +175,12 @@ class CreateSightingView(View):
 @login_required
 def my_sightings(request):
     """Display user's sightings"""
-    api_token = request.session.get("backend_api_token")
-    sightings = []
-
-    if api_token:
-        api_client = BackendAPIClient(auth_token=api_token)
-        # The feed endpoint expects POST with user ID filter
-        # Convert UUID to string for JSON serialization
-        response = api_client.post("/v1/socialmedia/api/feed/get/", {"userId": str(request.user.id)})
-        if response and response.get("results"):
-            sightings = response.get("results", [])
+    # Query the local database directly — both the web app and backend share
+    # the same Cloud SQL database, so posts created via the backend are visible here.
+    sightings = [
+        _normalize_post(format_post(p))
+        for p in MediaPost.objects.filter(created_by=request.user).order_by("-created")
+    ]
 
     context = {
         "sightings": sightings,
