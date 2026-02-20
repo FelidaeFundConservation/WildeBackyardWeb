@@ -338,7 +338,6 @@ INSTALLED_APPS = [
     "siteapps.users",
     "siteapps.socialmedia",
     "siteapps.sightings",
-    "siteapps.mapbox",
     "siteapps.species",
 ]
 
@@ -522,10 +521,6 @@ register_components(
 ####################
 # VARIABLES
 ####################
-# Mapbox
-MAPBOX_SECRET_TOKEN = env.str(
-    "MAPBOX_SECRET_TOKEN", default="sk.eyJ1IjoiZGVtb3VzZXIiLCJhIjoiY2xyMTIzNDU2Nzg5MCJ9.dGhpc19pc19hX2Zha2VfdG9rZW4"
-)
 
 
 # CUSTOM VARIABLES
