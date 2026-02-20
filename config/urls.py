@@ -30,7 +30,6 @@ urlpatterns = [
     path("sightings/", include("siteapps.sightings.urls", namespace="sightings")),
     path("feed/", include("siteapps.socialmedia.urls", namespace="socialmedia")),
     path("species/", include("siteapps.species.urls", namespace="species")),
-    path("mapbox/", include("siteapps.mapbox.urls", namespace="mapbox")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += staticfiles_urlpatterns()

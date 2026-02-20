@@ -1,4 +1,5 @@
-"""Utility functions for geocoding and reverse geocoding."""
+"""Utility functions for sightings geocoding."""
+
 import logging
 
 import requests
@@ -9,20 +10,18 @@ logger = logging.getLogger(__name__)
 def reverse_geocode_with_nominatim(latitude, longitude):
     """
     Reverse geocode coordinates using Nominatim API.
-    
+
     Args:
         latitude: Latitude coordinate
         longitude: Longitude coordinate
-        
+
     Returns:
         dict with locality, state, country, and zip_code, or None if failed
     """
     api_url = "https://nominatim.openstreetmap.org/reverse"
-    
+
     # Per Nominatim usage policy, we must include a User-Agent
-    headers = {
-        "User-Agent": "WildeBackyard/1.0 (wildlife conservation platform)"
-    }
+    headers = {"User-Agent": "WildeBackyard/1.0 (wildlife conservation platform)"}
 
     params = {
         "lat": latitude,
@@ -37,25 +36,21 @@ def reverse_geocode_with_nominatim(latitude, longitude):
 
         if response.status_code == 200:
             data = response.json()
-            
+
             # Extract address components
             address = data.get("address", {})
-            
+
             # Build location data from Nominatim response
             return {
                 "locality": (
-                    address.get("city") or 
-                    address.get("town") or 
-                    address.get("village") or 
-                    address.get("hamlet") or
-                    address.get("suburb") or
-                    None
+                    address.get("city")
+                    or address.get("town")
+                    or address.get("village")
+                    or address.get("hamlet")
+                    or address.get("suburb")
+                    or None
                 ),
-                "state": (
-                    address.get("state") or 
-                    address.get("province") or
-                    None
-                ),
+                "state": (address.get("state") or address.get("province") or None),
                 "country": address.get("country"),
                 "zip_code": address.get("postcode"),
             }

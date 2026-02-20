@@ -7,8 +7,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
 from django.views import View
+from rest_framework import authentication, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from siteapps.mapbox.utils import reverse_geocode_with_nominatim
+from siteapps.sightings.throttles import ReverseGeocodePerDayThrottle, ReverseGeocodePerMinuteThrottle
+from siteapps.sightings.utils import reverse_geocode_with_nominatim
 from siteapps.socialmedia.models import MediaPost
 from siteapps.socialmedia.views import format_post
 from siteapps.socialmedia.web_views import _normalize_post
@@ -186,8 +191,7 @@ def my_sightings(request):
     # Query the local database directly — both the web app and backend share
     # the same Cloud SQL database, so posts created via the backend are visible here.
     sightings = [
-        _normalize_post(format_post(p))
-        for p in MediaPost.objects.filter(created_by=request.user).order_by("-created")
+        _normalize_post(format_post(p)) for p in MediaPost.objects.filter(created_by=request.user).order_by("-created")
     ]
 
     context = {
@@ -211,19 +215,6 @@ def sightings_map(request):
                 lat = post.get("latitude")
                 lng = post.get("longitude")
 
-                # Fall back to center of obfuscation box if exact coords unavailable
-                if lat is None or lng is None:
-                    corners = [
-                        (post.get("corner_1_latitude"), post.get("corner_1_longitude")),
-                        (post.get("corner_2_latitude"), post.get("corner_2_longitude")),
-                        (post.get("corner_3_latitude"), post.get("corner_3_longitude")),
-                        (post.get("corner_4_latitude"), post.get("corner_4_longitude")),
-                    ]
-                    valid = [(la, lo) for la, lo in corners if la is not None and lo is not None]
-                    if valid:
-                        lat = sum(la for la, lo in valid) / len(valid)
-                        lng = sum(lo for la, lo in valid) / len(valid)
-
                 if lat is not None and lng is not None:
                     features.append(
                         {
@@ -244,3 +235,42 @@ def sightings_map(request):
         "sightings_count": len(features),
     }
     return render(request, "sightings/sightings_map.html", context)
+
+
+class ReverseGeocodeWithNominatim(APIView):
+    """
+    Reverse geocode lat/lon coordinates using Nominatim API.
+    Returns human-readable location information from coordinates.
+    """
+
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ReverseGeocodePerMinuteThrottle, ReverseGeocodePerDayThrottle]
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={"error": "Invalid JSON in request body"},
+            )
+
+        latitude = data.get("latitude")
+        longitude = data.get("longitude")
+
+        if latitude is None or longitude is None:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={"error": "latitude and longitude are required"},
+            )
+
+        location_data = reverse_geocode_with_nominatim(latitude, longitude)
+
+        if location_data:
+            return Response(status=status.HTTP_200_OK, data=location_data)
+        else:
+            return Response(
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                data={"error": "Failed to reverse geocode coordinates"},
+            )
