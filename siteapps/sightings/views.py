@@ -8,6 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from siteapps.mapbox.utils import reverse_geocode_with_nominatim
+from siteapps.socialmedia.web_views import _normalize_post
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class CreateSightingView(View):
 
         try:
             api_client = BackendAPIClient()
-            response = api_client.get("/v1/species/api/names/get/")
+            response = api_client.get("/species/api/names/get/")
             if response and "species_names" in response:
                 # Backend returns a flat list of species names
                 species_list = response.get("species_names", [])
@@ -156,7 +157,7 @@ class CreateSightingView(View):
         api_client = BackendAPIClient(auth_token=api_token)
 
         # Submit sighting
-        response = api_client.post("/v1/socialmedia/api/posts/create/", data)
+        response = api_client.post("/feed/api/posts/create/", data)
 
         if response and response.get("status") == "success":
             messages.success(request, "Sighting submitted successfully!")
@@ -179,9 +180,9 @@ def my_sightings(request):
         api_client = BackendAPIClient(auth_token=api_token)
         # The feed endpoint expects POST with user ID filter
         # Convert UUID to string for JSON serialization
-        response = api_client.post("/v1/socialmedia/api/feed/get/", {"userId": str(request.user.id)})
+        response = api_client.post("/feed/api/feed/get/", {"userId": str(request.user.id)})
         if response and response.get("results"):
-            sightings = response.get("results", [])
+            sightings = [_normalize_post(p) for p in response.get("results", [])]
 
     context = {
         "sightings": sightings,

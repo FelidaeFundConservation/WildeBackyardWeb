@@ -12,6 +12,7 @@ from siteapps.socialmedia.views import (
     CreateCommentView,
     CreatePostView,
     EditPostView,
+    GetPostByIdView,
     GetPostResponsesAuthenticatedView,
     GetPostResponsesNoAuthView,
     GetRecentPostsView,
@@ -32,6 +33,7 @@ urlpatterns = [
     path("post/<uuid:post_id>/comment/<uuid:comment_id>/like/", like_comment, name="like_comment"),
     path("post/<uuid:post_id>/report/", report_post, name="report_post"),
     # API views
+    path("api/posts/<uuid:post_id>/", GetPostByIdView.as_view(), name="get_post"),
     path("api/comments/create/", CreateCommentView.as_view(), name="create_comment"),
     path("api/comments/like/", LikeCommentView.as_view(), name="like_comment"),
     path("api/posts/create/", CreatePostView.as_view(), name="create_post"),

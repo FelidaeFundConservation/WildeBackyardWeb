@@ -17,6 +17,19 @@ logger = logging.getLogger(__name__)
 MAX_POSTS_PER_REQUEST = 100
 
 
+def _normalize_post(post):
+    """Map API field names to the field names expected by feed/sightings templates."""
+    media = post.get("media") or {}
+    post["media_url"] = media.get("url")
+    post["is_video"] = media.get("is_video", False)
+    post["user_name"] = post.get("created_by")
+    post["created"] = post.get("encounter_datetime")
+    additional = post.get("additional_info") or {}
+    post["camera_model"] = additional.get("camera_model")
+    post["habitat_type"] = additional.get("habitat_type")
+    return post
+
+
 def feed_view(request):
     """Display social media feed"""
     api_token = request.session.get("backend_api_token")
@@ -35,11 +48,11 @@ def feed_view(request):
             # Would need user's location here
 
         # Build URL with query parameters for pagination
-        endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
+        endpoint = "/feed/api/feed/get/?limit=10&offset=0"
         response = api_client.post(endpoint, data)
         if response:
             # Backend returns DRF paginated response with 'results' key
-            posts = response.get("results", [])
+            posts = [_normalize_post(p) for p in response.get("results", [])]
     else:
         # Not authenticated - show empty feed
         posts = []
@@ -47,7 +60,7 @@ def feed_view(request):
     # Get species list for filter
     species_list = []
     api_client = BackendAPIClient()
-    response = api_client.get("/v1/species/api/names/get/")
+    response = api_client.get("/species/api/names/get/")
     if response and "species_names" in response:
         species_list = response.get("species_names", [])
 
@@ -67,36 +80,26 @@ def post_detail_view(request, post_id):
     comments = []
 
     if api_token:
-        # Fetch from backend - for now, get from feed and find the matching post
         api_client = BackendAPIClient(auth_token=api_token)
-        feed_response = api_client.post("/v1/socialmedia/api/feed/get/", {})
-        if feed_response and feed_response.get("results"):
-            posts = feed_response.get("results", [])
-            for p in posts:
-                if p.get("id") == str(post_id):
-                    post = p
-                    break
 
-        # If not found in feed, return error
+        # Fetch the post directly by ID
+        post = api_client.get(f"/feed/api/posts/{post_id}/")
+
         if not post:
             messages.error(request, "Post not found.")
             return redirect("socialmedia:feed")
 
+        # Map API field names to template field names
+        _normalize_post(post)
+
         # Fetch comments with like information
         comments_response = api_client.post(
-            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
+            "/feed/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
         )
         if comments_response:
             comments = comments_response.get("comments", [])
-            # Update post with like information from response
-            if post:
-                post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
-                post["likes_count"] = comments_response.get("like_count", 0)
-                
-                # Extract media fields for template compatibility
-                if post.get("media"):
-                    post["media_url"] = post["media"].get("url")
-                    post["is_video"] = post["media"].get("is_video", False)
+            post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
+            post["likes_count"] = comments_response.get("like_count", 0)
     else:
         messages.error(request, "Please log in to view posts.")
         return redirect("login")
@@ -126,7 +129,7 @@ def add_comment(request, post_id):
                 "parentPostId": str(post_id),
                 "commentText": comment_text,
             }
-            response = api_client.post("/v1/socialmedia/api/comments/create/", data)
+            response = api_client.post("/feed/api/comments/create/", data)
 
             if response and response.get("status") == "success":
                 messages.success(request, "Comment added successfully!")
@@ -144,7 +147,7 @@ def like_post(request, post_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/v1/socialmedia/api/posts/like/", {"mediaPostId": str(post_id)})
+        response = api_client.post("/feed/api/posts/like/", {"mediaPostId": str(post_id)})
 
         if response and response.get("status") == "success":
             messages.success(request, "Post liked!")
@@ -165,7 +168,7 @@ def report_post(request, post_id):
                 "contentId": int(post_id),
                 "contentType": "MediaPost",
             }
-            response = api_client.post("/v1/socialmedia/api/posts/reports/create", data)
+            response = api_client.post("/feed/api/posts/reports/create", data)
 
             if response and response.get("status") == "success":
                 messages.success(request, "Report submitted. Thank you for helping keep our community safe.")
@@ -183,7 +186,7 @@ def like_comment(request, post_id, comment_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/v1/socialmedia/api/comments/like/", {"commentId": str(comment_id)})
+        response = api_client.post("/feed/api/comments/like/", {"commentId": str(comment_id)})
 
         if response and response.get("status") == "success":
             # Show appropriate message based on the action
@@ -233,7 +236,7 @@ def load_more_posts(request):
     #     data["userLongitude"] = user_longitude
     
     # Build URL with query parameters for pagination
-    endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
+    endpoint = f"/feed/api/feed/get/?offset={offset}&limit={limit}"
     
     # Fetch posts from backend
     response = api_client.post(endpoint, data)
