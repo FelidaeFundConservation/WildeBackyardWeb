@@ -2,14 +2,10 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 
 from siteapps.users.api_client import BackendAPIClient
-
-from .models import MediaPost, TextComment
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +52,19 @@ def validate_location_parameters(latitude, longitude, radius):
         return False, f"Invalid location parameters: {str(e)}"
 
 
+def _normalize_post(post):
+    """Map API field names to the field names expected by feed/sightings templates."""
+    media = post.get("media") or {}
+    post["media_url"] = media.get("url")
+    post["is_video"] = media.get("is_video", False)
+    post["user_name"] = post.get("created_by")
+    post["created"] = post.get("encounter_datetime")
+    additional = post.get("additional_info") or {}
+    post["camera_model"] = additional.get("camera_model")
+    post["habitat_type"] = additional.get("habitat_type")
+    return post
+
+
 def feed_view(request):
     """Display social media feed"""
     api_token = request.session.get("backend_api_token")
@@ -89,12 +98,12 @@ def feed_view(request):
         response = api_client.post(endpoint, data)
         if response:
             # Backend returns DRF paginated response with 'results' key
-            posts = response.get("results", [])
+            posts = [_normalize_post(p) for p in response.get("results", [])]
     else:
         # Not authenticated - show empty feed
         posts = []
 
-    # Get species list for filter
+    # Get species list for filter (no auth required)
     species_list = []
     api_client = BackendAPIClient()
     response = api_client.get("/v1/species/api/names/get/")
@@ -119,40 +128,27 @@ def post_detail_view(request, post_id):
     post = None
     comments = []
 
-    if api_token:
-        # Fetch from backend - for now, get from feed and find the matching post
-        api_client = BackendAPIClient(auth_token=api_token)
-        feed_response = api_client.post("/v1/socialmedia/api/feed/get/", {})
-        if feed_response and feed_response.get("results"):
-            posts = feed_response.get("results", [])
-            for p in posts:
-                if p.get("id") == str(post_id):
-                    post = p
-                    break
-
-        # If not found in feed, return error
-        if not post:
-            messages.error(request, "Post not found.")
-            return redirect("socialmedia:feed")
-
-        # Fetch comments with like information
-        comments_response = api_client.post(
-            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
-        )
-        if comments_response:
-            comments = comments_response.get("comments", [])
-            # Update post with like information from response
-            if post:
-                post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
-                post["likes_count"] = comments_response.get("like_count", 0)
-
-                # Extract media fields for template compatibility
-                if post.get("media"):
-                    post["media_url"] = post["media"].get("url")
-                    post["is_video"] = post["media"].get("is_video", False)
-    else:
+    if not api_token:
         messages.error(request, "Please log in to view posts.")
-        return redirect("login")
+        return redirect("users:login")
+
+    api_client = BackendAPIClient(auth_token=api_token)
+
+    # Fetch post from the backend API (single source of truth regardless of which
+    # database instance the web app is connected to).
+    post_response = api_client.get(f"/v1/socialmedia/api/posts/{post_id}/")
+    if post_response is None:
+        messages.error(request, "Post not found or could not be loaded.")
+        return redirect("socialmedia:feed")
+
+    post = _normalize_post(post_response)
+
+    # Fetch comments and like status from the backend
+    comments_response = api_client.post("/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)})
+    if comments_response:
+        comments = comments_response.get("comments", [])
+        post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
+        post["likes_count"] = comments_response.get("like_count", 0)
 
     context = {
         "post": post,
@@ -292,7 +288,6 @@ def load_more_posts(request):
             logger.warning(f"Invalid location parameters in load_more: {result}")
             return JsonResponse({"error": result}, status=400)
 
-    # Build URL with query parameters for pagination
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
 
     # Fetch posts from backend
@@ -309,7 +304,6 @@ def load_more_posts(request):
     # Format posts data for frontend
     posts_data = []
     for post in posts:
-        # Extract media URL and video flag if media exists
         media_url = None
         is_video = False
         if post.get("media"):
