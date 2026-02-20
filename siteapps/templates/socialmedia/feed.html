@@ -52,8 +52,12 @@
                         {% if user.is_authenticated %}
                             <hr>
                             <a href="{% url 'sightings:create' %}"
-                               class="btn btn-primary w-100 btn-sm">
+                               class="btn btn-primary w-100 btn-sm mb-2">
                                 <i class="bi bi-plus-circle"></i> Report Sighting
+                            </a>
+                            <a href="{% url 'sightings:map' %}"
+                               class="btn btn-info w-100 btn-sm">
+                                <i class="bi bi-map"></i> Sightings Map
                             </a>
                         {% endif %}
                     </div>
