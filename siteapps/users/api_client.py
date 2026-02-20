@@ -242,7 +242,7 @@ class BackendAPIClient:
             bool: True if successful, False otherwise
         """
         try:
-            url = f"{self.base_url}/v1/users/password/reset/"
+            url = f"{self.base_url}/v1/account/password_reset/"
             data = {"email": email}
 
             response = requests.post(url, json=data, headers=self.headers, timeout=self.timeout)
