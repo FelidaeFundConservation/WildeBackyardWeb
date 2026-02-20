@@ -2,14 +2,13 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from siteapps.users.api_client import BackendAPIClient
 
-from .models import MediaPost, TextComment
+from .models import MediaPost
+from .views import format_post
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ def feed_view(request):
             # Would need user's location here
 
         # Build URL with query parameters for pagination
-        endpoint = "/feed/api/feed/get/?limit=10&offset=0"
+        endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
         response = api_client.post(endpoint, data)
         if response:
             # Backend returns DRF paginated response with 'results' key
@@ -57,10 +56,10 @@ def feed_view(request):
         # Not authenticated - show empty feed
         posts = []
 
-    # Get species list for filter
+    # Get species list for filter (no auth required)
     species_list = []
     api_client = BackendAPIClient()
-    response = api_client.get("/species/api/names/get/")
+    response = api_client.get("/v1/species/api/names/get/")
     if response and "species_names" in response:
         species_list = response.get("species_names", [])
 
@@ -82,19 +81,14 @@ def post_detail_view(request, post_id):
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
 
-        # Fetch the post directly by ID
-        post = api_client.get(f"/feed/api/posts/{post_id}/")
+        # Fetch post from the local database (web app and backend share the same Cloud SQL DB).
+        # This avoids a round-trip to the backend and works for any post regardless of feed page.
+        local_post = get_object_or_404(MediaPost, id=post_id)
+        post = _normalize_post(format_post(local_post))
 
-        if not post:
-            messages.error(request, "Post not found.")
-            return redirect("socialmedia:feed")
-
-        # Map API field names to template field names
-        _normalize_post(post)
-
-        # Fetch comments with like information
+        # Fetch comments and like status from the backend
         comments_response = api_client.post(
-            "/feed/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
+            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
         )
         if comments_response:
             comments = comments_response.get("comments", [])
@@ -102,7 +96,7 @@ def post_detail_view(request, post_id):
             post["likes_count"] = comments_response.get("like_count", 0)
     else:
         messages.error(request, "Please log in to view posts.")
-        return redirect("login")
+        return redirect("users:login")
 
     context = {
         "post": post,
@@ -129,7 +123,7 @@ def add_comment(request, post_id):
                 "parentPostId": str(post_id),
                 "commentText": comment_text,
             }
-            response = api_client.post("/feed/api/comments/create/", data)
+            response = api_client.post("/v1/socialmedia/api/comments/create/", data)
 
             if response and response.get("status") == "success":
                 messages.success(request, "Comment added successfully!")
@@ -147,7 +141,7 @@ def like_post(request, post_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/feed/api/posts/like/", {"mediaPostId": str(post_id)})
+        response = api_client.post("/v1/socialmedia/api/posts/like/", {"mediaPostId": str(post_id)})
 
         if response and response.get("status") == "success":
             messages.success(request, "Post liked!")
@@ -168,7 +162,7 @@ def report_post(request, post_id):
                 "contentId": int(post_id),
                 "contentType": "MediaPost",
             }
-            response = api_client.post("/feed/api/posts/reports/create", data)
+            response = api_client.post("/v1/socialmedia/api/posts/reports/create", data)
 
             if response and response.get("status") == "success":
                 messages.success(request, "Report submitted. Thank you for helping keep our community safe.")
@@ -186,7 +180,7 @@ def like_comment(request, post_id, comment_id):
     api_token = request.session.get("backend_api_token")
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
-        response = api_client.post("/feed/api/comments/like/", {"commentId": str(comment_id)})
+        response = api_client.post("/v1/socialmedia/api/comments/like/", {"commentId": str(comment_id)})
 
         if response and response.get("status") == "success":
             # Show appropriate message based on the action
@@ -204,29 +198,29 @@ def like_comment(request, post_id, comment_id):
 def load_more_posts(request):
     """AJAX endpoint to load more posts for infinite scroll"""
     api_token = request.session.get("backend_api_token")
-    
+
     if not api_token:
         return JsonResponse({"error": "Authentication required"}, status=401)
-    
+
     # Get and validate pagination parameters
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 10))
     except ValueError:
         return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
-    
+
     # Validate limit to prevent abuse
     if limit < 1 or limit > MAX_POSTS_PER_REQUEST:
         return JsonResponse({"error": f"Limit must be between 1 and {MAX_POSTS_PER_REQUEST}"}, status=400)
-    
+
     # Get filter parameters
     species_filter = request.GET.get("species")
     location_filter = request.GET.get("location", "global")
-    
+
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
     data = {}
-    
+
     if species_filter:
         data["species"] = species_filter
     # Note: Local location filtering not yet implemented - requires user location
@@ -234,31 +228,29 @@ def load_more_posts(request):
     #     data["distanceRadius"] = 50
     #     data["userLatitude"] = user_latitude
     #     data["userLongitude"] = user_longitude
-    
-    # Build URL with query parameters for pagination
-    endpoint = f"/feed/api/feed/get/?offset={offset}&limit={limit}"
-    
+
+    endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
+
     # Fetch posts from backend
     response = api_client.post(endpoint, data)
-    
+
     if not response:
         return JsonResponse({"error": "Failed to fetch posts"}, status=500)
-    
+
     # Backend returns paginated response with 'results', 'next', 'count' keys
     posts = response.get("results", [])
     next_url = response.get("next")
     total_count = response.get("count", 0)
-    
+
     # Format posts data for frontend
     posts_data = []
     for post in posts:
-        # Extract media URL and video flag if media exists
         media_url = None
         is_video = False
         if post.get("media"):
             media_url = post["media"].get("url")
             is_video = post["media"].get("is_video", False)
-        
+
         post_data = {
             "id": post.get("id"),
             "title": post.get("title"),
@@ -273,7 +265,7 @@ def load_more_posts(request):
             "comments_count": post.get("comments_count", 0),
         }
         posts_data.append(post_data)
-    
+
     return JsonResponse({
         "posts": posts_data,
         "has_more": next_url is not None,

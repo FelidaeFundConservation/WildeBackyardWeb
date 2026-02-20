@@ -100,15 +100,6 @@ def format_post(post):
     return data
 
 
-class GetPostByIdView(APIView):
-    def get(self, request, post_id):
-        try:
-            post = MediaPost.objects.get(id=post_id)
-            return Response(status=status.HTTP_200_OK, data=format_post(post))
-        except MediaPost.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": "Post not found."})
-
-
 class GetRecentPostsView(APIView, LatLngValidationMixin):
     def post(self, request):
         data = json.loads(request.body)
