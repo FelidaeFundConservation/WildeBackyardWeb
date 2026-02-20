@@ -39,18 +39,6 @@
   .maplibregl-popup-content h6 {
     margin-bottom: 0.25rem;
   }
-  #radius-filter-panel {
-    background: rgba(255, 255, 255, 0.97);
-    border-radius: 0.5rem;
-  }
-  #radius-filter-panel .form-label {
-    font-size: 0.8rem;
-    margin-bottom: 0.2rem;
-  }
-  #radius-filter-panel .form-control {
-    font-size: 0.85rem;
-    padding: 0.3rem 0.5rem;
-  }
     </style>
 {% endblock header_includes %}
 {% block content %}
@@ -80,59 +68,6 @@
                 </div>
             {% endfor %}
         {% endif %}
-        <!-- Radius filter panel -->
-        <div id="radius-filter-panel" class="card shadow mb-3 p-3">
-            <form id="radius-filter-form" class="row g-2 align-items-end">
-                <div class="col-auto">
-                    <label for="filter-lat" class="form-label fw-semibold">
-                        <i class="bi bi-crosshair"></i> Center Latitude
-                    </label>
-                    <input type="number"
-                           id="filter-lat"
-                           class="form-control"
-                           placeholder="e.g. 38.5"
-                           step="any"
-                           min="-90"
-                           max="90">
-                </div>
-                <div class="col-auto">
-                    <label for="filter-lon" class="form-label fw-semibold">Center Longitude</label>
-                    <input type="number"
-                           id="filter-lon"
-                           class="form-control"
-                           placeholder="e.g. -121.5"
-                           step="any"
-                           min="-180"
-                           max="180">
-                </div>
-                <div class="col-auto">
-                    <label for="filter-radius" class="form-label fw-semibold">
-                        <i class="bi bi-circle"></i> Radius (km)
-                    </label>
-                    <input type="number"
-                           id="filter-radius"
-                           class="form-control"
-                           placeholder="e.g. 50"
-                           step="any"
-                           min="1"
-                           max="5000"
-                           value="50">
-                </div>
-                <div class="col-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel-fill"></i> Apply Filter
-                    </button>
-                    <button type="button" id="clear-filter-btn" class="btn btn-outline-secondary btn-sm d-none">
-                        <i class="bi bi-x-circle"></i> Clear Filter
-                    </button>
-                </div>
-                <div class="col-auto">
-                    <span id="filter-active-badge" class="badge bg-primary d-none">
-                        <i class="bi bi-circle-fill me-1"></i>Custom filter active
-                    </span>
-                </div>
-            </form>
-        </div>
         <div class="position-relative">
             <div id="sightings-map"></div>
             <!-- Legend overlay -->
@@ -158,49 +93,6 @@ const CSRF_TOKEN = "{{ csrf_token }}";
 
 const EMPTY_GEOJSON = { type: 'FeatureCollection', features: [] };
 
-// Kilometres per degree of latitude (WGS-84 mean value)
-const LAT_KM = 111.32;
-
-// ── Radius filter state ────────────────────────────────────────────────────
-// When non-null, the map fetches within the bbox derived from this filter
-// instead of using the current viewport bounds.
-let activeFilter = null; // { lat, lon, radiusKm }
-
-/**
- * Convert a center point + radius (km) to an axis-aligned bounding box.
- * Uses the haversine approximation (accurate enough for this use-case).
- */
-function radiusToBbox(lat, lon, radiusKm) {
-  const latDelta = radiusKm / LAT_KM;
-  const lonDelta = radiusKm / (LAT_KM * Math.cos(lat * Math.PI / 180));
-  return {
-    minLatitude:  lat - latDelta,
-    maxLatitude:  lat + latDelta,
-    minLongitude: lon - lonDelta,
-    maxLongitude: lon + lonDelta,
-  };
-}
-
-/**
- * Build a GeoJSON polygon approximating a circle (used for the map overlay).
- * Uses 64 segments for a smooth appearance.
- */
-function circleGeoJSON(lat, lon, radiusKm) {
-  const points = 64;
-  const coords = [];
-  const latR = radiusKm / LAT_KM;
-  const lonR = radiusKm / (LAT_KM * Math.cos(lat * Math.PI / 180));
-  for (let i = 0; i <= points; i++) {
-    const angle = (i / points) * 2 * Math.PI;
-    coords.push([lon + lonR * Math.cos(angle), lat + latR * Math.sin(angle)]);
-  }
-  return {
-    type: 'Feature',
-    geometry: { type: 'Polygon', coordinates: [coords] },
-    properties: {},
-  };
-}
-
 document.addEventListener('DOMContentLoaded', function () {
   // Default viewport: Northern California
   const map = new maplibregl.Map({
@@ -216,9 +108,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── Bbox fetch helpers ─────────────────────────────────────────────────────
 
   function getBbox() {
-    if (activeFilter) {
-      return radiusToBbox(activeFilter.lat, activeFilter.lon, activeFilter.radiusKm);
-    }
     const b = map.getBounds();
     return {
       minLatitude:  b.getSouth(),
@@ -319,98 +208,9 @@ document.addEventListener('DOMContentLoaded', function () {
     debounceTimer = setTimeout(fetchSightings, 400);
   }
 
-  // ── Radius filter UI handlers ──────────────────────────────────────────────
-
-  const filterForm      = document.getElementById('radius-filter-form');
-  const clearFilterBtn  = document.getElementById('clear-filter-btn');
-  const filterBadge     = document.getElementById('filter-active-badge');
-
-  /** Update the circle overlay source with the current active filter, or clear it. */
-  function updateCircleOverlay() {
-    if (!map.getSource('radius-circle')) return;
-    if (activeFilter) {
-      map.getSource('radius-circle').setData(
-        circleGeoJSON(activeFilter.lat, activeFilter.lon, activeFilter.radiusKm)
-      );
-    } else {
-      map.getSource('radius-circle').setData(EMPTY_GEOJSON);
-    }
-  }
-
-  filterForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const lat    = parseFloat(document.getElementById('filter-lat').value);
-    const lon    = parseFloat(document.getElementById('filter-lon').value);
-    const radius = parseFloat(document.getElementById('filter-radius').value);
-
-    if (isNaN(lat) || isNaN(lon) || isNaN(radius) || radius <= 0) {
-      alert('Please enter a valid latitude, longitude, and radius (> 0 km).');
-      return;
-    }
-    if (lat < -90 || lat > 90) {
-      alert('Latitude must be between -90 and 90.');
-      return;
-    }
-    if (lon < -180 || lon > 180) {
-      alert('Longitude must be between -180 and 180.');
-      return;
-    }
-
-    activeFilter = { lat, lon, radiusKm: radius };
-    filterBadge.classList.remove('d-none');
-    clearFilterBtn.classList.remove('d-none');
-
-    updateCircleOverlay();
-
-    // Fly the map to show the full search circle
-    const bbox = radiusToBbox(lat, lon, radius);
-    map.fitBounds(
-      [[bbox.minLongitude, bbox.minLatitude], [bbox.maxLongitude, bbox.maxLatitude]],
-      { padding: 40 }
-    );
-
-    // fitBounds triggers moveend → scheduleFetch calls fetchSightings with the
-    // active filter's bbox.  Trigger immediately too in case the bounds haven't
-    // changed (e.g. user re-applies the same filter).
-    fetchSightings();
-  });
-
-  clearFilterBtn.addEventListener('click', function () {
-    activeFilter = null;
-    filterBadge.classList.add('d-none');
-    clearFilterBtn.classList.add('d-none');
-    updateCircleOverlay();
-    fetchSightings();
-  });
-
   // ── Map layers ─────────────────────────────────────────────────────────────
 
   map.on('load', function () {
-    // Circle overlay source (used when a radius filter is active)
-    map.addSource('radius-circle', {
-      type: 'geojson',
-      data: EMPTY_GEOJSON,
-    });
-    map.addLayer({
-      id: 'radius-circle-fill',
-      type: 'fill',
-      source: 'radius-circle',
-      paint: {
-        'fill-color': '#2563eb',
-        'fill-opacity': 0.08,
-      },
-    });
-    map.addLayer({
-      id: 'radius-circle-outline',
-      type: 'line',
-      source: 'radius-circle',
-      paint: {
-        'line-color': '#2563eb',
-        'line-width': 2,
-        'line-dasharray': [4, 3],
-      },
-    });
-
     // Add sightings GeoJSON source with clustering enabled (starts empty)
     map.addSource('sightings', {
       type: 'geojson',
