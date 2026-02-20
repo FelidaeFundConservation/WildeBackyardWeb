@@ -1,8 +1,11 @@
 {% extends "_base.html" %}
 {% load static %}
-{% block title %}Sightings Map - WildeBackyard{% endblock %}
+{% block title %}
+    Sightings Map - WildeBackyard
+{% endblock title %}
 {% block header_includes %}
-    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
+          rel='stylesheet' />
     <script src='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js'></script>
     <style>
   #sightings-map {
@@ -37,16 +40,19 @@
     margin-bottom: 0.25rem;
   }
     </style>
-{% endblock %}
+{% endblock header_includes %}
 {% block content %}
     <div class="container-fluid py-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1 class="text-white mb-0">
                 <i class="bi bi-map"></i> Sightings Map
             </h1>
-            <div class="d-flex gap-2">
-                <span class="badge bg-light text-dark fs-6 align-self-center">
-                    <i class="bi bi-geo-alt-fill"></i> {{ sightings_count }} sighting{{ sightings_count|pluralize }}
+            <div class="d-flex gap-2 align-items-center">
+                <span id="loading-indicator" class="text-white-50 small d-none">
+                    <span class="spinner-border spinner-border-sm" role="status"></span> Loading…
+                </span>
+                <span id="sightings-count-badge" class="badge bg-light text-dark fs-6">
+                    <i class="bi bi-geo-alt-fill"></i> <span id="sightings-count-text">Loading…</span>
                 </span>
                 <a href="{% url 'sightings:create' %}" class="btn btn-success btn-sm">
                     <i class="bi bi-plus-circle"></i> Report Sighting
@@ -55,7 +61,8 @@
         </div>
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                     role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -66,18 +73,25 @@
             <!-- Legend overlay -->
             <div class="position-absolute bottom-0 start-0 m-3 map-legend shadow">
                 <div class="legend-item">
-                    <div class="legend-circle" style="background:#2563eb;border:2px solid white;"></div>
+                    <div class="legend-circle"
+                         style="background:#2563eb;
+                                border:2px solid white"></div>
                     <span>Cluster (multiple sightings)</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-circle" style="background:#16a34a;border:2px solid white;"></div>
+                    <div class="legend-circle"
+                         style="background:#16a34a;
+                                border:2px solid white"></div>
                     <span>Individual sighting</span>
                 </div>
             </div>
         </div>
     </div>
     <script>
-const SIGHTINGS_GEOJSON = {{ sightings_geojson|safe }};
+const BBOX_API_URL = "{% url 'sightings:bbox' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+const EMPTY_GEOJSON = { type: 'FeatureCollection', features: [] };
 
 document.addEventListener('DOMContentLoaded', function () {
   // Default viewport: Northern California
@@ -91,11 +105,64 @@ document.addEventListener('DOMContentLoaded', function () {
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
   map.addControl(new maplibregl.FullscreenControl(), 'top-right');
 
+  // ── Bbox fetch helpers ─────────────────────────────────────────────────────
+
+  function getBbox() {
+    const b = map.getBounds();
+    return {
+      minLatitude:  b.getSouth(),
+      maxLatitude:  b.getNorth(),
+      minLongitude: b.getWest(),
+      maxLongitude: b.getEast(),
+    };
+  }
+
+  const loadingEl = document.getElementById('loading-indicator');
+  const countTextEl = document.getElementById('sightings-count-text');
+
+  function setCount(n) {
+    countTextEl.textContent = n + ' sighting' + (n !== 1 ? 's' : '') + ' in view';
+  }
+
+  async function fetchSightings() {
+    loadingEl.classList.remove('d-none');
+    try {
+      const resp = await fetch(BBOX_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify(getBbox()),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const geojson = await resp.json();
+      if (map.getSource('sightings')) {
+        map.getSource('sightings').setData(geojson);
+      }
+      setCount(geojson.count ?? geojson.features.length);
+    } catch (err) {
+      console.error('Failed to fetch sightings:', err);
+      countTextEl.textContent = 'Error loading sightings';
+    } finally {
+      loadingEl.classList.add('d-none');
+    }
+  }
+
+  // Debounce so rapid pan/zoom doesn't fire a request per frame
+  let debounceTimer = null;
+  function scheduleFetch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(fetchSightings, 400);
+  }
+
+  // ── Map layers ─────────────────────────────────────────────────────────────
+
   map.on('load', function () {
-    // Add sightings GeoJSON source with clustering enabled
+    // Add sightings GeoJSON source with clustering enabled (starts empty)
     map.addSource('sightings', {
       type: 'geojson',
-      data: SIGHTINGS_GEOJSON,
+      data: EMPTY_GEOJSON,
       cluster: true,
       clusterMaxZoom: 13,
       clusterRadius: 50
@@ -155,6 +222,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
 
+    // ── Interaction handlers ─────────────────────────────────────────────────
+
     // Click on a cluster → zoom in
     map.on('click', 'clusters', function (e) {
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
@@ -207,7 +276,11 @@ document.addEventListener('DOMContentLoaded', function () {
         map.getCanvas().style.cursor = '';
       });
     });
+
+    // Initial load and update on every pan / zoom / resize
+    fetchSightings();
+    map.on('moveend', scheduleFetch);
   });
 });
     </script>
-{% endblock %}
+{% endblock content %}
