@@ -149,6 +149,58 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  // On initial load: fetch for the default viewport then zoom in to whichever
+  // bounding box is smaller – the default view or the tight bbox of the results.
+  // fitBounds (when used) triggers moveend which re-fetches for the new view.
+  async function fetchInitialSightings() {
+    loadingEl.classList.remove('d-none');
+    try {
+      const defaultBbox = getBbox();
+      const resp = await fetch(BBOX_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify(defaultBbox),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const geojson = await resp.json();
+      if (map.getSource('sightings')) {
+        map.getSource('sightings').setData(geojson);
+      }
+      setCount(geojson.count ?? geojson.features.length);
+
+      // Compute the tight bbox of the returned features
+      if (geojson.features.length > 0) {
+        let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+        for (const f of geojson.features) {
+          const [lng, lat] = f.geometry.coordinates;
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        }
+
+        const defaultArea = (defaultBbox.maxLongitude - defaultBbox.minLongitude) *
+                            (defaultBbox.maxLatitude  - defaultBbox.minLatitude);
+        const sightingsArea = (maxLng - minLng) * (maxLat - minLat);
+
+        // Fit to the sightings bbox when it is strictly smaller (and non-degenerate)
+        if (sightingsArea > 0 && sightingsArea < defaultArea) {
+          // fitBounds triggers moveend → scheduleFetch will re-fetch for the new view
+          map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 14 });
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch initial sightings:', err);
+      countTextEl.textContent = 'Error loading sightings';
+    } finally {
+      loadingEl.classList.add('d-none');
+    }
+  }
+
   // Debounce so rapid pan/zoom doesn't fire a request per frame
   let debounceTimer = null;
   function scheduleFetch() {
@@ -277,9 +329,13 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    // Initial load and update on every pan / zoom / resize
-    fetchSightings();
+    // Register moveend first so fitBounds inside fetchInitialSightings
+    // also triggers a re-fetch via scheduleFetch.
     map.on('moveend', scheduleFetch);
+
+    // Initial load: fetches for the default viewport, then zooms in to the
+    // tighter of the default bbox and the bbox of the returned sightings.
+    fetchInitialSightings();
   });
 });
     </script>
