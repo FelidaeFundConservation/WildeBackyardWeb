@@ -30,6 +30,85 @@ class Haversine(Func):
     output_field = models.FloatField()
 
 
+def format_post(post):
+    """Serialize a MediaPost instance to a dict for API responses."""
+    location_info_fields = [
+        post.geocoded_location_locality,
+        post.geocoded_location_state,
+        post.geocoded_location_country,
+        post.geocoded_location_zip_code,
+    ]
+    geocoded_location = ", ".join(filter(None, location_info_fields))
+
+    additional_data = {
+        "camera_model": post.camera_model,
+        "camera_deployment_date": post.camera_deployment_date,
+        "camera_timestamp_offset_error_details": post.camera_timestamp_offset_error_details,
+        "habitat_type": post.habitat_type,
+    }
+
+    media_data = (
+        {
+            "url": post.media.file_cloud_path,
+            "is_video": post.media.is_video,
+        }
+        if post.media
+        else None
+    )
+
+    data = {
+        "id": post.id,
+        "geoprivacy": post.geoprivacy,
+        "created_by": getattr(post.created_by, "name", "Deleted User"),
+        "encounter_datetime": post.encounter_datetime,
+        "species": getattr(post.species, "name", None),
+        "media": media_data,
+        "additional_info": additional_data,
+        "title": post.title,
+        "body": post.text_content,
+        "likes_count": post.upvoted_by.count(),
+        "comments_count": post.replies.count(),
+    }
+
+    if post.geoprivacy == settings.PRIVACY_SETTING_PUBLIC:
+        data.update(
+            {
+                "geocoded_location": geocoded_location,
+                "latitude": post.public_location_latitude,
+                "longitude": post.public_location_longitude,
+                "accuracy": post.accuracy_ring_radius_meters,
+            }
+        )
+    elif post.geoprivacy == settings.PRIVACY_SETTING_OBSCURED:
+        # WARNING: Don't send true location for obscured.
+        data.update(
+            {
+                "geocoded_location": geocoded_location,
+                "obfuscation_range_kilometers": post.obfuscation_range_kilometers,
+                "corner_1_latitude": post.obfuscation_box_corner_1_latitude,
+                "corner_1_longitude": post.obfuscation_box_corner_1_longitude,
+                "corner_2_latitude": post.obfuscation_box_corner_2_latitude,
+                "corner_2_longitude": post.obfuscation_box_corner_2_longitude,
+                "corner_3_latitude": post.obfuscation_box_corner_3_latitude,
+                "corner_3_longitude": post.obfuscation_box_corner_3_longitude,
+                "corner_4_latitude": post.obfuscation_box_corner_4_latitude,
+                "corner_4_longitude": post.obfuscation_box_corner_4_longitude,
+            }
+        )
+    # PRIVACY_SETTING_PRIVATE: no location data sent
+
+    return data
+
+
+class GetPostByIdView(APIView):
+    def get(self, request, post_id):
+        try:
+            post = MediaPost.objects.get(id=post_id)
+            return Response(status=status.HTTP_200_OK, data=format_post(post))
+        except MediaPost.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": "Post not found."})
+
+
 class GetRecentPostsView(APIView, LatLngValidationMixin):
     def post(self, request):
         data = json.loads(request.body)
@@ -43,13 +122,19 @@ class GetRecentPostsView(APIView, LatLngValidationMixin):
         # A specific zip code to look for posts in
         zip_code = data.get("zipCode")
 
+        # A specific user to filter posts by
+        user_id = data.get("userId")
+
         # A species to filter by
         species = data.get("species")
 
         post_data = []
 
+        # Filter by user
+        if user_id:
+            media_posts = MediaPost.objects.filter(created_by__id=user_id).order_by("-created")
         # Filter by zipcode
-        if zip_code:
+        elif zip_code:
             media_posts = MediaPost.objects.filter(geocoded_location_zip_code=zip_code).order_by("-created")
         # Filter by distance
         elif user_latitude or user_longitude or distance_radius:
@@ -96,72 +181,7 @@ class GetRecentPostsView(APIView, LatLngValidationMixin):
 
         # Collect and format post information to send
         for post in paginated_media_posts:
-            location_info_fields = [
-                post.geocoded_location_locality,
-                post.geocoded_location_state,
-                post.geocoded_location_country,
-                post.geocoded_location_zip_code,
-            ]
-            geocoded_location = ", ".join(filter(None, location_info_fields))
-
-            additional_data = {
-                "camera_model": post.camera_model,
-                "camera_deployment_date": post.camera_deployment_date,
-                "camera_timestamp_offset_error_details": post.camera_timestamp_offset_error_details,
-                "habitat_type": post.habitat_type,
-            }
-
-            media_data = (
-                {
-                    "url": post.media.file_cloud_path,
-                    "is_video": post.media.is_video,
-                }
-                if post.media
-                else None
-            )
-
-            current_data = {
-                "id": post.id,
-                "geoprivacy": post.geoprivacy,
-                "created_by": getattr(post.created_by, "name", "Deleted User"),
-                "encounter_datetime": post.encounter_datetime,
-                "species": getattr(post.species, "name", None),
-                "media": media_data,
-                "additional_info": additional_data,
-                "title": post.title,
-                "body": post.text_content,
-            }
-
-            if post.geoprivacy == settings.PRIVACY_SETTING_PUBLIC:
-                current_data.update(
-                    {
-                        "geocoded_location": geocoded_location,
-                        "latitude": post.public_location_latitude,
-                        "longitude": post.public_location_longitude,
-                        "accuracy": post.accuracy_ring_radius_meters,
-                    }
-                )
-            elif post.geoprivacy == settings.PRIVACY_SETTING_OBSCURED:
-                # WARNING: Don't send true location for obscured.
-                current_data.update(
-                    {
-                        "geocoded_location": geocoded_location,
-                        "obfuscation_range_kilometers": post.obfuscation_range_kilometers,
-                        "corner_1_latitude": post.obfuscation_box_corner_1_latitude,
-                        "corner_1_longitude": post.obfuscation_box_corner_1_longitude,
-                        "corner_2_latitude": post.obfuscation_box_corner_2_latitude,
-                        "corner_2_longitude": post.obfuscation_box_corner_2_longitude,
-                        "corner_3_latitude": post.obfuscation_box_corner_3_latitude,
-                        "corner_3_longitude": post.obfuscation_box_corner_3_longitude,
-                        "corner_4_latitude": post.obfuscation_box_corner_4_latitude,
-                        "corner_4_longitude": post.obfuscation_box_corner_4_longitude,
-                    }
-                )
-            elif post.geoprivacy == settings.PRIVACY_SETTING_PRIVATE:
-                # WARNING: Don't send any location data for private.
-                pass
-
-            post_data.append(current_data)
+            post_data.append(format_post(post))
 
         return paginator.get_paginated_response(post_data)
 
