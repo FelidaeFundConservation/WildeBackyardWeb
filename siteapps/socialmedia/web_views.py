@@ -3,12 +3,9 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 
 from siteapps.users.api_client import BackendAPIClient
-
-from .models import MediaPost
-from .views import format_post
 
 logger = logging.getLogger(__name__)
 
@@ -78,25 +75,27 @@ def post_detail_view(request, post_id):
     post = None
     comments = []
 
-    if api_token:
-        api_client = BackendAPIClient(auth_token=api_token)
-
-        # Fetch post from the local database (web app and backend share the same Cloud SQL DB).
-        # This avoids a round-trip to the backend and works for any post regardless of feed page.
-        local_post = get_object_or_404(MediaPost, id=post_id)
-        post = _normalize_post(format_post(local_post))
-
-        # Fetch comments and like status from the backend
-        comments_response = api_client.post(
-            "/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)}
-        )
-        if comments_response:
-            comments = comments_response.get("comments", [])
-            post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
-            post["likes_count"] = comments_response.get("like_count", 0)
-    else:
+    if not api_token:
         messages.error(request, "Please log in to view posts.")
         return redirect("users:login")
+
+    api_client = BackendAPIClient(auth_token=api_token)
+
+    # Fetch post from the backend API (single source of truth regardless of which
+    # database instance the web app is connected to).
+    post_response = api_client.get(f"/v1/socialmedia/api/posts/{post_id}/")
+    if post_response is None:
+        messages.error(request, "Post not found or could not be loaded.")
+        return redirect("socialmedia:feed")
+
+    post = _normalize_post(post_response)
+
+    # Fetch comments and like status from the backend
+    comments_response = api_client.post("/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)})
+    if comments_response:
+        comments = comments_response.get("comments", [])
+        post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
+        post["likes_count"] = comments_response.get("like_count", 0)
 
     context = {
         "post": post,
@@ -215,7 +214,8 @@ def load_more_posts(request):
 
     # Get filter parameters
     species_filter = request.GET.get("species")
-    location_filter = request.GET.get("location", "global")
+    # TODO: implement local filtering - requires user location
+    # location_filter = request.GET.get("location", "global")
 
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
@@ -223,11 +223,6 @@ def load_more_posts(request):
 
     if species_filter:
         data["species"] = species_filter
-    # Note: Local location filtering not yet implemented - requires user location
-    # if location_filter == "local":
-    #     data["distanceRadius"] = 50
-    #     data["userLatitude"] = user_latitude
-    #     data["userLongitude"] = user_longitude
 
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
 
@@ -266,8 +261,10 @@ def load_more_posts(request):
         }
         posts_data.append(post_data)
 
-    return JsonResponse({
-        "posts": posts_data,
-        "has_more": next_url is not None,
-        "total_count": total_count,
-    })
+    return JsonResponse(
+        {
+            "posts": posts_data,
+            "has_more": next_url is not None,
+            "total_count": total_count,
+        }
+    )
