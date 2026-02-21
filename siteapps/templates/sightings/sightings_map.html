@@ -188,8 +188,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Fit to the sightings bbox when it is strictly smaller (and non-degenerate)
         if (sightingsArea > 0 && sightingsArea < defaultArea) {
-          // fitBounds triggers moveend → scheduleFetch will re-fetch for the new view
-          map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 14 });
+          // fitBounds triggers moveend → scheduleFetch will re-fetch for the new view.
+          // maxZoom 8 keeps enough points on screen for meaningful clustering.
+          map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 8 });
           return;
         }
       }
