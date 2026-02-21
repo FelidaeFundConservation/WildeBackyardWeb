@@ -124,6 +124,18 @@ document.addEventListener('DOMContentLoaded', function () {
     countTextEl.textContent = n + ' sighting' + (n !== 1 ? 's' : '') + ' in view';
   }
 
+  function setSourceData(geojson) {
+    // Always pass a clean FeatureCollection to MapLibre so Supercluster
+    // clustering isn't confused by the extra `count`/`total` properties
+    // that the proxy appends to the root object.
+    if (map.getSource('sightings')) {
+      map.getSource('sightings').setData({
+        type: 'FeatureCollection',
+        features: geojson.features || [],
+      });
+    }
+  }
+
   async function fetchSightings() {
     loadingEl.classList.remove('d-none');
     try {
@@ -137,9 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
-      if (map.getSource('sightings')) {
-        map.getSource('sightings').setData(geojson);
-      }
+      setSourceData(geojson);
       setCount(geojson.count ?? geojson.features.length);
     } catch (err) {
       console.error('Failed to fetch sightings:', err);
@@ -149,9 +159,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // On initial load: fetch for the default viewport then zoom in to whichever
-  // bounding box is smaller – the default view or the tight bbox of the results.
-  // fitBounds (when used) triggers moveend which re-fetches for the new view.
+  // On initial load: fetch for the wide default viewport, zoom into the tight
+  // bbox of the returned sightings (if smaller), then let the moveend handler
+  // re-fetch for the final view.  We use animate:false so moveend fires once
+  // synchronously and there's no race between the animation and the next fetch.
   async function fetchInitialSightings() {
     loadingEl.classList.remove('d-none');
     try {
@@ -166,9 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
-      if (map.getSource('sightings')) {
-        map.getSource('sightings').setData(geojson);
-      }
+      setSourceData(geojson);
       setCount(geojson.count ?? geojson.features.length);
 
       // Compute the tight bbox of the returned features
@@ -186,12 +195,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             (defaultBbox.maxLatitude  - defaultBbox.minLatitude);
         const sightingsArea = (maxLng - minLng) * (maxLat - minLat);
 
-        // Fit to the sightings bbox when it is strictly smaller (and non-degenerate)
+        // Fit to the sightings bbox when it is strictly smaller (and non-degenerate).
+        // animate:false makes moveend fire synchronously (no animation race).
+        // maxZoom:8 keeps enough points on screen for meaningful clustering.
         if (sightingsArea > 0 && sightingsArea < defaultArea) {
-          // fitBounds triggers moveend → scheduleFetch will re-fetch for the new view.
-          // maxZoom 8 keeps enough points on screen for meaningful clustering.
-          map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 8 });
-          return;
+          map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 8, animate: false });
         }
       }
     } catch (err) {
@@ -331,12 +339,11 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    // Register moveend first so fitBounds inside fetchInitialSightings
-    // also triggers a re-fetch via scheduleFetch.
     map.on('moveend', scheduleFetch);
 
-    // Initial load: fetches for the default viewport, then zooms in to the
-    // tighter of the default bbox and the bbox of the returned sightings.
+    // Initial load: data is set then the view snaps (animate:false) to the
+    // tight bbox of the sightings.  The resulting moveend re-fetches for the
+    // final viewport.
     fetchInitialSightings();
   });
 });
