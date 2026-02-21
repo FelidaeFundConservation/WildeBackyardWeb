@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function () {
           'Content-Type': 'application/json',
           'X-CSRFToken': CSRF_TOKEN,
         },
-        body: JSON.stringify(getBbox()),
+        body: JSON.stringify({ ...getBbox(), limit: 5000 }),
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
           'Content-Type': 'application/json',
           'X-CSRFToken': CSRF_TOKEN,
         },
-        body: JSON.stringify(defaultBbox),
+        body: JSON.stringify({ ...defaultBbox, limit: 5000 }),
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
@@ -276,14 +276,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Interaction handlers ─────────────────────────────────────────────────
 
-    // Click on a cluster → zoom in
+    // Click on a cluster → zoom in (MapLibre v5 uses Promise API)
     map.on('click', 'clusters', function (e) {
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
-      map.getSource('sightings').getClusterExpansionZoom(clusterId, function (err, zoom) {
-        if (err) return;
-        map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
-      });
+      map.getSource('sightings').getClusterExpansionZoom(clusterId)
+        .then(function (zoom) {
+          map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+        })
+        .catch(function (err) { console.error('Cluster expansion error:', err); });
     });
 
     // Click on individual point → show popup

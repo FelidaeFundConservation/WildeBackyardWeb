@@ -244,7 +244,9 @@ def sightings_by_bbox(request):
         "maxLongitude": data.get("maxLongitude"),
     }
 
-    limit = data.get("limit", 500)
+    # Use a high default so the map gets enough points for meaningful clustering.
+    # The JS can lower this for performance on very dense viewports.
+    limit = data.get("limit", 5000)
     api_client = BackendAPIClient(auth_token=api_token)
     response = api_client.post(f"/v1/socialmedia/api/feed/getbb/?limit={limit}&offset=0", bbox_data)
 
