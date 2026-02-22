@@ -39,6 +39,22 @@
   .maplibregl-popup-content h6 {
     margin-bottom: 0.25rem;
   }
+  #map-coords {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0.5rem;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: #1e293b;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+  }
     </style>
 {% endblock header_includes %}
 {% block content %}
@@ -70,6 +86,7 @@
         {% endif %}
         <div class="position-relative">
             <div id="sightings-map"></div>
+            <div id="map-coords">—</div>
             <!-- Legend overlay -->
             <div class="position-absolute bottom-0 start-0 m-3 map-legend shadow">
                 <div class="legend-item">
@@ -105,6 +122,18 @@ document.addEventListener('DOMContentLoaded', function () {
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
   map.addControl(new maplibregl.FullscreenControl(), 'top-right');
 
+  // ── Cursor position / zoom display ────────────────────────────────────────
+  const coordsEl = document.getElementById('map-coords');
+  function updateZoomDisplay() {
+    coordsEl.textContent = `z${map.getZoom().toFixed(2)}`;
+  }
+  map.on('mousemove', function (e) {
+    const { lng, lat } = e.lngLat;
+    coordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}  z${map.getZoom().toFixed(2)}`;
+  });
+  map.on('mouseout', function () { updateZoomDisplay(); });
+  map.on('zoom', updateZoomDisplay);
+
   // ── Bbox fetch helpers ─────────────────────────────────────────────────────
 
   function getBbox() {
@@ -128,15 +157,32 @@ document.addEventListener('DOMContentLoaded', function () {
     // Always pass a clean FeatureCollection to MapLibre so Supercluster
     // clustering isn't confused by the extra `count`/`total` properties
     // that the proxy appends to the root object.
-    if (map.getSource('sightings')) {
-      map.getSource('sightings').setData({
-        type: 'FeatureCollection',
-        features: geojson.features || [],
-      });
+    console.log('[map] setSourceData called, raw keys:', Object.keys(geojson));
+    const clean = { type: 'FeatureCollection', features: geojson.features || [] };
+    console.log('[map] setSourceData clean features count:', clean.features.length);
+    if (clean.features.length > 0) {
+      console.log('[map] first feature sample:', JSON.stringify(clean.features[0]));
+    }
+    const source = map.getSource('sightings');
+    if (source) {
+      console.log('[map] source exists, calling setData');
+      source.setData(clean);
+      console.log('[map] setData complete');
+    } else {
+      console.warn('[map] setSourceData: source "sightings" not found yet');
     }
   }
 
   async function fetchSightings() {
+    // Cancel any in-flight request — its bbox is now stale.
+    if (fetchAbortController) {
+      fetchAbortController.abort();
+    }
+    fetchAbortController = new AbortController();
+    const signal = fetchAbortController.signal;
+
+    const bbox = getBbox();
+    console.log('[map] fetchSightings bbox:', bbox);
     loadingEl.classList.remove('d-none');
     try {
       const resp = await fetch(BBOX_API_URL, {
@@ -145,14 +191,21 @@ document.addEventListener('DOMContentLoaded', function () {
           'Content-Type': 'application/json',
           'X-CSRFToken': CSRF_TOKEN,
         },
-        body: JSON.stringify({ ...getBbox(), limit: 5000 }),
+        body: JSON.stringify({ ...bbox, limit: 5000 }),
+        signal,
       });
+      console.log('[map] fetchSightings response status:', resp.status);
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
+      console.log('[map] fetchSightings response keys:', Object.keys(geojson), 'feature count:', (geojson.features || []).length);
       setSourceData(geojson);
       setCount(geojson.count ?? geojson.features.length);
     } catch (err) {
-      console.error('Failed to fetch sightings:', err);
+      if (err.name === 'AbortError') {
+        console.log('[map] fetchSightings aborted (superseded by newer request)');
+        return;
+      }
+      console.error('[map] fetchSightings failed:', err);
       countTextEl.textContent = 'Error loading sightings';
     } finally {
       loadingEl.classList.add('d-none');
@@ -164,9 +217,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // re-fetch for the final view.  We use animate:false so moveend fires once
   // synchronously and there's no race between the animation and the next fetch.
   async function fetchInitialSightings() {
+    console.log('[map] fetchInitialSightings start');
     loadingEl.classList.remove('d-none');
     try {
       const defaultBbox = getBbox();
+      console.log('[map] fetchInitialSightings defaultBbox:', defaultBbox);
       const resp = await fetch(BBOX_API_URL, {
         method: 'POST',
         headers: {
@@ -175,8 +230,10 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         body: JSON.stringify({ ...defaultBbox, limit: 5000 }),
       });
+      console.log('[map] fetchInitialSightings response status:', resp.status);
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const geojson = await resp.json();
+      console.log('[map] fetchInitialSightings response keys:', Object.keys(geojson), 'feature count:', (geojson.features || []).length);
       setSourceData(geojson);
       setCount(geojson.count ?? geojson.features.length);
 
@@ -198,35 +255,61 @@ document.addEventListener('DOMContentLoaded', function () {
         // Fit to the sightings bbox when it is strictly smaller (and non-degenerate).
         // animate:false makes moveend fire synchronously (no animation race).
         // maxZoom:8 keeps enough points on screen for meaningful clustering.
+        console.log('[map] defaultArea:', defaultArea, 'sightingsArea:', sightingsArea);
         if (sightingsArea > 0 && sightingsArea < defaultArea) {
+          console.log('[map] calling fitBounds to', [minLng, minLat], [maxLng, maxLat]);
+          suppressNextMoveend = true;
           map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 8, animate: false });
         }
       }
     } catch (err) {
-      console.error('Failed to fetch initial sightings:', err);
+      console.error('[map] fetchInitialSightings failed:', err);
       countTextEl.textContent = 'Error loading sightings';
     } finally {
       loadingEl.classList.add('d-none');
     }
   }
 
-  // Debounce so rapid pan/zoom doesn't fire a request per frame
+  // Debounce so rapid pan/zoom doesn't fire a request per frame.
+  // suppressNextMoveend lets fetchInitialSightings skip the moveend that
+  // fires synchronously from fitBounds (animate:false) so it doesn't
+  // overwrite the already-loaded data with a second fetch.
+  // abortController cancels any in-flight bbox request when a newer one starts,
+  // so a stale wide-bbox response can never overwrite a later narrow-bbox one.
   let debounceTimer = null;
+  let suppressNextMoveend = false;
+  let fetchAbortController = null;
   function scheduleFetch() {
+    if (suppressNextMoveend) {
+      console.log('[map] scheduleFetch suppressed (initial fitBounds moveend)');
+      suppressNextMoveend = false;
+      return;
+    }
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(fetchSightings, 400);
   }
 
   // ── Map layers ─────────────────────────────────────────────────────────────
 
+  map.on('error', function (e) {
+    console.error('[map] MapLibre error:', e.error || e);
+  });
+
+  map.on('sourcedata', function (e) {
+    if (e.sourceId === 'sightings' && e.isSourceLoaded && e.dataType === 'source') {
+      console.log('[map] sightings source fully loaded');
+    }
+  });
+
   map.on('load', function () {
+    console.log('[map] load event fired');
     // Add sightings GeoJSON source with clustering enabled (starts empty)
     map.addSource('sightings', {
       type: 'geojson',
       data: EMPTY_GEOJSON,
       cluster: true,
-      clusterMaxZoom: 13,
-      clusterRadius: 50
+      clusterMaxZoom: 17,
+      clusterRadius: 250
     });
 
     // Cluster circles – sized by point count
@@ -261,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
       filter: ['has', 'point_count'],
       layout: {
         'text-field': '{point_count_abbreviated}',
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-font': ["Noto Sans Regular"],
         'text-size': 13
       },
       paint: {
@@ -274,6 +357,7 @@ document.addEventListener('DOMContentLoaded', function () {
       id: 'unclustered-point',
       type: 'circle',
       source: 'sightings',
+      minZoom: 8,
       filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-color': '#16a34a',
@@ -339,7 +423,10 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    map.on('moveend', scheduleFetch);
+    map.on('moveend', function () {
+      console.log('[map] moveend — zoom:', map.getZoom(), 'center:', map.getCenter());
+      scheduleFetch();
+    });
 
     // Initial load: data is set then the view snaps (animate:false) to the
     // tight bbox of the sightings.  The resulting moveend re-fetches for the
