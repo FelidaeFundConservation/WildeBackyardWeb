@@ -18,7 +18,17 @@ from siteapps.socialmedia.views import (
     LikeCommentView,
     LikePostView,
 )
-from siteapps.socialmedia.web_views import add_comment, feed_view, like_comment, like_post, load_more_posts, post_detail_view, report_post
+from siteapps.socialmedia.web_views import (
+    add_comment,
+    feed_view,
+    like_comment,
+    like_post,
+    load_more_posts,
+    post_detail_view,
+    report_post,
+    update_sighting_species,
+    vote_quality_metric,
+)
 
 app_name = "socialmedia"
 
@@ -31,6 +41,8 @@ urlpatterns = [
     path("post/<uuid:post_id>/like/", like_post, name="like_post"),
     path("post/<uuid:post_id>/comment/<uuid:comment_id>/like/", like_comment, name="like_comment"),
     path("post/<uuid:post_id>/report/", report_post, name="report_post"),
+    path("post/<uuid:post_id>/quality/<str:metric>/", vote_quality_metric, name="vote_quality_metric"),
+    path("post/<uuid:post_id>/species/", update_sighting_species, name="update_sighting_species"),
     # API views
     path("api/comments/create/", CreateCommentView.as_view(), name="create_comment"),
     path("api/comments/like/", LikeCommentView.as_view(), name="like_comment"),

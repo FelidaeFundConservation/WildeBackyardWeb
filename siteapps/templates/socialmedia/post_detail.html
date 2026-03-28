@@ -84,10 +84,35 @@
                                 </div>
                             {% endif %}
                         </div>
-                        {% if post.species %}
-                            <div class="mb-3">
+                        {% if post.species_list %}
+                            <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+                                {% for sp in post.species_list %}
+                                    <span class="badge bg-success fs-6">
+                                        <i class="bi bi-tag"></i> {{ sp }}
+                                        {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75 ms-1 small">(primary)</span>{% endif %}
+                                    </span>
+                                {% endfor %}
+                                {% if post.animal_count %}
+                                    <span class="badge bg-info text-dark fs-6">
+                                        <i class="bi bi-collection"></i> {{ post.animal_count }} animal{{ post.animal_count|pluralize }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% elif post.species %}
+                            <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
                                 <span class="badge bg-success fs-6">
                                     <i class="bi bi-tag"></i> {{ post.species }}
+                                </span>
+                                {% if post.animal_count %}
+                                    <span class="badge bg-info text-dark fs-6">
+                                        <i class="bi bi-collection"></i> {{ post.animal_count }} animal{{ post.animal_count|pluralize }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% elif post.animal_count %}
+                            <div class="mb-3">
+                                <span class="badge bg-info text-dark fs-6">
+                                    <i class="bi bi-collection"></i> {{ post.animal_count }} animal{{ post.animal_count|pluralize }}
                                 </span>
                             </div>
                         {% endif %}
@@ -120,6 +145,286 @@
                                 </div>
                             {% endif %}
                         </div>
+                    </div>
+                </div>
+                <!-- Data Quality Assessment Panel -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-clipboard-check"></i> Data Quality Assessment
+                        </h4>
+                        <span class="badge fs-6 {% if post.quality_grade == 'research' %}bg-success {% elif post.quality_grade == 'needs_id' %}bg-warning text-dark {% else %}bg-secondary{% endif %}">
+                            {% if post.quality_grade == 'research' %}
+                                <i class="bi bi-award"></i> Research Grade
+                            {% elif post.quality_grade == 'needs_id' %}
+                                <i class="bi bi-question-circle"></i> Needs ID
+                            {% else %}
+                                <i class="bi bi-info-circle"></i> Casual
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Derived quality criteria (auto-computed from post data) -->
+                        {% with qf=post.quality_flags %}
+                            {% if qf %}
+                                <h6 class="text-muted mb-2 small text-uppercase fw-semibold">Quality Criteria</h6>
+                                <table class="table table-sm table-borderless mb-4" style="width:auto">
+                                    <tbody>
+                                        <tr>
+                                            <td class="pe-3">
+                                                {% if qf.date_specified %}
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>Date specified</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                {% if qf.location_specified %}
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>Location specified</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                {% if qf.has_media %}
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>Has photo or video</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                {% if qf.id_supported_by_two_or_more %}
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>ID supported by two or more</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            {% endif %}
+                        {% endwith %}
+                        {% if quality_metrics %}
+                            <h6 class="text-muted mb-2 small text-uppercase fw-semibold">Community Assessment</h6>
+                            <p class="text-muted small mb-3">
+                                Quality assessment votes are reviewed by staff.
+                                {% if user.is_staff or user.is_superuser %}Vote using the buttons below.{% endif %}
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Criterion</th>
+                                            <th class="text-center">
+                                                <i class="bi bi-hand-thumbs-up text-success"></i> Yes
+                                            </th>
+                                            <th class="text-center">
+                                                <i class="bi bi-hand-thumbs-down text-danger"></i> No
+                                            </th>
+                                            {% if user.is_staff or user.is_superuser %}<th class="text-center">Your Vote</th>{% endif %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for qm in quality_metrics %}
+                                            <tr>
+                                                <td>{{ qm.question }}</td>
+                                                <td class="text-center">
+                                                    {% if user.is_staff or user.is_superuser %}
+                                                        <form method="post"
+                                                              action="{% url 'socialmedia:vote_quality_metric' post_id qm.metric %}"
+                                                              style="display:inline">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="agree" value="true">
+                                                            <button type="submit"
+                                                                    class="btn btn-sm {% if qm.user_vote == True %}btn-success{% else %}btn-outline-success{% endif %}">
+                                                                {{ qm.agree_count }}
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <span class="text-success fw-semibold">{{ qm.agree_count }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if user.is_staff or user.is_superuser %}
+                                                        <form method="post"
+                                                              action="{% url 'socialmedia:vote_quality_metric' post_id qm.metric %}"
+                                                              style="display:inline">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="agree" value="false">
+                                                            <button type="submit"
+                                                                    class="btn btn-sm {% if qm.user_vote == False %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                                                {{ qm.disagree_count }}
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <span class="text-danger fw-semibold">{{ qm.disagree_count }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                {% if user.is_staff or user.is_superuser %}
+                                                    <td class="text-center">
+                                                        {% if qm.user_vote == True %}
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check-lg"></i> Yes
+                                                            </span>
+                                                        {% elif qm.user_vote == False %}
+                                                            <span class="badge bg-danger">
+                                                                <i class="bi bi-x-lg"></i> No
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">—</span>
+                                                        {% endif %}
+                                                    </td>
+                                                {% endif %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endif %}
+                        {% if post.species_list or post.species %}
+                            <div class="{% if quality_metrics %}mt-3 pt-3 border-top{% endif %}">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-tag"></i> Species Identification
+                                    </h6>
+                                    {% if user.is_staff or user.is_superuser %}
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#speciesEditForm"
+                                                aria-expanded="false">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                {% if post.species_list %}
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        {% for sp in post.species_list %}
+                                            <span class="badge bg-success">
+                                                {{ sp }}
+                                                {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75">(primary)</span>{% endif %}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-success mb-2">{{ post.species }}</span>
+                                {% endif %}
+                                <div class="d-flex gap-3">
+                                    <span class="text-success">
+                                        <i class="bi bi-hand-thumbs-up-fill"></i>
+                                        {{ post.num_identification_agreements }} agreement{{ post.num_identification_agreements|pluralize }}
+                                    </span>
+                                    <span class="text-danger">
+                                        <i class="bi bi-hand-thumbs-down-fill"></i>
+                                        {{ post.num_identification_disagreements }} disagreement{{ post.num_identification_disagreements|pluralize }}
+                                    </span>
+                                </div>
+                                {% if user.is_staff or user.is_superuser %}
+                                    <div class="collapse mt-3" id="speciesEditForm">
+                                        {{ all_species_list|json_script:"allSpeciesData" }}
+                                        <form method="post"
+                                              action="{% url 'socialmedia:update_sighting_species' post_id %}">
+                                            {% csrf_token %}
+                                            <div id="speciesRows">
+                                                {% if post.species_list %}
+                                                    {% for sp in post.species_list %}
+                                                        <div class="input-group mb-2 species-row">
+                                                            <select name="species_list" class="form-select form-select-sm">
+                                                                <option value="">-- select species --</option>
+                                                                {% for s in all_species_list %}
+                                                                    <option value="{{ s }}" {% if s == sp %}selected{% endif %}>{{ s }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-outline-danger remove-species-row">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="input-group mb-2 species-row">
+                                                        <select name="species_list" class="form-select form-select-sm">
+                                                            <option value="">-- select species --</option>
+                                                            {% for s in all_species_list %}
+                                                                <option value="{{ s }}" {% if s == post.species %}selected{% endif %}>{{ s }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-danger remove-species-row">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="d-flex gap-2 mt-1">
+                                                <button type="button"
+                                                        id="addSpeciesRow"
+                                                        class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-plus"></i> Add species
+                                                </button>
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check"></i> Save
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <script>
+                                    (function () {
+                                        const MAX_SPECIES = 5;
+                                        const allSpecies = JSON.parse(document.getElementById('allSpeciesData').textContent);
+
+                                        function buildOptions(selected) {
+                                            let html = '<option value="">-- select species --</option>';
+                                            allSpecies.forEach(function (s) {
+                                                html += '<option value="' + s.replace(/"/g, '&quot;') + '"' + (s === selected ? ' selected' : '') + '>' + s + '</option>';
+                                            });
+                                            return html;
+                                        }
+
+                                        function buildRow() {
+                                            const div = document.createElement('div');
+                                            div.className = 'input-group mb-2 species-row';
+                                            div.innerHTML = '<select name="species_list" class="form-select form-select-sm">' + buildOptions('') + '</select>' +
+                                                '<button type="button" class="btn btn-sm btn-outline-danger remove-species-row"><i class="bi bi-x"></i></button>';
+                                            return div;
+                                        }
+
+                                        document.getElementById('addSpeciesRow').addEventListener('click', function () {
+                                            const container = document.getElementById('speciesRows');
+                                            if (container.querySelectorAll('.species-row').length < MAX_SPECIES) {
+                                                container.appendChild(buildRow());
+                                            }
+                                        });
+
+                                        document.getElementById('speciesRows').addEventListener('click', function (e) {
+                                            const btn = e.target.closest('.remove-species-row');
+                                            if (!btn) return;
+                                            const rows = document.querySelectorAll('#speciesRows .species-row');
+                                            if (rows.length > 1) {
+                                                btn.closest('.species-row').remove();
+                                            }
+                                        });
+                                    })();
+                                    </script>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if not quality_metrics and not post.species %}
+                            <p class="text-muted text-center mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                Quality assessment data is not yet available for this post.
+                            </p>
+                        {% endif %}
                     </div>
                 </div>
                 <!-- Map Section -->
@@ -275,7 +580,7 @@ document.getElementById('comment_text').addEventListener('input', function() {
 document.addEventListener('DOMContentLoaded', function() {
   const latitude = {{ post.latitude }};
   const longitude = {{ post.longitude }};
-  
+
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://tiles.openfreemap.org/styles/bright',
@@ -298,10 +603,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const corner2 = [{{ post.corner_2_longitude }}, {{ post.corner_2_latitude }}];
   const corner3 = [{{ post.corner_3_longitude }}, {{ post.corner_3_latitude }}];
   const corner4 = [{{ post.corner_4_longitude }}, {{ post.corner_4_latitude }}];
-  
+
   const centerLng = (corner1[0] + corner2[0] + corner3[0] + corner4[0]) / 4;
   const centerLat = (corner1[1] + corner2[1] + corner3[1] + corner4[1]) / 4;
-  
+
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://tiles.openfreemap.org/styles/bright',
@@ -323,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
-    
+
     map.addLayer({
       'id': 'obfuscation-box-fill',
       'type': 'fill',
@@ -333,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'fill-opacity': 0.3
       }
     });
-    
+
     map.addLayer({
       'id': 'obfuscation-box-outline',
       'type': 'line',

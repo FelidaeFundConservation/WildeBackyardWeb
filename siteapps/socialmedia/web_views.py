@@ -57,7 +57,13 @@ def feed_view(request):
         data = {}
         if species_filter:
             data["species"] = species_filter
-        if location_filter == "radius" and center_lat is not None and center_lon is not None and radius_km is not None and radius_km > 0:
+        if (
+            location_filter == "radius"
+            and center_lat is not None
+            and center_lon is not None
+            and radius_km is not None
+            and radius_km > 0
+        ):
             data["distanceRadius"] = radius_km
             data["centerLatitude"] = center_lat
             data["centerLongitude"] = center_lon
@@ -111,6 +117,14 @@ def post_detail_view(request, post_id):
         return redirect("socialmedia:feed")
 
     post = _normalize_post(post_response)
+    quality_metrics = post_response.get("quality_metrics", [])
+
+    # Fetch the full species list for the edit form (unauthenticated endpoint)
+    all_species_list = []
+    species_api_client = BackendAPIClient()
+    species_response = species_api_client.get("/v1/species/api/names/get/")
+    if species_response and "species_names" in species_response:
+        all_species_list = species_response.get("species_names", [])
 
     # Fetch comments and like status from the backend
     comments_response = api_client.post("/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)})
@@ -123,8 +137,64 @@ def post_detail_view(request, post_id):
         "post": post,
         "post_id": post_id,
         "comments": comments,
+        "quality_metrics": quality_metrics,
+        "all_species_list": all_species_list,
     }
     return render(request, "socialmedia/post_detail.html", context)
+
+
+@login_required
+def vote_quality_metric(request, post_id, metric):
+    """Submit or toggle a quality-metric vote. Restricted to staff and superusers."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to vote on quality metrics.")
+        return redirect("socialmedia:post_detail", post_id=post_id)
+
+    if request.method == "POST":
+        agree_str = request.POST.get("agree", "").lower()
+        agree = agree_str == "true"
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            response = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/quality/{metric}/",
+                {"agree": agree},
+            )
+            if response is None:
+                messages.error(request, "Failed to record quality vote.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
+
+
+@login_required
+def update_sighting_species(request, post_id):
+    """Replace the species list for a post. Restricted to staff and superusers."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to edit species.")
+        return redirect("socialmedia:post_detail", post_id=post_id)
+
+    if request.method == "POST":
+        species_names = request.POST.getlist("species_list")
+        species_names = [s for s in species_names if s.strip()]
+
+        if not species_names:
+            messages.error(request, "At least one species is required.")
+            return redirect("socialmedia:post_detail", post_id=post_id)
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            response = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/species/",
+                {"species_list": species_names},
+            )
+            if response is None:
+                messages.error(request, "Failed to update species list.")
+            else:
+                messages.success(request, "Species list updated.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
 
 
 @login_required
@@ -248,7 +318,13 @@ def load_more_posts(request):
     if species_filter:
         data["species"] = species_filter
 
-    if location_filter == "radius" and center_lat is not None and center_lon is not None and radius_km is not None and radius_km > 0:
+    if (
+        location_filter == "radius"
+        and center_lat is not None
+        and center_lon is not None
+        and radius_km is not None
+        and radius_km > 0
+    ):
         data["distanceRadius"] = radius_km
         data["centerLatitude"] = center_lat
         data["centerLongitude"] = center_lon

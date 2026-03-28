@@ -100,9 +100,21 @@ class CreateSightingView(View):
             if geocoded_location.get("zip_code"):
                 data["geocodedLocationZipCode"] = geocoded_location["zip_code"]
 
-        # Optional fields - only include if provided
-        if request.POST.get("species"):
+        # Handle multi-species list (name="species_list" multi-value field, up to 5)
+        species_names = [s.strip() for s in request.POST.getlist("species_list") if s.strip()][:5]
+        if species_names:
+            data["speciesList"] = species_names
+        elif request.POST.get("species"):
             data["species"] = request.POST.get("species")
+
+        # Number of animals in the sighting
+        animal_count_raw = request.POST.get("animal_count", "").strip()
+        if animal_count_raw:
+            try:
+                data["animalCount"] = int(animal_count_raw)
+            except ValueError:
+                pass
+
         if request.POST.get("post_body"):
             data["postBody"] = request.POST.get("post_body")
         if request.POST.get("location_accuracy_meters"):
