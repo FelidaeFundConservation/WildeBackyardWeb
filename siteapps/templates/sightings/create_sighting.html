@@ -75,24 +75,31 @@
                         <h3>
                             <i class="bi bi-search"></i> Species Identification
                         </h3>
-                        <div class="mb-3">
-                            <label for="species" class="form-label">Species</label>
-                            <select class="form-select" id="species" name="species">
-                                <option value="">Select a species...</option>
-                                {% for species in species_list %}<option value="{{ species }}">{{ species }}</option>{% endfor %}
-                            </select>
-                            <small class="text-muted">Select the species you observed</small>
+                        <p class="text-muted mb-3">
+                            Add up to 5 species observed in this sighting. The first entry is the primary identification.
+                        </p>
+                        <div id="species-container">
+                            <!-- Species rows added by JS -->
                         </div>
-                        <div class="mb-3">
-                            <label for="new_species" class="form-label">Or Add New Species</label>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    id="add-species-btn"
+                                    onclick="addSpeciesRow()">
+                                <i class="bi bi-plus-circle"></i> Add Another Species
+                            </button>
+                            <small class="text-muted" id="species-count-hint">1 of 5 max</small>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Add Unlisted Species to Options</label>
                             <div class="input-group">
                                 <input type="text"
                                        class="form-control"
-                                       id="new_species"
-                                       placeholder="Enter new species name">
+                                       id="new_species_input"
+                                       placeholder="Enter species name not in the list">
                                 <button class="btn btn-outline-secondary"
                                         type="button"
-                                        onclick="addNewSpecies()">
+                                        onclick="addNewSpeciesOption()">
                                     <i class="bi bi-plus-circle"></i> Add
                                 </button>
                             </div>
@@ -228,6 +235,17 @@
                             <i class="bi bi-info-circle"></i> Additional Information
                         </h3>
                         <div class="mb-3">
+                            <label for="animal_count" class="form-label">Number of Animals</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="animal_count"
+                                   name="animal_count"
+                                   min="1"
+                                   max="9999"
+                                   placeholder="e.g., 3">
+                            <small class="text-muted">How many individual animals were visible?</small>
+                        </div>
+                        <div class="mb-3">
                             <label for="camera_model" class="form-label">Camera Model</label>
                             <input type="text"
                                    class="form-control"
@@ -274,6 +292,101 @@
         </div>
     </div>
     <script>
+// -------------------------------------------------------
+// Multi-species selection (up to 5)
+// -------------------------------------------------------
+const MAX_SPECIES_ALLOWED = 5;
+let speciesRowCount = 0;
+
+// Build options HTML from Django-rendered species list
+const allSpeciesList = [{% for sp in species_list %}'{{ sp|escapejs }}',{% endfor %}];
+
+function buildSpeciesOptionsHtml(placeholder) {
+  let html = `<option value="">${placeholder}</option>`;
+  allSpeciesList.forEach(s => {
+    html += `<option value="${s}">${s}</option>`;
+  });
+  return html;
+}
+
+function addSpeciesRow(preselected) {
+  if (speciesRowCount >= MAX_SPECIES_ALLOWED) return;
+  speciesRowCount++;
+
+  const container = document.getElementById('species-container');
+  const row = document.createElement('div');
+  row.className = 'd-flex gap-2 mb-2 align-items-center';
+
+  const isPrimary = speciesRowCount === 1;
+  const placeholder = isPrimary ? 'Primary species...' : `Additional species ${speciesRowCount}...`;
+
+  const select = document.createElement('select');
+  select.className = 'form-select';
+  select.name = 'species_list';
+  select.innerHTML = buildSpeciesOptionsHtml(placeholder);
+  if (preselected) select.value = preselected;
+
+  const label = document.createElement('span');
+  label.className = 'text-muted small text-nowrap';
+  label.textContent = isPrimary ? '(primary)' : '';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-sm btn-outline-danger flex-shrink-0';
+  removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+  removeBtn.disabled = isPrimary;
+  removeBtn.onclick = function() {
+    row.remove();
+    speciesRowCount--;
+    refreshSpeciesRows();
+  };
+
+  row.appendChild(select);
+  row.appendChild(label);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+  updateSpeciesHint();
+}
+
+function refreshSpeciesRows() {
+  const rows = document.querySelectorAll('#species-container > div');
+  speciesRowCount = rows.length;
+  rows.forEach((row, idx) => {
+    const label = row.querySelector('span');
+    const btn = row.querySelector('button');
+    const sel = row.querySelector('select');
+    if (label) label.textContent = idx === 0 ? '(primary)' : '';
+    if (btn) btn.disabled = (idx === 0 && rows.length === 1);
+    if (sel && sel.options[0].value === '') {
+      sel.options[0].text = idx === 0 ? 'Primary species...' : `Additional species ${idx + 1}...`;
+    }
+  });
+  updateSpeciesHint();
+}
+
+function updateSpeciesHint() {
+  const hint = document.getElementById('species-count-hint');
+  if (hint) hint.textContent = `${speciesRowCount} of ${MAX_SPECIES_ALLOWED} max`;
+  const addBtn = document.getElementById('add-species-btn');
+  if (addBtn) addBtn.disabled = speciesRowCount >= MAX_SPECIES_ALLOWED;
+}
+
+function addNewSpeciesOption() {
+  const input = document.getElementById('new_species_input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!allSpeciesList.includes(name)) {
+    allSpeciesList.push(name);
+    document.querySelectorAll('select[name="species_list"]').forEach(sel => {
+      sel.add(new Option(name, name));
+    });
+  }
+  // Select in the last row
+  const selects = document.querySelectorAll('select[name="species_list"]');
+  if (selects.length) selects[selects.length - 1].value = name;
+  input.value = '';
+}
+// -------------------------------------------------------
 // MapLibre GL JS does not require an access token for base maps
 let map, marker;
 
@@ -290,6 +403,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set today's date as default
   document.getElementById('encounter_date').valueAsDate = new Date();
+
+  // Initialize first species row
+  addSpeciesRow();
 
   // Character counters
   document.getElementById('post_title').addEventListener('input', function() {
@@ -347,16 +463,8 @@ function useCurrentDateTime() {
   document.getElementById('encounter_time').value = now.toTimeString().slice(0, 5);
 }
 
-function addNewSpecies() {
-  const newSpecies = document.getElementById('new_species').value.trim();
-  if (newSpecies) {
-    const select = document.getElementById('species');
-    const option = new Option(newSpecies, newSpecies);
-    select.add(option);
-    select.value = newSpecies;
-    document.getElementById('new_species').value = '';
-  }
-}
+// Legacy - kept for compatibility, no longer used in main species select
+function addNewSpecies() {}
 
 function previewMedia(input) {
   const preview = document.getElementById('mediaPreview');
@@ -365,20 +473,20 @@ function previewMedia(input) {
   if (input.files && input.files[0]) {
     const file = input.files[0];
     const maxSize = 500 * 1024 * 1024; // 500MB
-    
+
     // Validate file size
     if (file.size > maxSize) {
       alert('File is too large. Maximum size is 500MB.');
       input.value = ''; // Clear the input
       return;
     }
-    
+
     const reader = new FileReader();
 
     reader.onload = function(e) {
       if (file.type.startsWith('image/')) {
         preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
-        
+
         // Extract EXIF data for images
         extractExifGPS(e.target.result);
       } else if (file.type.startsWith('video/')) {
@@ -397,11 +505,11 @@ function extractExifGPS(dataUrl) {
     console.warn('EXIF library not loaded, skipping GPS extraction');
     return;
   }
-  
+
   // Convert dataURL to image element for EXIF parsing
   const img = document.createElement('img');
   img.src = dataUrl;
-  
+
   img.onload = function() {
     try {
       EXIF.getData(img, function() {
@@ -409,12 +517,12 @@ function extractExifGPS(dataUrl) {
         const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
         const lng = EXIF.getTag(this, 'GPSLongitude');
         const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
-        
+
         if (lat && lng && latRef && lngRef) {
           // Convert GPS coordinates to decimal degrees
           const latitude = convertDMSToDD(lat, latRef);
           const longitude = convertDMSToDD(lng, lngRef);
-          
+
           // Validate coordinates are within valid ranges and are finite numbers
           if (!isFinite(latitude) || !isFinite(longitude) ||
               latitude < -90 || latitude > 90 ||
@@ -422,38 +530,38 @@ function extractExifGPS(dataUrl) {
             console.warn('Invalid GPS coordinates extracted from EXIF:', {latitude, longitude});
             return;
           }
-          
+
           // Only populate if fields are empty
           const latField = document.getElementById('location_latitude');
           const lngField = document.getElementById('location_longitude');
-          
+
           if (latField.value === '') {
             latField.value = latitude.toFixed(6);
           }
           if (lngField.value === '') {
             lngField.value = longitude.toFixed(6);
           }
-          
+
           // Update map with EXIF location (only if map is initialized)
           if (typeof map !== 'undefined' && map) {
             updateMapMarker(longitude, latitude);
             map.flyTo({center: [longitude, latitude], zoom: 14});
           }
-          
+
           // Show notification
           const preview = document.getElementById('mediaPreview');
           const notification = document.createElement('div');
           notification.className = 'alert alert-success mt-2';
-          
+
           const icon = document.createElement('i');
           icon.className = 'bi bi-check-circle';
           notification.appendChild(icon);
-          
+
           const message = document.createTextNode(' GPS coordinates extracted from image EXIF data');
           notification.appendChild(message);
-          
+
           preview.appendChild(notification);
-          
+
           // Remove notification after 5 seconds
           setTimeout(() => notification.remove(), 5000);
         }
@@ -467,13 +575,13 @@ function extractExifGPS(dataUrl) {
 function convertDMSToDD(dms, ref) {
   // DMS is typically [degrees, minutes, seconds]
   // EXIF.js returns these as rational numbers (with numerator/denominator) or plain numbers
-  
+
   // Validate dms is an array with at least 3 elements
   if (!Array.isArray(dms) || dms.length < 3) {
     console.warn('Invalid DMS array format:', dms);
     return NaN;
   }
-  
+
   // Convert each component, handling both rational and plain number formats
   const toDecimal = (value) => {
     if (typeof value === 'object' && value !== null && value.numerator !== undefined) {
@@ -486,18 +594,18 @@ function convertDMSToDD(dms, ref) {
     }
     return value;
   };
-  
+
   const degrees = toDecimal(dms[0]);
   const minutes = toDecimal(dms[1]);
   const seconds = toDecimal(dms[2]);
-  
+
   let dd = degrees + minutes/60 + seconds/3600;
-  
+
   // If South or West, make negative
   if (ref === 'S' || ref === 'W') {
     dd = dd * -1;
   }
-  
+
   return dd;
 }
 
