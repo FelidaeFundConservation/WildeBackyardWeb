@@ -58,6 +58,19 @@ class User(AbstractUser, TimeStampedModel):
     first_name = None  # type: ignore
     last_name = None  # type: ignore
 
+    # The number of warnings the user has received
+    warnings = models.IntegerField(default=0)
+
+    # Additional flag to indicate if user is a volunteer
+    is_volunteer = models.BooleanField(default=False)
+    # Flag to indicate an expert user. Their votes will provide direct validation
+    is_expert = models.BooleanField(
+        default=False,
+        help_text="Expert user votes directly validate Category, Species and Activity without need for additional consensus",
+    )
+    # Phone number if needed
+    phone_number = models.CharField("Phone Number", max_length=25, blank=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]
 
@@ -66,5 +79,13 @@ class User(AbstractUser, TimeStampedModel):
     def __str__(self):
         return f"{self.name}"
 
-    def has_eligible_work(self, min):
-        return self.writing.filter(word_count__gte=500).exists()
+
+class BannedEmail(TimeStampedModel):
+    """Track email addresses that have been permanently banned."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    ban_reason = models.TextField(max_length=2000)
+
+    def __str__(self):
+        return self.email
