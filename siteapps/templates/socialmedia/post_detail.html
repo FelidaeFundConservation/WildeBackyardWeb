@@ -419,6 +419,57 @@
                                 {% endif %}
                             </div>
                         {% endif %}
+                        {% if post.animal_count is not None or user.is_staff or user.is_superuser %}
+                            <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-collection"></i> Animal Count
+                                    </h6>
+                                    <span class="fs-5 fw-semibold" id="animalCountDisplay">
+                                        {% if post.animal_count is not None %}
+                                            {{ post.animal_count }}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">not set</span>
+                                        {% endif %}
+                                    </span>
+                                    {% if post.animal_count is not None and post.animal_count == 1 %}
+                                        <span class="text-muted ms-1">animal</span>
+                                    {% elif post.animal_count is not None %}
+                                        <span class="text-muted ms-1">animals</span>
+                                    {% endif %}
+                                </div>
+                                {% if user.is_staff or user.is_superuser %}
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#animalCountEditForm"
+                                                aria-expanded="false">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% if user.is_staff or user.is_superuser %}
+                                <div class="collapse mt-2" id="animalCountEditForm">
+                                    <form method="post"
+                                          action="{% url 'socialmedia:update_animal_count' post_id %}"
+                                          class="d-flex align-items-center gap-2">
+                                        {% csrf_token %}
+                                        <input type="number"
+                                               name="animal_count"
+                                               class="form-control form-control-sm"
+                                               style="max-width:100px"
+                                               min="1"
+                                               max="9999"
+                                               value="{% if post.animal_count is not None %}{{ post.animal_count }}{% else %}1{% endif %}">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="bi bi-check"></i> Save
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        {% endif %}
                         {% if not quality_metrics and not post.species %}
                             <p class="text-muted text-center mb-0">
                                 <i class="bi bi-info-circle"></i>

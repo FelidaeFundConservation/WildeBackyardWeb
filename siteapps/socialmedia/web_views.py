@@ -198,6 +198,34 @@ def update_sighting_species(request, post_id):
 
 
 @login_required
+def update_animal_count(request, post_id):
+    """Update the animal count for a post. Restricted to staff and superusers."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to edit animal count.")
+        return redirect("socialmedia:post_detail", post_id=post_id)
+
+    if request.method == "POST":
+        animal_count = request.POST.get("animal_count", "").strip()
+        if not animal_count:
+            messages.error(request, "Animal count is required.")
+            return redirect("socialmedia:post_detail", post_id=post_id)
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            response = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/animal-count/",
+                {"animal_count": animal_count},
+            )
+            if response is None:
+                messages.error(request, "Failed to update animal count.")
+            else:
+                messages.success(request, "Animal count updated.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
+
+
+@login_required
 def add_comment(request, post_id):
     """Add comment to a post"""
     if request.method == "POST":

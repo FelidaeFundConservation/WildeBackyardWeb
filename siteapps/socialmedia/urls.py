@@ -26,6 +26,7 @@ from siteapps.socialmedia.web_views import (
     load_more_posts,
     post_detail_view,
     report_post,
+    update_animal_count,
     update_sighting_species,
     vote_quality_metric,
 )
@@ -43,6 +44,7 @@ urlpatterns = [
     path("post/<uuid:post_id>/report/", report_post, name="report_post"),
     path("post/<uuid:post_id>/quality/<str:metric>/", vote_quality_metric, name="vote_quality_metric"),
     path("post/<uuid:post_id>/species/", update_sighting_species, name="update_sighting_species"),
+    path("post/<uuid:post_id>/animal-count/", update_animal_count, name="update_animal_count"),
     # API views
     path("api/comments/create/", CreateCommentView.as_view(), name="create_comment"),
     path("api/comments/like/", LikeCommentView.as_view(), name="like_comment"),
