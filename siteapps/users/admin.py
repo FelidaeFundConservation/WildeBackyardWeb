@@ -13,8 +13,10 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        (_("Personal info"), {"fields": ("name", "bio", "low_priority_rounds")}),
+        (_("Personal info"), {"fields": ("name", "bio", "phone_number")}),
+        (_("Roles"), {"fields": ("is_volunteer", "is_expert")}),
         (_("Permissions"), {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
+        (_("Moderation"), {"fields": ("warnings",)}),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
 

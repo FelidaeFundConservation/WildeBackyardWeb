@@ -1,0 +1,13 @@
+{% extends "_base.html" %}
+{% block content %}
+    <div class="container mt-4">
+        <h2>Report Post</h2>
+        <p>Are you sure you want to report this post as inappropriate?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Submit Report</button>
+            <a href="{% url 'socialmedia:post_detail' post_id=post_id %}"
+               class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+{% endblock content %}
