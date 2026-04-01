@@ -1,6 +1,8 @@
 {% extends "_base.html" %}
 {% load static %}
-{% block title %}Report a Sighting - WildeBackyard{% endblock %}
+{% block title %}
+    Report a Sighting - WildeBackyard
+{% endblock title %}
 {% block header_includes %}
     <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
           rel='stylesheet' />
@@ -36,7 +38,7 @@
     color: red;
   }
     </style>
-{% endblock %}
+{% endblock header_includes %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
@@ -96,13 +98,15 @@
                                 <input type="text"
                                        class="form-control"
                                        id="new_species_input"
-                                       placeholder="Enter species name not in the list">
+                                       placeholder="Enter species name not in the list"
+                                       autocomplete="off">
                                 <button class="btn btn-outline-secondary"
                                         type="button"
                                         onclick="addNewSpeciesOption()">
                                     <i class="bi bi-plus-circle"></i> Add
                                 </button>
                             </div>
+                            <div id="species-suggestion"></div>
                         </div>
                     </div>
                     <!-- Location Section -->
@@ -385,6 +389,42 @@ function addNewSpeciesOption() {
   const selects = document.querySelectorAll('select[name="species_list"]');
   if (selects.length) selects[selects.length - 1].value = name;
   input.value = '';
+  document.getElementById('species-suggestion').innerHTML = '';
+}
+
+// -------------------------------------------------------
+// Species name suggestion (debounced fetch to /species/api/suggest/)
+// -------------------------------------------------------
+(function () {
+  let suggestTimer = null;
+  const input = document.getElementById('new_species_input');
+  const box = document.getElementById('species-suggestion');
+
+  input.addEventListener('input', function () {
+    clearTimeout(suggestTimer);
+    const q = this.value.trim();
+    if (!q) { box.innerHTML = ''; return; }
+    suggestTimer = setTimeout(function () {
+      fetch('/species/api/suggest/?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.choice) { box.innerHTML = ''; return; }
+          const safeChoice = data.choice.replace(/'/g, "\\'");
+          const level = data.confident ? 'success' : 'info';
+          const label = data.confident ? 'Probably' : 'Did you mean';
+          box.innerHTML =
+            '<div class="alert alert-' + level + ' py-1 px-2 mt-1 mb-0 d-flex align-items-center gap-2">' +
+            '<small>' + label + ': <strong>' + data.choice + '</strong></small>' +
+            '<button type="button" class="btn btn-sm btn-' + level + ' py-0 px-2 ms-auto" ' + 'onclick="useSuggestion(\'' + safeChoice + '\')">Use</button>' +
+            '</div>';
+        });
+    }, 300);
+  });
+})();
+
+function useSuggestion(name) {
+  document.getElementById('new_species_input').value = name;
+  addNewSpeciesOption();
 }
 // -------------------------------------------------------
 // MapLibre GL JS does not require an access token for base maps
@@ -628,4 +668,4 @@ document.getElementById('location_longitude').addEventListener('change', functio
   }
 });
     </script>
-{% endblock %}
+{% endblock content %}

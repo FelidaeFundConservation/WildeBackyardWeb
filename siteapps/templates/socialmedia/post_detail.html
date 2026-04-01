@@ -1,6 +1,8 @@
 {% extends "_base.html" %}
 {% load static %}
-{% block title %}{{ post.title }} - WildeBackyard{% endblock %}
+{% block title %}
+    {{ post.title }} - WildeBackyard
+{% endblock title %}
 {% block header_includes %}
     <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
           rel='stylesheet' />
@@ -12,7 +14,7 @@
     border-radius: 0.5rem;
   }
     </style>
-{% endblock %}
+{% endblock header_includes %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
@@ -376,6 +378,21 @@
                                                     <i class="bi bi-check"></i> Save
                                                 </button>
                                             </div>
+                                            <div class="mt-2">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text"
+                                                           class="form-control form-control-sm"
+                                                           id="dqa_species_search"
+                                                           placeholder="Search species by name…"
+                                                           autocomplete="off">
+                                                    <button class="btn btn-sm btn-outline-secondary"
+                                                            type="button"
+                                                            id="dqa_species_search_btn">
+                                                        <i class="bi bi-search"></i>
+                                                    </button>
+                                                </div>
+                                                <div id="dqa-species-suggestion"></div>
+                                            </div>
                                         </form>
                                     </div>
                                     <script>
@@ -414,6 +431,60 @@
                                                 btn.closest('.species-row').remove();
                                             }
                                         });
+
+                                        // Species search with similarity suggestion
+                                        (function () {
+                                            let dqaTimer = null;
+                                            const searchInput = document.getElementById('dqa_species_search');
+                                            const suggBox = document.getElementById('dqa-species-suggestion');
+
+                                            function applyDqaSuggestion(name) {
+                                                const container = document.getElementById('speciesRows');
+                                                const rows = container.querySelectorAll('.species-row');
+                                                const lastSelect = rows[rows.length - 1].querySelector('select');
+                                                if (lastSelect.value === '') {
+                                                    // Pre-fill the last empty row
+                                                    lastSelect.value = name;
+                                                } else if (rows.length < MAX_SPECIES) {
+                                                    // Add a new row pre-selected
+                                                    const newRow = buildRow();
+                                                    newRow.querySelector('select').value = name;
+                                                    container.appendChild(newRow);
+                                                }
+                                                searchInput.value = '';
+                                                suggBox.innerHTML = '';
+                                            }
+
+                                            function fetchSuggestion(q) {
+                                                fetch('/species/api/suggest/?q=' + encodeURIComponent(q))
+                                                    .then(function (r) { return r.json(); })
+                                                    .then(function (data) {
+                                                        if (!data.choice) { suggBox.innerHTML = ''; return; }
+                                                        const safeChoice = data.choice.replace(/'/g, "\\'");
+                                                        const level = data.confident ? 'success' : 'info';
+                                                        const label = data.confident ? 'Probably' : 'Did you mean';
+                                                        suggBox.innerHTML =
+                                                            '<div class="alert alert-' + level + ' py-1 px-2 mt-1 mb-0 d-flex align-items-center gap-2">' +
+                                                            '<small>' + label + ': <strong>' + data.choice + '</strong></small>' +
+                                                            '<button type="button" class="btn btn-sm btn-' + level + ' py-0 px-2 ms-auto" ' + 'onclick="applyDqaSuggestion(\'' + safeChoice + '\')">Use</button>' +
+                                                            '</div>';
+                                                        // Expose so onclick can reach it
+                                                        window.applyDqaSuggestion = applyDqaSuggestion;
+                                                    });
+                                            }
+
+                                            searchInput.addEventListener('input', function () {
+                                                clearTimeout(dqaTimer);
+                                                const q = this.value.trim();
+                                                if (!q) { suggBox.innerHTML = ''; return; }
+                                                dqaTimer = setTimeout(function () { fetchSuggestion(q); }, 300);
+                                            });
+
+                                            document.getElementById('dqa_species_search_btn').addEventListener('click', function () {
+                                                const q = searchInput.value.trim();
+                                                if (q) fetchSuggestion(q);
+                                            });
+                                        })();
                                     })();
                                     </script>
                                 {% endif %}
@@ -476,6 +547,172 @@
                                 Quality assessment data is not yet available for this post.
                             </p>
                         {% endif %}
+                        <!-- Location edit panel (staff / superuser only) -->
+                        {% if user.is_staff or user.is_superuser %}
+                            <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-geo-alt"></i> Location
+                                    </h6>
+                                    {% if post.latitude and post.longitude %}
+                                        <span class="text-muted small">{{ post.latitude|floatformat:6 }}, {{ post.longitude|floatformat:6 }}</span>
+                                        <span class="badge bg-success ms-2">Public</span>
+                                    {% elif post.corner_1_latitude %}
+                                        <span class="text-muted small fst-italic">Approximate (obfuscated)</span>
+                                        <span class="badge bg-warning text-dark ms-2">Obscured</span>
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Hidden</span>
+                                        <span class="badge bg-secondary ms-2">Private</span>
+                                    {% endif %}
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#locationEditForm"
+                                        aria-expanded="false">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                            </div>
+                            <div class="collapse mt-2" id="locationEditForm">
+                                <form method="post"
+                                      action="{% url 'socialmedia:update_location' post_id %}"
+                                      id="locationEditFormEl">
+                                    {% csrf_token %}
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6">
+                                            <label for="edit_location_latitude" class="form-label form-label-sm">Latitude</label>
+                                            <input type="number"
+                                                   step="any"
+                                                   class="form-control form-control-sm"
+                                                   id="edit_location_latitude"
+                                                   name="location_latitude"
+                                                   value="{% if post.latitude %}{{ post.latitude }}{% endif %}"
+                                                   required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="edit_location_longitude" class="form-label form-label-sm">Longitude</label>
+                                            <input type="number"
+                                                   step="any"
+                                                   class="form-control form-control-sm"
+                                                   id="edit_location_longitude"
+                                                   name="location_longitude"
+                                                   value="{% if post.longitude %}{{ post.longitude }}{% endif %}"
+                                                   required>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6">
+                                            <label for="edit_privacy_setting" class="form-label form-label-sm">Privacy Setting</label>
+                                            <select class="form-select form-select-sm"
+                                                    id="edit_privacy_setting"
+                                                    name="privacy_setting"
+                                                    onchange="toggleObfuscationField(this.value)">
+                                                <option value="public"
+                                                        {% if post.latitude and post.longitude %}selected{% endif %}>
+                                                    Public (Exact Location)
+                                                </option>
+                                                <option value="approximate"
+                                                        {% if post.corner_1_latitude and not post.latitude %}selected{% endif %}>
+                                                    Approximate (Obfuscated)
+                                                </option>
+                                                <option value="hidden"
+                                                        {% if not post.latitude and not post.corner_1_latitude %}selected{% endif %}>
+                                                    Hidden (No Location Shown)
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6" id="obfuscationField">
+                                            <label for="edit_obfuscation_kilometers" class="form-label form-label-sm">Obfuscation Radius (km)</label>
+                                            <input type="number"
+                                                   step="0.1"
+                                                   class="form-control form-control-sm"
+                                                   id="edit_obfuscation_kilometers"
+                                                   name="obfuscation_kilometers"
+                                                   value="0.5"
+                                                   min="0.1"
+                                                   max="50">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                onclick="pickLocationOnEditMap()">
+                                            <i class="bi bi-map"></i> Pick on Map
+                                        </button>
+                                    </div>
+                                    <div id="locationEditMap"
+                                         style="width:100%;
+                                                height:300px;
+                                                border-radius:0.4rem;
+                                                margin-bottom:0.75rem"></div>
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-check"></i> Save Location
+                                    </button>
+                                </form>
+                            </div>
+                            <script>
+                            (function () {
+                                let editMap = null;
+                                let editMarker = null;
+
+                                function toggleObfuscationField(val) {
+                                    const el = document.getElementById('obfuscationField');
+                                    if (el) el.style.display = val === 'approximate' ? '' : 'none';
+                                }
+
+                                // Set initial visibility
+                                const privacyEl = document.getElementById('edit_privacy_setting');
+                                if (privacyEl) toggleObfuscationField(privacyEl.value);
+                                if (privacyEl) privacyEl.addEventListener('change', function () { toggleObfuscationField(this.value); });
+
+                                // Initialise edit map when the collapse opens
+                                const collapseEl = document.getElementById('locationEditForm');
+                                collapseEl.addEventListener('shown.bs.collapse', function () {
+                                    if (editMap) return;
+                                    const lat = parseFloat(document.getElementById('edit_location_latitude').value) || 37.5;
+                                    const lng = parseFloat(document.getElementById('edit_location_longitude').value) || -122.0;
+                                    editMap = new maplibregl.Map({
+                                        container: 'locationEditMap',
+                                        style: 'https://tiles.openfreemap.org/styles/bright',
+                                        center: [lng, lat],
+                                        zoom: 12
+                                    });
+                                    editMap.addControl(new maplibregl.NavigationControl());
+                                    if (document.getElementById('edit_location_latitude').value) {
+                                        editMarker = new maplibregl.Marker({ draggable: true })
+                                            .setLngLat([lng, lat])
+                                            .addTo(editMap);
+                                        editMarker.on('dragend', function () {
+                                            const pos = editMarker.getLngLat();
+                                            document.getElementById('edit_location_latitude').value = pos.lat.toFixed(8);
+                                            document.getElementById('edit_location_longitude').value = pos.lng.toFixed(8);
+                                        });
+                                    }
+                                });
+
+                                window.pickLocationOnEditMap = function () {
+                                    if (!editMap) return;
+                                    editMap.once('click', function (e) {
+                                        const { lng, lat } = e.lngLat;
+                                        document.getElementById('edit_location_latitude').value = lat.toFixed(8);
+                                        document.getElementById('edit_location_longitude').value = lng.toFixed(8);
+                                        if (editMarker) {
+                                            editMarker.setLngLat([lng, lat]);
+                                        } else {
+                                            editMarker = new maplibregl.Marker({ draggable: true })
+                                                .setLngLat([lng, lat])
+                                                .addTo(editMap);
+                                            editMarker.on('dragend', function () {
+                                                const pos = editMarker.getLngLat();
+                                                document.getElementById('edit_location_latitude').value = pos.lat.toFixed(8);
+                                                document.getElementById('edit_location_longitude').value = pos.lng.toFixed(8);
+                                            });
+                                        }
+                                    });
+                                };
+                            })();
+                            </script>
+                        {% endif %}
                     </div>
                 </div>
                 <!-- Map Section -->
@@ -503,7 +740,9 @@
                     <div class="card-header bg-white">
                         <h4 class="mb-0">
                             <i class="bi bi-chat-dots"></i> Comments
-                            {% if comments %}<span class="badge bg-secondary">{{ comments|length }}</span>{% endif %}
+                            {% if comments %}
+                                <span class="badge bg-secondary">{{ comments|length }}</span>
+                            {% endif %}
                         </h4>
                     </div>
                     <div class="card-body">
@@ -703,4 +942,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 {% endif %}
     </script>
-{% endblock %}
+{% endblock content %}
