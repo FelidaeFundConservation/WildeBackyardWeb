@@ -602,6 +602,20 @@
                                     </div>
                                     <div class="row g-2 mb-2">
                                         <div class="col-md-6">
+                                            <label for="edit_accuracy_ring_radius_meters"
+                                                   class="form-label form-label-sm">Accuracy Radius (m)</label>
+                                            <input type="number"
+                                                   step="1"
+                                                   class="form-control form-control-sm"
+                                                   id="edit_accuracy_ring_radius_meters"
+                                                   name="accuracy_ring_radius_meters"
+                                                   value="{% if post.accuracy %}{{ post.accuracy }}{% endif %}"
+                                                   min="0"
+                                                   placeholder="Optional">
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6">
                                             <label for="edit_privacy_setting" class="form-label form-label-sm">Privacy Setting</label>
                                             <select class="form-select form-select-sm"
                                                     id="edit_privacy_setting"
