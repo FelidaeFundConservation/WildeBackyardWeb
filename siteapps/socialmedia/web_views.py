@@ -226,6 +226,44 @@ def update_animal_count(request, post_id):
 
 
 @login_required
+def update_location(request, post_id):
+    """Update latitude, longitude, privacy setting, and obfuscation radius for a post.
+    Restricted to staff and superusers."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to edit location.")
+        return redirect("socialmedia:post_detail", post_id=post_id)
+
+    if request.method == "POST":
+        latitude = request.POST.get("location_latitude", "").strip()
+        longitude = request.POST.get("location_longitude", "").strip()
+        privacy_setting = request.POST.get("privacy_setting", "").strip()
+        obfuscation_km = request.POST.get("obfuscation_kilometers", "0.5").strip()
+
+        if not latitude or not longitude:
+            messages.error(request, "Latitude and longitude are required.")
+            return redirect("socialmedia:post_detail", post_id=post_id)
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            response = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/location/",
+                {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "privacy_setting": privacy_setting,
+                    "obfuscation_kilometers": obfuscation_km,
+                },
+            )
+            if response is None:
+                messages.error(request, "Failed to update location.")
+            else:
+                messages.success(request, "Location updated.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
+
+
+@login_required
 def add_comment(request, post_id):
     """Add comment to a post"""
     if request.method == "POST":
