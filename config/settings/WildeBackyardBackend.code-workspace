@@ -2,6 +2,23 @@
     "folders": [
         {
             "path": "../.."
+        },
+        {
+            "path": "../../../WildeBackyardFrontend"
+        },
+        {
+            "path": "../../../inaturalist"
+        },
+        {
+            "path": "../../../WildeBackyardBackend"
+        },
+        {
+            "path": "../../../wildepod_main"
         }
-    ]
+    ],
+    "settings": {
+        "chat.tools.terminal.autoApprove": {
+            "mkdir": true
+        }
+    }
 }

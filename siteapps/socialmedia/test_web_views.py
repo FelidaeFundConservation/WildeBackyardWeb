@@ -110,14 +110,11 @@ class FeedViewTests(TestCase):
         response = self.client.get(self.url + "?location=radius&center_lat=not_a_number&center_lon=-93.0&radius_km=10")
         self.assertEqual(response.status_code, 200)
 
-    @patch("siteapps.socialmedia.web_views.BackendAPIClient")
-    def test_species_list_populated_from_api(self, mock_client_class):
-        mock_api = MagicMock()
-        mock_api.get.return_value = {"species_names": ["Robin", "Blue Jay"]}
-        mock_client_class.return_value = mock_api
-
+    def test_feed_renders_without_species_list_in_context(self):
+        # species_list is no longer pre-populated; filter uses live autocomplete
         response = self.client.get(self.url)
-        self.assertEqual(response.context["species_list"], ["Robin", "Blue Jay"])
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("species_list", response.context)
 
 
 class PostDetailViewTests(TestCase):
@@ -155,7 +152,18 @@ class PostDetailViewTests(TestCase):
         mock_api = MagicMock()
         mock_api.get.side_effect = [
             {**FAKE_POST, "quality_metrics": []},
-            {"species_names": ["Robin"]},
+            {
+                "taxa": [
+                    {
+                        "id": 1,
+                        "inat_id": 3001,
+                        "name": "Turdus migratorius",
+                        "preferred_common_name": "American Robin",
+                        "iconic_taxon_name": "Aves",
+                        "observations_count": 5000,
+                    }
+                ]
+            },
         ]
         mock_api.post.return_value = {
             "comments": [],

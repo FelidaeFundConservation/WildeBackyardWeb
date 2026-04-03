@@ -29,25 +29,7 @@ class CreateSightingView(View):
 
     def get(self, request):
         """Display sighting submission form"""
-        # Get species list from backend (no auth required for species list)
-        species_list = []
-
-        try:
-            api_client = BackendAPIClient()
-            response = api_client.get("/v1/species/api/names/get/")
-            if response and "species_names" in response:
-                # Backend returns a flat list of species names
-                species_list = response.get("species_names", [])
-                logger.info(f"Loaded {len(species_list)} species from backend API")
-            else:
-                logger.warning(f"Failed to load species list. Response: {response}")
-        except Exception as e:
-            logger.error(f"Error loading species list: {e}")
-
-        context = {
-            "species_list": species_list,
-        }
-        return render(request, self.template_name, context)
+        return render(request, self.template_name, {})
 
     def post(self, request):
         """Process sighting submission"""

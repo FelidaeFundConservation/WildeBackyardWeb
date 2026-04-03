@@ -1,6 +1,14 @@
 {% extends "_base.html" %}
 {% load static %}
-{% block title %}Wildlife Feed - WildeBackyard{% endblock %}
+{% block title %}
+    Wildlife Feed - WildeBackyard
+{% endblock title %}
+{% block header_includes %}
+    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
+          rel='stylesheet' />
+    <script src='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js'></script>
+    <style>#feed-radius-map { height: 180px; border-radius: .375rem; margin-top: .5rem; }</style>
+{% endblock header_includes %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row">
@@ -10,20 +18,22 @@
                     <div class="card-body">
                         <h5 class="card-title">Filters</h5>
                         <form method="get" action="{% url 'socialmedia:feed' %}">
-                            <div class="mb-3">
+                            <div class="mb-3 position-relative">
                                 <label for="species" class="form-label">Species</label>
-                                <select class="form-select form-select-sm"
-                                        id="species"
-                                        name="species"
-                                        onchange="this.form.submit()">
-                                    <option value="">All Species</option>
-                                    {% for species in species_list %}
-                                        <option value="{{ species }}"
-                                                {% if current_species == species %}selected{% endif %}>
-                                            {{ species }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="species"
+                                       name="species"
+                                       value="{{ current_species|default:'' }}"
+                                       placeholder="Search species…"
+                                       autocomplete="off">
+                                <div id="feedSpeciesDropdown"
+                                     class="list-group shadow position-absolute start-0 end-0"
+                                     style="z-index:1050;
+                                            display:none;
+                                            max-height:220px;
+                                            overflow-y:auto;
+                                            top:100%"></div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Location</label>
@@ -79,7 +89,8 @@
                                            min="1"
                                            max="5000"
                                            value="{{ radius_km|default:50 }}">
-                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <div id="feed-radius-map"></div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
                                         <i class="bi bi-funnel-fill"></i> Apply
                                     </button>
                                 </div>
@@ -91,8 +102,7 @@
                                class="btn btn-primary w-100 btn-sm mb-2">
                                 <i class="bi bi-plus-circle"></i> Report Sighting
                             </a>
-                            <a href="{% url 'sightings:map' %}"
-                               class="btn btn-info w-100 btn-sm">
+                            <a href="{% url 'sightings:map' %}" class="btn btn-info w-100 btn-sm">
                                 <i class="bi bi-map"></i> Sightings Map
                             </a>
                         {% endif %}
@@ -144,6 +154,8 @@
                                         {% else %}
                                             <img src="{{ post.media_url }}"
                                                  class="card-img-top"
+                                                 height="300"
+                                                 width="100%"
                                                  style="max-height: 300px;
                                                         object-fit: cover"
                                                  alt="{{ post.title }}">
@@ -371,5 +383,143 @@ async function loadMore() {
         loadingSpinner.classList.add('d-none');
     }
 }
+
+// -------------------------------------------------------
+// Species typeahead for filter sidebar
+// -------------------------------------------------------
+(function () {
+    const TAXON_ICONS = {
+        'Aves':     '{% static "img/taxa/aves-32px.png" %}',
+        'Mammalia': '{% static "img/taxa/mammalia-32px.png" %}',
+        'Reptilia': '{% static "img/taxa/reptilia-32px.png" %}',
+        'Amphibia': '{% static "img/taxa/amphibia-32px.png" %}',
+    };
+    const TAXON_ICON_DEFAULT = '{% static "img/taxa/unknown-32px.png" %}';
+
+    const input = document.getElementById('species');
+    const dropdown = document.getElementById('feedSpeciesDropdown');
+    const form = input.closest('form');
+    let timer = null;
+
+    // If input is cleared and user presses Enter, submit (show all species)
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); form.submit(); }
+        if (e.key === 'Escape') { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+    });
+
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        const q = this.value.trim();
+        if (q.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+        timer = setTimeout(function () {
+            fetch('/species/api/taxa/autocomplete/?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.results || !data.results.length) {
+                        dropdown.style.display = 'none'; dropdown.innerHTML = ''; return;
+                    }
+                    dropdown.innerHTML = data.results.map(t => {
+                        const common = t.preferred_common_name || t.name;
+                        const iconUrl = TAXON_ICONS[t.iconic_taxon_name] || TAXON_ICON_DEFAULT;
+                        return `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
+                                    data-value="${common.replace(/"/g, '&quot;')}">
+                                <img src="${iconUrl}" width="20" height="20" style="object-fit:contain;flex-shrink:0;" alt="">
+                                <div>
+                                    <div class="fw-semibold small lh-sm">${common}</div>
+                                    <div class="text-muted fst-italic lh-sm" style="font-size:.75em">${t.name}</div>
+                                </div>
+                            </button>`;
+                    }).join('');
+                    dropdown.style.display = 'block';
+                    dropdown.querySelectorAll('button').forEach(btn => {
+                        btn.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            input.value = this.dataset.value;
+                            dropdown.style.display = 'none';
+                            dropdown.innerHTML = '';
+                            form.submit();
+                        });
+                    });
+                });
+        }, 300);
+    });
+
+    input.addEventListener('blur', function () {
+        setTimeout(() => { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }, 200);
+    });
+})();
+
+// -------------------------------------------------------
+// Radius map picker
+// -------------------------------------------------------
+(function () {
+    const radiusInputs = document.getElementById('radius-inputs');
+    if (!radiusInputs) return;
+
+    const latInput = document.getElementById('center_lat');
+    const lonInput = document.getElementById('center_lon');
+
+    let feedMap = null;
+    let feedMarker = null;
+
+    function initFeedMap() {
+        if (feedMap) return;
+        const lat = parseFloat(latInput.value) || 37.906;
+        const lng = parseFloat(lonInput.value) || -122.5449; // Mill Valley, CA
+        feedMap = new maplibregl.Map({
+            container: 'feed-radius-map',
+            style: 'https://tiles.openfreemap.org/styles/bright',
+            center: [lng, lat],
+            zoom: lat !== 37.906 ? 6 : 10,
+        });
+        feedMap.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        // Place marker if coords already set
+        if (latInput.value && lonInput.value) {
+            feedMarker = new maplibregl.Marker({ draggable: true })
+                .setLngLat([lng, lat])
+                .addTo(feedMap);
+            feedMarker.on('dragend', function () {
+                const pos = feedMarker.getLngLat();
+                latInput.value = pos.lat.toFixed(6);
+                lonInput.value = pos.lng.toFixed(6);
+            });
+        }
+
+        feedMap.on('click', function (e) {
+            const { lng, lat } = e.lngLat;
+            latInput.value = lat.toFixed(6);
+            lonInput.value = lng.toFixed(6);
+            if (feedMarker) {
+                feedMarker.setLngLat([lng, lat]);
+            } else {
+                feedMarker = new maplibregl.Marker({ draggable: true })
+                    .setLngLat([lng, lat])
+                    .addTo(feedMap);
+                feedMarker.on('dragend', function () {
+                    const pos = feedMarker.getLngLat();
+                    latInput.value = pos.lat.toFixed(6);
+                    lonInput.value = pos.lng.toFixed(6);
+                });
+            }
+        });
+    }
+
+    // Init map when the radius section becomes visible
+    const radiusRadio = document.getElementById('radius');
+    if (radiusRadio) {
+        radiusRadio.addEventListener('change', function () {
+            if (this.checked) {
+                // Wait a tick for d-none to be removed before sizing map
+                setTimeout(initFeedMap, 50);
+            }
+        });
+    }
+
+    // If radius filter is already active on page load, init immediately
+    if (radiusInputs && !radiusInputs.classList.contains('d-none')) {
+        document.addEventListener('DOMContentLoaded', function () { initFeedMap(); });
+    }
+})();
     </script>
-{% endblock %}
+{% endblock content %}

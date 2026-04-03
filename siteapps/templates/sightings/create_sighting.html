@@ -92,22 +92,6 @@
                             </button>
                             <small class="text-muted" id="species-count-hint">1 of 5 max</small>
                         </div>
-                        <div class="mb-3 mt-3">
-                            <label class="form-label">Add Unlisted Species to Options</label>
-                            <div class="input-group">
-                                <input type="text"
-                                       class="form-control"
-                                       id="new_species_input"
-                                       placeholder="Enter species name not in the list"
-                                       autocomplete="off">
-                                <button class="btn btn-outline-secondary"
-                                        type="button"
-                                        onclick="addNewSpeciesOption()">
-                                    <i class="bi bi-plus-circle"></i> Add
-                                </button>
-                            </div>
-                            <div id="species-suggestion"></div>
-                        </div>
                     </div>
                     <!-- Location Section -->
                     <div class="form-section">
@@ -297,137 +281,141 @@
     </div>
     <script>
 // -------------------------------------------------------
-// Multi-species selection (up to 5)
+// Taxon icons by group (MIT-licensed silhouettes from iNaturalist)
+// -------------------------------------------------------
+const TAXON_ICONS = {
+    'Aves':     '{% static "img/taxa/aves-32px.png" %}',
+    'Mammalia': '{% static "img/taxa/mammalia-32px.png" %}',
+    'Reptilia': '{% static "img/taxa/reptilia-32px.png" %}',
+    'Amphibia': '{% static "img/taxa/amphibia-32px.png" %}',
+};
+const TAXON_ICON_DEFAULT = '{% static "img/taxa/unknown-32px.png" %}';
+
+function taxonIconUrl(iconicTaxonName) {
+    return TAXON_ICONS[iconicTaxonName] || TAXON_ICON_DEFAULT;
+}
+
+// -------------------------------------------------------
+// Multi-species typeahead (up to 5)
 // -------------------------------------------------------
 const MAX_SPECIES_ALLOWED = 5;
 let speciesRowCount = 0;
 
-// Build options HTML from Django-rendered species list
-const allSpeciesList = [{% for sp in species_list %}'{{ sp|escapejs }}',{% endfor %}];
+function addSpeciesRow(preselected) {
+    if (speciesRowCount >= MAX_SPECIES_ALLOWED) return;
+    speciesRowCount++;
 
-function buildSpeciesOptionsHtml(placeholder) {
-  let html = `<option value="">${placeholder}</option>`;
-  allSpeciesList.forEach(s => {
-    html += `<option value="${s}">${s}</option>`;
-  });
-  return html;
+    const container = document.getElementById('species-container');
+    const isPrimary = speciesRowCount === 1;
+    const placeholder = isPrimary ? 'Primary species...' : `Additional species ${speciesRowCount}...`;
+
+    const row = document.createElement('div');
+    row.className = 'd-flex gap-2 mb-2 align-items-center position-relative';
+    row.dataset.rowIdx = speciesRowCount;
+    row.innerHTML = `
+        <img class="taxon-icon rounded flex-shrink-0" src="${TAXON_ICON_DEFAULT}" width="28" height="28" alt="" style="object-fit:contain;">
+        <div class="flex-grow-1 position-relative">
+            <input type="text" name="species_list" class="form-control taxon-typeahead" placeholder="${placeholder}" autocomplete="off">
+            <div class="taxon-dropdown list-group shadow position-absolute start-0 end-0" style="z-index:1050;display:none;max-height:240px;overflow-y:auto;top:100%;"></div>
+        </div>
+        <span class="text-muted small text-nowrap taxon-row-label">${isPrimary ? '(primary)' : ''}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 remove-taxon-btn" ${isPrimary ? 'disabled' : ''}>
+            <i class="bi bi-trash"></i>
+        </button>`;
+
+    if (preselected) {
+        row.querySelector('input[name="species_list"]').value = preselected;
+    }
+
+    row.querySelector('.remove-taxon-btn').addEventListener('click', function () {
+        row.remove();
+        speciesRowCount--;
+        refreshSpeciesRows();
+    });
+
+    attachTypeahead(row);
+    container.appendChild(row);
+    updateSpeciesHint();
 }
 
-function addSpeciesRow(preselected) {
-  if (speciesRowCount >= MAX_SPECIES_ALLOWED) return;
-  speciesRowCount++;
+function attachTypeahead(row) {
+    const input = row.querySelector('.taxon-typeahead');
+    const dropdown = row.querySelector('.taxon-dropdown');
+    const icon = row.querySelector('.taxon-icon');
+    let debounceTimer = null;
 
-  const container = document.getElementById('species-container');
-  const row = document.createElement('div');
-  row.className = 'd-flex gap-2 mb-2 align-items-center';
+    input.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        const q = this.value.trim();
+        if (q.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+        debounceTimer = setTimeout(function () {
+            fetch('/species/api/taxa/autocomplete/?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.results || !data.results.length) {
+                        dropdown.style.display = 'none'; dropdown.innerHTML = '';
+                        return;
+                    }
+                    dropdown.innerHTML = data.results.map(t => {
+                        const common = t.preferred_common_name || t.name;
+                        const sci = t.name;
+                        const iconUrl = taxonIconUrl(t.iconic_taxon_name);
+                        return `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2 px-3"
+                                    data-common="${common.replace(/"/g, '&quot;')}"
+                                    data-sci="${sci.replace(/"/g, '&quot;')}"
+                                    data-group="${(t.iconic_taxon_name || '').replace(/"/g, '&quot;')}"
+                                    data-icon="${iconUrl}">
+                                <img src="${iconUrl}" width="24" height="24" style="object-fit:contain;flex-shrink:0;" alt="">
+                                <div>
+                                    <div class="fw-semibold lh-sm">${common}</div>
+                                    <div class="text-muted small fst-italic lh-sm">${sci}</div>
+                                </div>
+                            </button>`;
+                    }).join('');
+                    dropdown.style.display = 'block';
+                    dropdown.querySelectorAll('button').forEach(btn => {
+                        btn.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            input.value = this.dataset.common;
+                            icon.src = this.dataset.icon;
+                            dropdown.style.display = 'none';
+                            dropdown.innerHTML = '';
+                        });
+                    });
+                });
+        }, 300);
+    });
 
-  const isPrimary = speciesRowCount === 1;
-  const placeholder = isPrimary ? 'Primary species...' : `Additional species ${speciesRowCount}...`;
-
-  const select = document.createElement('select');
-  select.className = 'form-select';
-  select.name = 'species_list';
-  select.innerHTML = buildSpeciesOptionsHtml(placeholder);
-  if (preselected) select.value = preselected;
-
-  const label = document.createElement('span');
-  label.className = 'text-muted small text-nowrap';
-  label.textContent = isPrimary ? '(primary)' : '';
-
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn btn-sm btn-outline-danger flex-shrink-0';
-  removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
-  removeBtn.disabled = isPrimary;
-  removeBtn.onclick = function() {
-    row.remove();
-    speciesRowCount--;
-    refreshSpeciesRows();
-  };
-
-  row.appendChild(select);
-  row.appendChild(label);
-  row.appendChild(removeBtn);
-  container.appendChild(row);
-  updateSpeciesHint();
+    input.addEventListener('blur', function () {
+        setTimeout(() => { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }, 200);
+    });
 }
 
 function refreshSpeciesRows() {
-  const rows = document.querySelectorAll('#species-container > div');
-  speciesRowCount = rows.length;
-  rows.forEach((row, idx) => {
-    const label = row.querySelector('span');
-    const btn = row.querySelector('button');
-    const sel = row.querySelector('select');
-    if (label) label.textContent = idx === 0 ? '(primary)' : '';
-    if (btn) btn.disabled = (idx === 0 && rows.length === 1);
-    if (sel && sel.options[0].value === '') {
-      sel.options[0].text = idx === 0 ? 'Primary species...' : `Additional species ${idx + 1}...`;
-    }
-  });
-  updateSpeciesHint();
+    const rows = document.querySelectorAll('#species-container > div');
+    speciesRowCount = rows.length;
+    rows.forEach((row, idx) => {
+        const label = row.querySelector('.taxon-row-label');
+        const btn = row.querySelector('.remove-taxon-btn');
+        const input = row.querySelector('.taxon-typeahead');
+        if (label) label.textContent = idx === 0 ? '(primary)' : '';
+        if (btn) btn.disabled = (idx === 0 && rows.length === 1);
+        if (input && !input.value) {
+            input.placeholder = idx === 0 ? 'Primary species...' : `Additional species ${idx + 1}...`;
+        }
+    });
+    updateSpeciesHint();
 }
 
 function updateSpeciesHint() {
-  const hint = document.getElementById('species-count-hint');
-  if (hint) hint.textContent = `${speciesRowCount} of ${MAX_SPECIES_ALLOWED} max`;
-  const addBtn = document.getElementById('add-species-btn');
-  if (addBtn) addBtn.disabled = speciesRowCount >= MAX_SPECIES_ALLOWED;
+    const hint = document.getElementById('species-count-hint');
+    if (hint) hint.textContent = `${speciesRowCount} of ${MAX_SPECIES_ALLOWED} max`;
+    const addBtn = document.getElementById('add-species-btn');
+    if (addBtn) addBtn.disabled = speciesRowCount >= MAX_SPECIES_ALLOWED;
 }
 
-function addNewSpeciesOption() {
-  const input = document.getElementById('new_species_input');
-  const name = input.value.trim();
-  if (!name) return;
-  if (!allSpeciesList.includes(name)) {
-    allSpeciesList.push(name);
-    document.querySelectorAll('select[name="species_list"]').forEach(sel => {
-      sel.add(new Option(name, name));
-    });
-  }
-  // Select in the last row
-  const selects = document.querySelectorAll('select[name="species_list"]');
-  if (selects.length) selects[selects.length - 1].value = name;
-  input.value = '';
-  document.getElementById('species-suggestion').innerHTML = '';
-}
-
-// -------------------------------------------------------
-// Species name suggestion (debounced fetch to /species/api/suggest/)
-// -------------------------------------------------------
-(function () {
-  let suggestTimer = null;
-  const input = document.getElementById('new_species_input');
-  const box = document.getElementById('species-suggestion');
-
-  input.addEventListener('input', function () {
-    clearTimeout(suggestTimer);
-    const q = this.value.trim();
-    if (!q) { box.innerHTML = ''; return; }
-    suggestTimer = setTimeout(function () {
-      fetch('/species/api/suggest/?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.choice) { box.innerHTML = ''; return; }
-          const safeChoice = data.choice.replace(/'/g, "\\'");
-          const level = data.confident ? 'success' : 'info';
-          const label = data.confident ? 'Probably' : 'Did you mean';
-          box.innerHTML =
-            '<div class="alert alert-' + level + ' py-1 px-2 mt-1 mb-0 d-flex align-items-center gap-2">' +
-            '<small>' + label + ': <strong>' + data.choice + '</strong></small>' +
-            '<button type="button" class="btn btn-sm btn-' + level + ' py-0 px-2 ms-auto" ' + 'onclick="useSuggestion(\'' + safeChoice + '\')">Use</button>' +
-            '</div>';
-        });
-    }, 300);
-  });
-})();
-
-function useSuggestion(name) {
-  document.getElementById('new_species_input').value = name;
-  addNewSpeciesOption();
-}
-// -------------------------------------------------------
-// MapLibre GL JS does not require an access token for base maps
+// Legacy stubs kept for any inline-HTML references
+function addNewSpecies() {}
 let map, marker;
 
 // Initialize map
@@ -502,9 +490,6 @@ function useCurrentDateTime() {
   document.getElementById('encounter_date').valueAsDate = now;
   document.getElementById('encounter_time').value = now.toTimeString().slice(0, 5);
 }
-
-// Legacy - kept for compatibility, no longer used in main species select
-function addNewSpecies() {}
 
 function previewMedia(input) {
   const preview = document.getElementById('mediaPreview');
