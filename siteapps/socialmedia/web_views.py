@@ -78,16 +78,8 @@ def feed_view(request):
         # Not authenticated - show empty feed
         posts = []
 
-    # Get species list for filter (no auth required)
-    species_list = []
-    api_client = BackendAPIClient()
-    response = api_client.get("/v1/species/api/names/get/")
-    if response and "species_names" in response:
-        species_list = response.get("species_names", [])
-
     context = {
         "posts": posts,
-        "species_list": species_list,
         "current_species": species_filter,
         "location_filter": location_filter,
         "center_lat": center_lat,
@@ -119,12 +111,10 @@ def post_detail_view(request, post_id):
     post = _normalize_post(post_response)
     quality_metrics = post_response.get("quality_metrics", [])
 
-    # Fetch the full species list for the edit form (unauthenticated endpoint)
-    all_species_list = []
-    species_api_client = BackendAPIClient()
-    species_response = species_api_client.get("/v1/species/api/names/get/")
-    if species_response and "species_names" in species_response:
-        all_species_list = species_response.get("species_names", [])
+    # Build zipped (common_name, taxon_or_None) pairs for template rendering
+    species_list = post.get("species_list") or []
+    taxa_list = post.get("taxa_list") or [None] * len(species_list)
+    post["species_pairs"] = list(zip(species_list, taxa_list))
 
     # Fetch comments and like status from the backend
     comments_response = api_client.post("/v1/socialmedia/api/posts/responses/get/auth", {"mediaPostId": str(post_id)})
@@ -138,7 +128,6 @@ def post_detail_view(request, post_id):
         "post_id": post_id,
         "comments": comments,
         "quality_metrics": quality_metrics,
-        "all_species_list": all_species_list,
     }
     return render(request, "socialmedia/post_detail.html", context)
 

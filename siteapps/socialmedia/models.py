@@ -6,7 +6,7 @@ from django.db import models
 from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
-from siteapps.species.models import SpeciesName
+from siteapps.species.models import SpeciesName, Taxon
 
 User = get_user_model()
 
@@ -74,6 +74,8 @@ class MediaPost(TextComment):
 
     # The species the user specified was sighted
     species = models.ForeignKey(SpeciesName, on_delete=models.SET_NULL, null=True, blank=True)
+    # iNaturalist-derived taxon FK (replaces species FK over time)
+    taxon = models.ForeignKey(Taxon, on_delete=models.SET_NULL, null=True, blank=True, related_name="media_posts")
 
     ########################
     # Public Information

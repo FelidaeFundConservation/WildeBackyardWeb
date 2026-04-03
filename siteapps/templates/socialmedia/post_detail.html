@@ -88,9 +88,10 @@
                         </div>
                         {% if post.species_list %}
                             <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-                                {% for sp in post.species_list %}
-                                    <span class="badge bg-success fs-6">
+                                {% for sp, taxon in post.species_pairs %}
+                                    <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %} fs-6">
                                         <i class="bi bi-tag"></i> {{ sp }}
+                                        {% if taxon and taxon.name != sp %}<span class="opacity-75 fst-italic small">{{ taxon.name }}</span>{% endif %}
                                         {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75 ms-1 small">(primary)</span>{% endif %}
                                     </span>
                                 {% endfor %}
@@ -311,9 +312,10 @@
                                 </div>
                                 {% if post.species_list %}
                                     <div class="d-flex flex-wrap gap-1 mb-2">
-                                        {% for sp in post.species_list %}
-                                            <span class="badge bg-success">
+                                        {% for sp, taxon in post.species_pairs %}
+                                            <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %}">
                                                 {{ sp }}
+                                                {% if taxon and taxon.name != sp %}<em class="opacity-75 small">{{ taxon.name }}</em>{% endif %}
                                                 {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75">(primary)</span>{% endif %}
                                             </span>
                                         {% endfor %}
@@ -333,20 +335,32 @@
                                 </div>
                                 {% if user.is_staff or user.is_superuser %}
                                     <div class="collapse mt-3" id="speciesEditForm">
-                                        {{ all_species_list|json_script:"allSpeciesData" }}
                                         <form method="post"
                                               action="{% url 'socialmedia:update_sighting_species' post_id %}">
                                             {% csrf_token %}
                                             <div id="speciesRows">
                                                 {% if post.species_list %}
                                                     {% for sp in post.species_list %}
-                                                        <div class="input-group mb-2 species-row">
-                                                            <select name="species_list" class="form-select form-select-sm">
-                                                                <option value="">-- select species --</option>
-                                                                {% for s in all_species_list %}
-                                                                    <option value="{{ s }}" {% if s == sp %}selected{% endif %}>{{ s }}</option>
-                                                                {% endfor %}
-                                                            </select>
+                                                        <div class="d-flex gap-2 mb-2 align-items-center position-relative species-row">
+                                                            <img class="taxon-icon rounded flex-shrink-0"
+                                                                 src="{% static 'img/taxa/unknown-32px.png' %}"
+                                                                 width="28"
+                                                                 height="28"
+                                                                 alt=""
+                                                                 style="object-fit:contain">
+                                                            <div class="flex-grow-1 position-relative">
+                                                                <input type="text"
+                                                                       name="species_list"
+                                                                       class="form-control form-control-sm taxon-typeahead"
+                                                                       value="{{ sp }}"
+                                                                       autocomplete="off">
+                                                                <div class="taxon-dropdown list-group shadow position-absolute start-0 end-0"
+                                                                     style="z-index:1050;
+                                                                            display:none;
+                                                                            max-height:200px;
+                                                                            overflow-y:auto;
+                                                                            top:100%"></div>
+                                                            </div>
                                                             <button type="button"
                                                                     class="btn btn-sm btn-outline-danger remove-species-row">
                                                                 <i class="bi bi-x"></i>
@@ -354,13 +368,26 @@
                                                         </div>
                                                     {% endfor %}
                                                 {% else %}
-                                                    <div class="input-group mb-2 species-row">
-                                                        <select name="species_list" class="form-select form-select-sm">
-                                                            <option value="">-- select species --</option>
-                                                            {% for s in all_species_list %}
-                                                                <option value="{{ s }}" {% if s == post.species %}selected{% endif %}>{{ s }}</option>
-                                                            {% endfor %}
-                                                        </select>
+                                                    <div class="d-flex gap-2 mb-2 align-items-center position-relative species-row">
+                                                        <img class="taxon-icon rounded flex-shrink-0"
+                                                             src="{% static 'img/taxa/unknown-32px.png' %}"
+                                                             width="28"
+                                                             height="28"
+                                                             alt=""
+                                                             style="object-fit:contain">
+                                                        <div class="flex-grow-1 position-relative">
+                                                            <input type="text"
+                                                                   name="species_list"
+                                                                   class="form-control form-control-sm taxon-typeahead"
+                                                                   value="{{ post.species|default:'' }}"
+                                                                   autocomplete="off">
+                                                            <div class="taxon-dropdown list-group shadow position-absolute start-0 end-0"
+                                                                 style="z-index:1050;
+                                                                        display:none;
+                                                                        max-height:200px;
+                                                                        overflow-y:auto;
+                                                                        top:100%"></div>
+                                                        </div>
                                                         <button type="button"
                                                                 class="btn btn-sm btn-outline-danger remove-species-row">
                                                             <i class="bi bi-x"></i>
@@ -378,48 +405,82 @@
                                                     <i class="bi bi-check"></i> Save
                                                 </button>
                                             </div>
-                                            <div class="mt-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text"
-                                                           class="form-control form-control-sm"
-                                                           id="dqa_species_search"
-                                                           placeholder="Search species by name…"
-                                                           autocomplete="off">
-                                                    <button class="btn btn-sm btn-outline-secondary"
-                                                            type="button"
-                                                            id="dqa_species_search_btn">
-                                                        <i class="bi bi-search"></i>
-                                                    </button>
-                                                </div>
-                                                <div id="dqa-species-suggestion"></div>
-                                            </div>
                                         </form>
                                     </div>
                                     <script>
                                     (function () {
                                         const MAX_SPECIES = 5;
-                                        const allSpecies = JSON.parse(document.getElementById('allSpeciesData').textContent);
+                                        const TAXON_ICONS = {
+                                            'Aves':     '{% static "img/taxa/aves-32px.png" %}',
+                                            'Mammalia': '{% static "img/taxa/mammalia-32px.png" %}',
+                                            'Reptilia': '{% static "img/taxa/reptilia-32px.png" %}',
+                                            'Amphibia': '{% static "img/taxa/amphibia-32px.png" %}',
+                                        };
+                                        const TAXON_ICON_DEFAULT = '{% static "img/taxa/unknown-32px.png" %}';
 
-                                        function buildOptions(selected) {
-                                            let html = '<option value="">-- select species --</option>';
-                                            allSpecies.forEach(function (s) {
-                                                html += '<option value="' + s.replace(/"/g, '&quot;') + '"' + (s === selected ? ' selected' : '') + '>' + s + '</option>';
+                                        function taxonIconUrl(g) { return TAXON_ICONS[g] || TAXON_ICON_DEFAULT; }
+
+                                        function attachTypeahead(row) {
+                                            const input = row.querySelector('.taxon-typeahead');
+                                            const dropdown = row.querySelector('.taxon-dropdown');
+                                            const icon = row.querySelector('.taxon-icon');
+                                            let timer = null;
+                                            input.addEventListener('input', function () {
+                                                clearTimeout(timer);
+                                                const q = this.value.trim();
+                                                if (q.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+                                                timer = setTimeout(function () {
+                                                    fetch('/species/api/taxa/autocomplete/?q=' + encodeURIComponent(q))
+                                                        .then(r => r.json())
+                                                        .then(data => {
+                                                            if (!data.results || !data.results.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+                                                            dropdown.innerHTML = data.results.map(t => {
+                                                                const common = t.preferred_common_name || t.name;
+                                                                const sci = t.name;
+                                                                const iconUrl = taxonIconUrl(t.iconic_taxon_name);
+                                                                return `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
+                                                                    data-common="${common.replace(/"/g, '&quot;')}" data-icon="${iconUrl}">
+                                                                    <img src="${iconUrl}" width="22" height="22" style="object-fit:contain;flex-shrink:0;" alt="">
+                                                                    <div><div class="fw-semibold small lh-sm">${common}</div><div class="text-muted x-small fst-italic lh-sm" style="font-size:.75em">${sci}</div></div>
+                                                                </button>`;
+                                                            }).join('');
+                                                            dropdown.style.display = 'block';
+                                                            dropdown.querySelectorAll('button').forEach(btn => {
+                                                                btn.addEventListener('mousedown', function (e) {
+                                                                    e.preventDefault();
+                                                                    input.value = this.dataset.common;
+                                                                    icon.src = this.dataset.icon;
+                                                                    dropdown.style.display = 'none'; dropdown.innerHTML = '';
+                                                                });
+                                                            });
+                                                        });
+                                                }, 300);
                                             });
-                                            return html;
+                                            input.addEventListener('blur', function () {
+                                                setTimeout(() => { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }, 200);
+                                            });
                                         }
 
                                         function buildRow() {
                                             const div = document.createElement('div');
-                                            div.className = 'input-group mb-2 species-row';
-                                            div.innerHTML = '<select name="species_list" class="form-select form-select-sm">' + buildOptions('') + '</select>' +
-                                                '<button type="button" class="btn btn-sm btn-outline-danger remove-species-row"><i class="bi bi-x"></i></button>';
+                                            div.className = 'd-flex gap-2 mb-2 align-items-center position-relative species-row';
+                                            div.innerHTML = `<img class="taxon-icon rounded flex-shrink-0" src="${TAXON_ICON_DEFAULT}" width="28" height="28" alt="" style="object-fit:contain;">
+                                                <div class="flex-grow-1 position-relative">
+                                                    <input type="text" name="species_list" class="form-control form-control-sm taxon-typeahead" autocomplete="off">
+                                                    <div class="taxon-dropdown list-group shadow position-absolute start-0 end-0" style="z-index:1050;display:none;max-height:200px;overflow-y:auto;top:100%;"></div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-species-row"><i class="bi bi-x"></i></button>`;
                                             return div;
                                         }
+
+                                        document.querySelectorAll('#speciesRows .species-row').forEach(attachTypeahead);
 
                                         document.getElementById('addSpeciesRow').addEventListener('click', function () {
                                             const container = document.getElementById('speciesRows');
                                             if (container.querySelectorAll('.species-row').length < MAX_SPECIES) {
-                                                container.appendChild(buildRow());
+                                                const row = buildRow();
+                                                container.appendChild(row);
+                                                attachTypeahead(row);
                                             }
                                         });
 
@@ -427,64 +488,8 @@
                                             const btn = e.target.closest('.remove-species-row');
                                             if (!btn) return;
                                             const rows = document.querySelectorAll('#speciesRows .species-row');
-                                            if (rows.length > 1) {
-                                                btn.closest('.species-row').remove();
-                                            }
+                                            if (rows.length > 1) btn.closest('.species-row').remove();
                                         });
-
-                                        // Species search with similarity suggestion
-                                        (function () {
-                                            let dqaTimer = null;
-                                            const searchInput = document.getElementById('dqa_species_search');
-                                            const suggBox = document.getElementById('dqa-species-suggestion');
-
-                                            function applyDqaSuggestion(name) {
-                                                const container = document.getElementById('speciesRows');
-                                                const rows = container.querySelectorAll('.species-row');
-                                                const lastSelect = rows[rows.length - 1].querySelector('select');
-                                                if (lastSelect.value === '') {
-                                                    // Pre-fill the last empty row
-                                                    lastSelect.value = name;
-                                                } else if (rows.length < MAX_SPECIES) {
-                                                    // Add a new row pre-selected
-                                                    const newRow = buildRow();
-                                                    newRow.querySelector('select').value = name;
-                                                    container.appendChild(newRow);
-                                                }
-                                                searchInput.value = '';
-                                                suggBox.innerHTML = '';
-                                            }
-
-                                            function fetchSuggestion(q) {
-                                                fetch('/species/api/suggest/?q=' + encodeURIComponent(q))
-                                                    .then(function (r) { return r.json(); })
-                                                    .then(function (data) {
-                                                        if (!data.choice) { suggBox.innerHTML = ''; return; }
-                                                        const safeChoice = data.choice.replace(/'/g, "\\'");
-                                                        const level = data.confident ? 'success' : 'info';
-                                                        const label = data.confident ? 'Probably' : 'Did you mean';
-                                                        suggBox.innerHTML =
-                                                            '<div class="alert alert-' + level + ' py-1 px-2 mt-1 mb-0 d-flex align-items-center gap-2">' +
-                                                            '<small>' + label + ': <strong>' + data.choice + '</strong></small>' +
-                                                            '<button type="button" class="btn btn-sm btn-' + level + ' py-0 px-2 ms-auto" ' + 'onclick="applyDqaSuggestion(\'' + safeChoice + '\')">Use</button>' +
-                                                            '</div>';
-                                                        // Expose so onclick can reach it
-                                                        window.applyDqaSuggestion = applyDqaSuggestion;
-                                                    });
-                                            }
-
-                                            searchInput.addEventListener('input', function () {
-                                                clearTimeout(dqaTimer);
-                                                const q = this.value.trim();
-                                                if (!q) { suggBox.innerHTML = ''; return; }
-                                                dqaTimer = setTimeout(function () { fetchSuggestion(q); }, 300);
-                                            });
-
-                                            document.getElementById('dqa_species_search_btn').addEventListener('click', function () {
-                                                const q = searchInput.value.trim();
-                                                if (q) fetchSuggestion(q);
-                                            });
-                                        })();
                                     })();
                                     </script>
                                 {% endif %}

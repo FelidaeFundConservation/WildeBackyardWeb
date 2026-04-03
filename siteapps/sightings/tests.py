@@ -51,27 +51,17 @@ class CreateSightingViewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
 
-    @patch("siteapps.sightings.views.BackendAPIClient")
-    def test_get_renders_form_with_species(self, mock_client_class):
+    def test_get_renders_form(self):
         self._login_with_token()
-        mock_api = MagicMock()
-        mock_api.get.return_value = {"species_names": ["Robin", "Hawk"]}
-        mock_client_class.return_value = mock_api
-
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["species_list"], ["Robin", "Hawk"])
+        self.assertTemplateUsed(response, "sightings/create_sighting.html")
 
-    @patch("siteapps.sightings.views.BackendAPIClient")
-    def test_get_handles_species_api_failure(self, mock_client_class):
+    def test_get_does_not_require_api_call(self):
+        # GET should succeed even without any backend API configured
         self._login_with_token()
-        mock_api = MagicMock()
-        mock_api.get.return_value = None
-        mock_client_class.return_value = mock_api
-
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["species_list"], [])
 
     def test_post_missing_api_token_redirects(self):
         self.client.login(email=self.user.email, password="pass1234!")
