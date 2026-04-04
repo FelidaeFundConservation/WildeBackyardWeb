@@ -167,6 +167,7 @@ class Command(BaseCommand):
                         "preferred_common_name": item.get("preferred_common_name", ""),
                         "is_active": item.get("is_active", True),
                         "observations_count": obs_count,
+                        "default_photo_url": (item.get("default_photo") or {}).get("url", "") or "",
                     }
                     taxon, created = Taxon.objects.update_or_create(
                         inat_id=inat_id,

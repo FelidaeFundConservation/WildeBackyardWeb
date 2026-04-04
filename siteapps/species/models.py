@@ -47,6 +47,8 @@ class Taxon(models.Model):
     preferred_common_name = models.CharField(max_length=255, blank=True, default="", db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
     observations_count = models.IntegerField(default=0)
+    # Square thumbnail URL from iNaturalist default_photo (CC-licensed, hotlinked from iNat CDN)
+    default_photo_url = models.URLField(blank=True, default="")
 
     class Meta:
         ordering = ("preferred_common_name", "name")
