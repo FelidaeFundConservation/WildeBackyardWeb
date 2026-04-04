@@ -1,6 +1,8 @@
 {% extends "_base.html" %}
 {% load static %}
-{% block title %}Profile - WildeBackyard{% endblock %}
+{% block title %}
+    Profile - WildeBackyard
+{% endblock title %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
@@ -79,6 +81,63 @@
                             </div>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-circle"></i> Update Name
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Default Sighting License Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-cc-circle"></i> Default Sighting License
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            This license is applied automatically to new sightings you create.
+                            You can override it per-sighting when submitting.
+                        </p>
+                        <form method="post" action="{% url 'users:update_default_license' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="license_code" class="form-label">License</label>
+                                <select class="form-select" id="license_code" name="license_code">
+                                    <option value="cc0"
+                                            {% if profile_data.default_license == "cc0" %}selected{% endif %}>
+                                        CC0 — Public Domain Dedication (most permissive)
+                                    </option>
+                                    <option value="cc-by"
+                                            {% if profile_data.default_license == "cc-by" %}selected{% endif %}>
+                                        CC BY — Attribution
+                                    </option>
+                                    <option value="cc-by-sa"
+                                            {% if profile_data.default_license == "cc-by-sa" %}selected{% endif %}>
+                                        CC BY-SA — Attribution-ShareAlike
+                                    </option>
+                                    <option value="cc-by-nd"
+                                            {% if profile_data.default_license == "cc-by-nd" %}selected{% endif %}>
+                                        CC BY-ND — Attribution-NoDerivatives
+                                    </option>
+                                    <option value="cc-by-nc"
+                                            {% if profile_data.default_license == "cc-by-nc" %}selected{% endif %}>
+                                        CC BY-NC — Attribution-NonCommercial
+                                    </option>
+                                    <option value="cc-by-nc-sa"
+                                            {% if profile_data.default_license == "cc-by-nc-sa" %}selected{% endif %}>
+                                        CC BY-NC-SA — Attribution-NonCommercial-ShareAlike
+                                    </option>
+                                    <option value="cc-by-nc-nd"
+                                            {% if profile_data.default_license == "cc-by-nc-nd" %}selected{% endif %}>
+                                        CC BY-NC-ND — Attribution-NonCommercial-NoDerivatives
+                                    </option>
+                                    <option value="all-rights-reserved"
+                                            {% if profile_data.default_license == "all-rights-reserved" %}selected{% endif %}>
+                                        All Rights Reserved
+                                    </option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save License
                             </button>
                         </form>
                     </div>
@@ -165,4 +224,4 @@
             </div>
         </div>
     </div>
-{% endblock %}
+{% endblock content %}

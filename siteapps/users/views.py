@@ -181,6 +181,32 @@ class ChangeUsernameView(LoginRequiredMixin, View):
         return redirect("users:profile")
 
 
+class UpdateDefaultLicenseView(LoginRequiredMixin, View):
+    """Handle default license update via Backend API"""
+
+    def post(self, request):
+        """Process default license change"""
+        license_code = request.POST.get("license_code")
+
+        if not license_code:
+            messages.error(request, "No license selected.")
+            return redirect("users:profile")
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            success = api_client.update_default_license(license_code)
+
+            if success:
+                messages.success(request, "Default license updated successfully!")
+            else:
+                messages.error(request, "Failed to update default license.")
+        else:
+            messages.error(request, "Authentication required.")
+
+        return redirect("users:profile")
+
+
 class DeleteAccountView(LoginRequiredMixin, View):
     """Handle account deletion via Backend API"""
 

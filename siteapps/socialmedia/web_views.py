@@ -38,6 +38,7 @@ def _normalize_post(post):
     additional = post.get("additional_info") or {}
     post["camera_model"] = additional.get("camera_model")
     post["habitat_type"] = additional.get("habitat_type")
+    # license dict passed through as-is; templates access post.license.code, .label, etc.
     return post
 
 
