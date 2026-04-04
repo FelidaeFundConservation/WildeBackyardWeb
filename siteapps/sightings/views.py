@@ -29,7 +29,15 @@ class CreateSightingView(View):
 
     def get(self, request):
         """Display sighting submission form"""
-        return render(request, self.template_name, {})
+        # Fetch user's default license to pre-select in the form
+        default_license = "cc0"
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            profile = api_client.get_profile()
+            if profile:
+                default_license = profile.get("default_license", "cc0")
+        return render(request, self.template_name, {"default_license": default_license})
 
     def post(self, request):
         """Process sighting submission"""
@@ -111,6 +119,10 @@ class CreateSightingView(View):
             data["habitatType"] = request.POST.get("habitat_type")
         if request.POST.get("timestamp_offset_details"):
             data["timestampOffsetErrorDetails"] = request.POST.get("timestamp_offset_details")
+        if request.POST.get("license_code"):
+            data["licenseCode"] = request.POST.get("license_code")
+        if request.POST.get("attribution_override"):
+            data["attributionOverride"] = request.POST.get("attribution_override")
 
         # Handle media upload
         media_file = request.FILES.get("media_file")
