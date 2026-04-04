@@ -264,6 +264,52 @@
                                       rows="2"
                                       placeholder="Any notes about camera time accuracy"></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label for="license_code" class="form-label">License</label>
+                            <select class="form-select" id="license_code" name="license_code">
+                                <option value="cc0"
+                                        {% if default_license == "cc0" or not default_license %}selected{% endif %}>
+                                    CC0 — Public Domain Dedication (most permissive)
+                                </option>
+                                <option value="cc-by" {% if default_license == "cc-by" %}selected{% endif %}>CC BY — Attribution</option>
+                                <option value="cc-by-sa"
+                                        {% if default_license == "cc-by-sa" %}selected{% endif %}>
+                                    CC BY-SA — Attribution-ShareAlike
+                                </option>
+                                <option value="cc-by-nd"
+                                        {% if default_license == "cc-by-nd" %}selected{% endif %}>
+                                    CC BY-ND — Attribution-NoDerivatives
+                                </option>
+                                <option value="cc-by-nc"
+                                        {% if default_license == "cc-by-nc" %}selected{% endif %}>
+                                    CC BY-NC — Attribution-NonCommercial
+                                </option>
+                                <option value="cc-by-nc-sa"
+                                        {% if default_license == "cc-by-nc-sa" %}selected{% endif %}>
+                                    CC BY-NC-SA — Attribution-NonCommercial-ShareAlike
+                                </option>
+                                <option value="cc-by-nc-nd"
+                                        {% if default_license == "cc-by-nc-nd" %}selected{% endif %}>
+                                    CC BY-NC-ND — Attribution-NonCommercial-NoDerivatives
+                                </option>
+                                <option value="all-rights-reserved"
+                                        {% if default_license == "all-rights-reserved" %}selected{% endif %}>
+                                    All Rights Reserved
+                                </option>
+                            </select>
+                            <small class="text-muted">License applied to this sighting's data and media. Your default is set on your <a href="{% url 'users:profile' %}">profile page</a>.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="attribution_override" class="form-label">
+                                Attribution Name <span class="text-muted">(optional)</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="attribution_override"
+                                   name="attribution_override"
+                                   placeholder="Leave blank to use your display name">
+                            <small class="text-muted">Custom name to use for attribution (e.g. your organization). Leave blank to use your display name.</small>
+                        </div>
                     </div>
                     <!-- Submit Button -->
                     <div class="text-center mb-4">
