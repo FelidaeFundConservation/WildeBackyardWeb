@@ -126,6 +126,6 @@ class TaxonAutocompleteView(APIView):
             Taxon.objects.filter(is_active=True)
             .filter(Q(preferred_common_name__icontains=q) | Q(name__icontains=q))
             .order_by("-observations_count")
-            .values("id", "inat_id", "name", "preferred_common_name", "iconic_taxon_name")[:10]
+            .values("id", "inat_id", "name", "preferred_common_name", "iconic_taxon_name", "default_photo_url")[:10]
         )
         return Response({"results": list(taxa)})

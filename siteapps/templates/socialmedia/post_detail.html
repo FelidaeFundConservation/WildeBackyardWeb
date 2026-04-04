@@ -89,8 +89,19 @@
                         {% if post.species_list %}
                             <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
                                 {% for sp, taxon in post.species_pairs %}
-                                    <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %} fs-6">
-                                        <i class="bi bi-tag"></i> {{ sp }}
+                                    <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %} fs-6 d-inline-flex align-items-center gap-1">
+                                        {% if taxon and taxon.default_photo_url %}
+                                            <img src="{{ taxon.default_photo_url }}"
+                                                 width="20"
+                                                 height="20"
+                                                 style="object-fit:cover;
+                                                        border-radius:3px;
+                                                        flex-shrink:0"
+                                                 alt="">
+                                        {% else %}
+                                            <i class="bi bi-tag"></i>
+                                        {% endif %}
+                                        {{ sp }}
                                         {% if taxon and taxon.name != sp %}<span class="opacity-75 fst-italic small">{{ taxon.name }}</span>{% endif %}
                                         {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75 ms-1 small">(primary)</span>{% endif %}
                                     </span>
@@ -313,7 +324,16 @@
                                 {% if post.species_list %}
                                     <div class="d-flex flex-wrap gap-1 mb-2">
                                         {% for sp, taxon in post.species_pairs %}
-                                            <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %}">
+                                            <span class="badge {% if taxon %}{% if taxon.iconic_taxon_name == 'Aves' %}bg-primary{% elif taxon.iconic_taxon_name == 'Mammalia' %}bg-warning text-dark{% elif taxon.iconic_taxon_name == 'Reptilia' %}bg-success{% elif taxon.iconic_taxon_name == 'Amphibia' %}bg-info text-dark{% else %}bg-success{% endif %}{% else %}bg-success{% endif %} d-inline-flex align-items-center gap-1">
+                                                {% if taxon and taxon.default_photo_url %}
+                                                    <img src="{{ taxon.default_photo_url }}"
+                                                         width="18"
+                                                         height="18"
+                                                         style="object-fit:cover;
+                                                                border-radius:3px;
+                                                                flex-shrink:0"
+                                                         alt="">
+                                                {% endif %}
                                                 {{ sp }}
                                                 {% if taxon and taxon.name != sp %}<em class="opacity-75 small">{{ taxon.name }}</em>{% endif %}
                                                 {% if forloop.first and post.species_list|length > 1 %}<span class="opacity-75">(primary)</span>{% endif %}
@@ -438,9 +458,12 @@
                                                                 const common = t.preferred_common_name || t.name;
                                                                 const sci = t.name;
                                                                 const iconUrl = taxonIconUrl(t.iconic_taxon_name);
+                                                                const photoUrl = t.default_photo_url || '';
+                                                                const thumbSrc = photoUrl || iconUrl;
+                                                                const isPhoto = !!photoUrl;
                                                                 return `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
-                                                                    data-common="${common.replace(/"/g, '&quot;')}" data-icon="${iconUrl}">
-                                                                    <img src="${iconUrl}" width="22" height="22" style="object-fit:contain;flex-shrink:0;" alt="">
+                                                                    data-common="${common.replace(/"/g, '&quot;')}" data-icon="${iconUrl}" data-photo="${photoUrl}">
+                                                                    <img src="${thumbSrc}" width="32" height="32" style="object-fit:${isPhoto ? 'cover' : 'contain'};flex-shrink:0;${isPhoto ? 'border-radius:4px;' : ''}" alt="">
                                                                     <div><div class="fw-semibold small lh-sm">${common}</div><div class="text-muted x-small fst-italic lh-sm" style="font-size:.75em">${sci}</div></div>
                                                                 </button>`;
                                                             }).join('');
@@ -449,7 +472,9 @@
                                                                 btn.addEventListener('mousedown', function (e) {
                                                                     e.preventDefault();
                                                                     input.value = this.dataset.common;
-                                                                    icon.src = this.dataset.icon;
+                                                                    icon.src = this.dataset.photo || this.dataset.icon;
+                                                                    icon.style.objectFit = this.dataset.photo ? 'cover' : 'contain';
+                                                                    icon.style.borderRadius = this.dataset.photo ? '4px' : '0';
                                                                     dropdown.style.display = 'none'; dropdown.innerHTML = '';
                                                                 });
                                                             });
