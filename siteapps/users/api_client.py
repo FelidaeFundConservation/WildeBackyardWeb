@@ -113,17 +113,17 @@ class BackendAPIClient:
                 result = response.json() if response.status_code != 204 else {"email": email}
                 return (True, result)
             else:
-                error_data = response.json() if response.headers.get('content-type') == 'application/json' else {}
+                error_data = response.json() if response.headers.get("content-type") == "application/json" else {}
                 logger.warning(f"User registration failed: {response.status_code} - {error_data}")
-                
+
                 # Extract error messages
                 error_messages = []
-                for field, errors in error_data.items():
+                for _field, errors in error_data.items():
                     if isinstance(errors, list):
                         error_messages.extend(errors)
                     else:
                         error_messages.append(str(errors))
-                
+
                 error_text = " ".join(error_messages) if error_messages else "Registration failed. Please try again."
                 return (False, error_text)
         except requests.exceptions.RequestException as e:
@@ -209,6 +209,26 @@ class BackendAPIClient:
             return response.status_code == 200
         except requests.exceptions.RequestException as e:
             logger.error(f"Backend API connection error during username change: {e}")
+            return False
+
+    def update_default_license(self, license_code):
+        """
+        Update the user's default sighting license via the Backend API.
+
+        Args:
+            license_code: License code string (e.g. 'cc0', 'cc-by')
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            url = f"{self.base_url}/v1/users/profile/update-default-license/"
+            response = requests.post(
+                url, json={"licenseCode": license_code}, headers=self.headers, timeout=self.timeout
+            )
+            return response.status_code == 200
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during default license update: {e}")
             return False
 
     def delete_account(self, confirmation_string):
