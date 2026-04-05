@@ -75,9 +75,10 @@ class BackendAPIAuthBackend(BaseBackend):
                         user.is_superuser = profile_data.get("is_superuser", False)
                         user.save()
 
-                    # Store the API token in the session for future API calls
+                    # Store the API token and user ID in the session for future API calls
                     if request:
                         request.session["backend_api_token"] = auth_token
+                        request.session["backend_user_id"] = profile_data.get("id")
 
                     logger.info(f"Successfully authenticated user {email} via Backend API")
                     return user

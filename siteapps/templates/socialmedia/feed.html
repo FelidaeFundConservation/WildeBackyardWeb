@@ -36,6 +36,53 @@
                                             top:100%"></div>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">User</label>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="user_filter"
+                                           id="uf_all"
+                                           value="all"
+                                           {% if user_filter != 'self' and user_filter != 'other' %}checked{% endif %}
+                                           onchange="document.getElementById('user-name-input').classList.add('d-none')">
+                                    <label class="form-check-label" for="uf_all">All users</label>
+                                </div>
+                                {% if user.is_authenticated %}
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="radio"
+                                               name="user_filter"
+                                               id="uf_self"
+                                               value="self"
+                                               {% if user_filter == 'self' %}checked{% endif %}
+                                               onchange="document.getElementById('user-name-input').classList.add('d-none'); this.form.submit()">
+                                        <label class="form-check-label" for="uf_self">My posts</label>
+                                    </div>
+                                {% endif %}
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="user_filter"
+                                           id="uf_other"
+                                           value="other"
+                                           {% if user_filter == 'other' %}checked{% endif %}
+                                           onchange="document.getElementById('user-name-input').classList.remove('d-none')">
+                                    <label class="form-check-label" for="uf_other">Another user</label>
+                                </div>
+                                <div id="user-name-input"
+                                     class="mt-2 {% if user_filter != 'other' %}d-none{% endif %}">
+                                    <input type="text"
+                                           name="user_display_name"
+                                           id="user_display_name_input"
+                                           class="form-control form-control-sm mb-1"
+                                           placeholder="Display name…"
+                                           value="{{ user_display_name_filter|default:'' }}">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                        <i class="bi bi-funnel-fill"></i> Apply
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Location</label>
                                 <div class="form-check">
                                     <input class="form-check-input"
@@ -114,6 +161,10 @@
                 <h1 class="mb-4 text-white">
                     <i class="bi bi-grid"></i> Wildlife Feed
                     {% if current_species %}<span class="badge bg-success">{{ current_species }}</span>{% endif %}
+                    {% if user_filter == 'self' %}<span class="badge bg-info text-dark">My Posts</span>{% endif %}
+                    {% if user_filter == 'other' and user_display_name_filter %}
+                        <span class="badge bg-secondary"><i class="bi bi-person"></i> {{ user_display_name_filter }}</span>
+                    {% endif %}
                 </h1>
                 {% if messages %}
                     {% for message in messages %}
@@ -222,6 +273,8 @@ const currentLocation = "{{ location_filter|default:'global' }}";
 const currentCenterLat = "{{ center_lat|default:'' }}";
 const currentCenterLon = "{{ center_lon|default:'' }}";
 const currentRadiusKm = "{{ radius_km|default:'' }}";
+const currentUserFilter = "{{ user_filter|default:'all' }}";
+const currentUserDisplayName = "{{ user_display_name_filter|default:''|escapejs }}";
 let isLoading = false;
 let hasMore = true;
 
@@ -345,6 +398,12 @@ async function loadMore() {
             params.append('center_lat', currentCenterLat);
             params.append('center_lon', currentCenterLon);
             params.append('radius_km', currentRadiusKm);
+        }
+        if (currentUserFilter && currentUserFilter !== 'all') {
+            params.append('user_filter', currentUserFilter);
+        }
+        if (currentUserFilter === 'other' && currentUserDisplayName) {
+            params.append('user_display_name', currentUserDisplayName);
         }
 
         const response = await fetch(`/feed/feed/load-more/?${params}`);
