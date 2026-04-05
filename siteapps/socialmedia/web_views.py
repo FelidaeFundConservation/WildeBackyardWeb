@@ -52,6 +52,13 @@ def feed_view(request):
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
 
+    # If the user is authenticated but has no backend API token, their session
+    # was created via a local-only auth path (e.g. ModelBackend). Redirect them
+    # to login so the BackendAPIAuthBackend can run and store the token.
+    if request.user.is_authenticated and not api_token:
+        messages.info(request, "Please log in again to load your feed.")
+        return redirect("users:login")
+
     # Get posts from backend (requires authentication)
     if api_token:
         api_client = BackendAPIClient(auth_token=api_token)
