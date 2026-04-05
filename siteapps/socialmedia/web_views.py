@@ -48,6 +48,8 @@ def feed_view(request):
     posts = []
     species_filter = request.GET.get("species")
     location_filter = request.GET.get("location", "global")  # global or radius
+    user_filter = request.GET.get("user_filter", "all")  # all, self, or other
+    user_display_name_filter = request.GET.get("user_display_name", "").strip()
 
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
@@ -73,8 +75,16 @@ def feed_view(request):
             and radius_km > 0
         ):
             data["distanceRadius"] = radius_km
-            data["centerLatitude"] = center_lat
-            data["centerLongitude"] = center_lon
+            data["userLatitude"] = center_lat
+            data["userLongitude"] = center_lon
+
+        # User filter: "self" = current user's backend UUID, "other" = display name search
+        if user_filter == "self":
+            backend_user_id = request.session.get("backend_user_id")
+            if backend_user_id:
+                data["userId"] = backend_user_id
+        elif user_filter == "other" and user_display_name_filter:
+            data["userDisplayName"] = user_display_name_filter
 
         # Build URL with query parameters for pagination
         endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
@@ -93,6 +103,8 @@ def feed_view(request):
         "center_lat": center_lat,
         "center_lon": center_lon,
         "radius_km": radius_km,
+        "user_filter": user_filter,
+        "user_display_name_filter": user_display_name_filter,
     }
     return render(request, "socialmedia/feed.html", context)
 
@@ -374,6 +386,8 @@ def load_more_posts(request):
     # Get filter parameters
     species_filter = request.GET.get("species")
     location_filter = request.GET.get("location", "global")
+    user_filter = request.GET.get("user_filter", "all")
+    user_display_name_filter = request.GET.get("user_display_name", "").strip()
 
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
@@ -393,8 +407,16 @@ def load_more_posts(request):
         and radius_km > 0
     ):
         data["distanceRadius"] = radius_km
-        data["centerLatitude"] = center_lat
-        data["centerLongitude"] = center_lon
+        data["userLatitude"] = center_lat
+        data["userLongitude"] = center_lon
+
+    # User filter
+    if user_filter == "self":
+        backend_user_id = request.session.get("backend_user_id")
+        if backend_user_id:
+            data["userId"] = backend_user_id
+    elif user_filter == "other" and user_display_name_filter:
+        data["userDisplayName"] = user_display_name_filter
 
     endpoint = f"/v1/socialmedia/api/feed/get/?offset={offset}&limit={limit}"
 
