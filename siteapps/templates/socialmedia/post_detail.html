@@ -673,11 +673,11 @@
                                                         {% if post.latitude and post.longitude %}selected{% endif %}>
                                                     Public (Exact Location)
                                                 </option>
-                                                <option value="approximate"
+                                                <option value="obscured"
                                                         {% if post.corner_1_latitude and not post.latitude %}selected{% endif %}>
                                                     Approximate (Obfuscated)
                                                 </option>
-                                                <option value="hidden"
+                                                <option value="private"
                                                         {% if not post.latitude and not post.corner_1_latitude %}selected{% endif %}>
                                                     Hidden (No Location Shown)
                                                 </option>
@@ -719,7 +719,7 @@
 
                                 function toggleObfuscationField(val) {
                                     const el = document.getElementById('obfuscationField');
-                                    if (el) el.style.display = val === 'approximate' ? '' : 'none';
+                                    if (el) el.style.display = val === 'obscured' ? '' : 'none';
                                 }
 
                                 // Set initial visibility

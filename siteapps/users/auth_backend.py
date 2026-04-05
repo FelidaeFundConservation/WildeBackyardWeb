@@ -63,6 +63,8 @@ class BackendAPIAuthBackend(BaseBackend):
                         email=email,
                         defaults={
                             "name": profile_data.get("display_name", email.split("@")[0]),
+                            "is_staff": profile_data.get("is_staff", False),
+                            "is_superuser": profile_data.get("is_superuser", False),
                         },
                     )
 
