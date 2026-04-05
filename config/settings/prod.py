@@ -33,7 +33,7 @@ IS_HEROKU_APP = "DYNO" in os.environ and "CI" not in os.environ
 if IS_HEROKU_APP:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0"]
+    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0", ".wl.r.appspot.com"]
 
 SITE_ID = 1
 
@@ -102,19 +102,23 @@ EMAIL_SUBJECT_PREFIX = env(
 # Anymail
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa: F405
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# https://anymail.readthedocs.io/en/stable/esps/sendgrid/
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-ANYMAIL = {
-    "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-}
+# Email configuration - use Mailgun if configured, otherwise console backend
+MAILGUN_API_KEY = env("MAILGUN_API_KEY", default="")
+if MAILGUN_API_KEY:
+    INSTALLED_APPS += ["anymail"]  # noqa: F405
+    # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+    # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    ANYMAIL = {
+        "MAILGUN_API_KEY": MAILGUN_API_KEY,
+    }
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
-ADMIN_URL = env("DJANGO_ADMIN_URL")
+ADMIN_URL = env("DJANGO_ADMIN_URL", default="admin/")
 
 
 # SECURITY
@@ -122,7 +126,8 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-ssl-redirect
-SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
+# App Engine terminates SSL upstream; redirect handled by load balancer
+SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=False)
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-secure
 SESSION_COOKIE_SECURE = True
