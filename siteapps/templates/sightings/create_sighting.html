@@ -595,6 +595,25 @@ function extractExifGPS(dataUrl) {
         const lng = EXIF.getTag(this, 'GPSLongitude');
         const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
 
+        // Extract camera make/model and populate the camera_model field if empty
+        const make = EXIF.getTag(this, 'Make');
+        const model = EXIF.getTag(this, 'Model');
+        if (make || model) {
+          const cameraModelField = document.getElementById('camera_model');
+          if (cameraModelField && cameraModelField.value === '') {
+            // Combine make + model, avoiding duplicate words (e.g. "Canon Canon EOS 5D")
+            let cameraString = '';
+            const makeStr = (make || '').trim();
+            const modelStr = (model || '').trim();
+            if (makeStr && modelStr && !modelStr.toLowerCase().startsWith(makeStr.toLowerCase())) {
+              cameraString = `${makeStr} ${modelStr}`;
+            } else {
+              cameraString = modelStr || makeStr;
+            }
+            cameraModelField.value = cameraString;
+          }
+        }
+
         if (lat && lng && latRef && lngRef) {
           // Convert GPS coordinates to decimal degrees
           const latitude = convertDMSToDD(lat, latRef);
