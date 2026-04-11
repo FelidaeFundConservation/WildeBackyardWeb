@@ -182,7 +182,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const signal = fetchAbortController.signal;
 
     const bbox = getBbox();
-    console.log('[map] fetchSightings bbox:', bbox);
+    const zoomLevel = Math.floor(map.getZoom());
+    const limit = 5000;
+    console.log('[map] fetchSightings bbox:', bbox, 'zoom:', zoomLevel);
     loadingEl.classList.remove('d-none');
     try {
       const resp = await fetch(BBOX_API_URL, {
@@ -191,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
           'Content-Type': 'application/json',
           'X-CSRFToken': CSRF_TOKEN,
         },
-        body: JSON.stringify({ ...bbox, limit: 5000 }),
+        body: JSON.stringify({ ...bbox, zoom: zoomLevel, limit }),
         signal,
       });
       console.log('[map] fetchSightings response status:', resp.status);
@@ -221,14 +223,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loadingEl.classList.remove('d-none');
     try {
       const defaultBbox = getBbox();
-      console.log('[map] fetchInitialSightings defaultBbox:', defaultBbox);
+      const initZoom = Math.floor(map.getZoom());
+      const initLimit = 5000;
+      console.log('[map] fetchInitialSightings defaultBbox:', defaultBbox, 'zoom:', initZoom);
       const resp = await fetch(BBOX_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': CSRF_TOKEN,
         },
-        body: JSON.stringify({ ...defaultBbox, limit: 5000 }),
+        body: JSON.stringify({ ...defaultBbox, zoom: initZoom, limit: initLimit }),
       });
       console.log('[map] fetchInitialSightings response status:', resp.status);
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -303,13 +307,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   map.on('load', function () {
     console.log('[map] load event fired');
-    // Add sightings GeoJSON source with clustering enabled (starts empty)
+    // Add sightings GeoJSON source — clustering is handled server-side, so
+    // client-side Supercluster is disabled. The server returns pre-aggregated
+    // cluster features (with point_count) at low zoom and raw points at high
+    // zoom. The existing layer filters ('has point_count' / '!' has point_count')
+    // work correctly for both modes without any extra config here.
     map.addSource('sightings', {
       type: 'geojson',
       data: EMPTY_GEOJSON,
-      cluster: true,
-      clusterMaxZoom: 17,
-      clusterRadius: 250
     });
 
     // Cluster circles – sized by point count
@@ -357,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
       id: 'unclustered-point',
       type: 'circle',
       source: 'sightings',
-      minZoom: 8,
+      minZoom: 14,
       filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-color': '#16a34a',
@@ -369,15 +374,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Interaction handlers ─────────────────────────────────────────────────
 
-    // Click on a cluster → zoom in (MapLibre v5 uses Promise API)
+    // Click on a cluster → zoom in two levels.
+    // (getClusterExpansionZoom is a Supercluster API not available when
+    // cluster:true is disabled; a +2 zoom is a good approximation.)
     map.on('click', 'clusters', function (e) {
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-      const clusterId = features[0].properties.cluster_id;
-      map.getSource('sightings').getClusterExpansionZoom(clusterId)
-        .then(function (zoom) {
-          map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
-        })
-        .catch(function (err) { console.error('Cluster expansion error:', err); });
+      map.easeTo({ center: features[0].geometry.coordinates, zoom: map.getZoom() + 2 });
     });
 
     // Click on individual point → show popup

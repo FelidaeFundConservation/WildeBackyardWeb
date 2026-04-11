@@ -1,5 +1,3 @@
-"""Tests for siteapps/sightings/views.py"""
-
 import json
 import uuid
 from unittest.mock import MagicMock, patch
@@ -11,6 +9,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from siteapps.users.models import User
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def make_user(email="sightings@example.com", is_staff=False):
@@ -311,15 +313,12 @@ class SightingsByBboxViewTests(TestCase):
         self._login_with_token()
         mock_api = MagicMock()
         mock_api.post.return_value = {
-            "results": [
+            "type": "FeatureCollection",
+            "features": [
                 {
-                    "id": str(uuid.uuid4()),
-                    "latitude": 45.5,
-                    "longitude": -93.0,
-                    "title": "Bird",
-                    "species": "Robin",
-                    "encounter_datetime": "2024-01-01",
-                    "geocoded_location": "MN",
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [-93.0, 45.5]},
+                    "properties": {"id": str(uuid.uuid4()), "title": "Bird"},
                 }
             ],
             "count": 1,
@@ -328,13 +327,35 @@ class SightingsByBboxViewTests(TestCase):
 
         response = self.client.post(
             self.url,
-            json.dumps({"minLatitude": 45.0, "maxLatitude": 46.0, "minLongitude": -94.0, "maxLongitude": -93.0}),
+            json.dumps(
+                {"minLatitude": 45.0, "maxLatitude": 46.0, "minLongitude": -94.0, "maxLongitude": -93.0, "zoom": 12}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["type"], "FeatureCollection")
         self.assertEqual(len(data["features"]), 1)
+        self.assertEqual(data["count"], 1)
+
+    @patch("siteapps.sightings.views.BackendAPIClient")
+    def test_zoom_forwarded_to_backend(self, mock_client_class):
+        self._login_with_token()
+        mock_api = MagicMock()
+        mock_api.post.return_value = {"type": "FeatureCollection", "features": [], "count": 0}
+        mock_client_class.return_value = mock_api
+
+        self.client.post(
+            self.url,
+            json.dumps(
+                {"minLatitude": 45.0, "maxLatitude": 46.0, "minLongitude": -94.0, "maxLongitude": -93.0, "zoom": 7}
+            ),
+            content_type="application/json",
+        )
+        call_kwargs = mock_api.post.call_args
+        endpoint, payload = call_kwargs[0]
+        self.assertIn("clusters", endpoint)
+        self.assertEqual(payload["zoom"], 7)
 
     @patch("siteapps.sightings.views.BackendAPIClient")
     def test_api_failure_returns_502(self, mock_client_class):
@@ -349,27 +370,6 @@ class SightingsByBboxViewTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 502)
-
-    @patch("siteapps.sightings.views.BackendAPIClient")
-    def test_skips_posts_without_coordinates(self, mock_client_class):
-        self._login_with_token()
-        mock_api = MagicMock()
-        mock_api.post.return_value = {
-            "results": [
-                {"id": "1", "latitude": None, "longitude": None, "title": "No coords"},
-                {"id": "2", "latitude": 45.5, "longitude": -93.0, "title": "Has coords"},
-            ],
-            "count": 2,
-        }
-        mock_client_class.return_value = mock_api
-
-        response = self.client.post(
-            self.url,
-            json.dumps({"minLatitude": 45.0, "maxLatitude": 46.0}),
-            content_type="application/json",
-        )
-        data = response.json()
-        self.assertEqual(len(data["features"]), 1)
 
 
 class ReverseGeocodeAPIViewTests(TestCase):
