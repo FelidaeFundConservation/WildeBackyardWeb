@@ -1,6 +1,7 @@
 *.env
 cloud-sql-proxy.exe
 db.sqlite3
+staticfiles/
 # Cloud SQL proxy socket directories (created when proxy runs from project root)
 wildepod-339517:us-west2:wildepoddb/
 *pycache*
