@@ -226,10 +226,11 @@ def sightings_map(request):
 
 @login_required
 def sightings_by_bbox(request):
-    """Proxy bounding box sightings query to the backend API.
+    """Proxy bounding box clustering query to the backend API.
 
-    Accepts a POST body with minLatitude, maxLatitude, minLongitude, maxLongitude
-    and returns a GeoJSON FeatureCollection of sightings within that area.
+    Accepts a POST body with minLatitude, maxLatitude, minLongitude, maxLongitude,
+    and zoom, then delegates clustering entirely to the backend's PostGIS endpoint.
+    Returns the backend's GeoJSON FeatureCollection unchanged.
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
@@ -243,49 +244,21 @@ def sightings_by_bbox(request):
     if not api_token:
         return JsonResponse({"error": "Not authenticated"}, status=401)
 
-    bbox_data = {
+    payload = {
         "minLatitude": data.get("minLatitude"),
         "maxLatitude": data.get("maxLatitude"),
         "minLongitude": data.get("minLongitude"),
         "maxLongitude": data.get("maxLongitude"),
+        "zoom": data.get("zoom", 10),
     }
 
-    # Use a high default so the map gets enough points for meaningful clustering.
-    # The JS can lower this for performance on very dense viewports.
-    limit = data.get("limit", 5000)
     api_client = BackendAPIClient(auth_token=api_token)
-    response = api_client.post(f"/v1/socialmedia/api/feed/getbb/?limit={limit}&offset=0", bbox_data)
+    response = api_client.post("/v1/socialmedia/api/feed/clusters/", payload)
 
     if response is None:
-        return JsonResponse({"error": "Failed to fetch sightings from backend"}, status=502)
+        return JsonResponse({"error": "Failed to fetch clusters from backend"}, status=502)
 
-    features = []
-    for post in response.get("results", []):
-        lat = post.get("latitude")
-        lng = post.get("longitude")
-        if lat is not None and lng is not None:
-            features.append(
-                {
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [lng, lat]},
-                    "properties": {
-                        "id": str(post.get("id", "")),
-                        "title": post.get("title", ""),
-                        "species": post.get("species", "") or "",
-                        "encounter_date": post.get("encounter_datetime", "") or "",
-                        "geocoded_location": post.get("geocoded_location", "") or "",
-                    },
-                }
-            )
-
-    return JsonResponse(
-        {
-            "type": "FeatureCollection",
-            "features": features,
-            "count": len(features),
-            "total": response.get("count", len(features)),
-        }
-    )
+    return JsonResponse(response)
 
 
 class ReverseGeocodeWithNominatim(APIView):
