@@ -241,11 +241,7 @@
                         <div class="mb-3">
                             <label for="sighting_type" class="form-label">Sighting Type</label>
                             <select class="form-select" id="sighting_type" name="sighting_type">
-                                <option value="unknown" selected>Unknown</option>
-                                <option value="live_sighting">Live Sighting</option>
-                                <option value="camera_trap">Camera Trap or Security Camera</option>
-                                <option value="track_sign">Track or Sign</option>
-                                <option value="killed">Killed</option>
+                                <option value="">Loading...</option>
                             </select>
                             <small class="text-muted">How did you observe this wildlife?</small>
                         </div>
@@ -792,6 +788,50 @@ document.getElementById('location_longitude').addEventListener('change', functio
 let savedLocations = [];
 
 // Load user's saved locations on page load
+// Load sighting types from backend API
+async function loadSightingTypes() {
+  try {
+    const response = await fetch('{% url "sightings:proxy_sighting_types" %}', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (response.ok) {
+      const sightingTypes = await response.json();
+      const select = document.getElementById('sighting_type');
+
+      // Clear existing options
+      select.innerHTML = '';
+
+      // Add sighting types (already ordered by display_order on backend)
+      sightingTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type.id;
+        option.textContent = type.displayName;
+        option.title = type.description; // Tooltip on hover
+
+        // Select "Unknown" by default
+        if (type.code === 'unknown') {
+          option.selected = true;
+        }
+
+        select.appendChild(option);
+      });
+    } else {
+      console.error('Failed to load sighting types');
+      // Fallback to a basic option
+      const select = document.getElementById('sighting_type');
+      select.innerHTML = '<option value="">-- Error loading types --</option>';
+    }
+  } catch (error) {
+    console.error('Error loading sighting types:', error);
+    const select = document.getElementById('sighting_type');
+    select.innerHTML = '<option value="">-- Error loading types --</option>';
+  }
+}
+
 async function loadSavedLocations() {
   try {
     const response = await fetch('/sightings/api/backend/locations/', {
@@ -885,8 +925,9 @@ async function saveCurrentLocation() {
   }
 }
 
-// Load saved locations when page loads
+// Load saved locations and sighting types when page loads
 document.addEventListener('DOMContentLoaded', function() {
+  loadSightingTypes();
   loadSavedLocations();
 });
     </script>
