@@ -11,6 +11,8 @@ urlpatterns = [
     path("map/", views.sightings_map, name="map"),
     path("api/bbox/", views.sightings_by_bbox, name="bbox"),
     path("api/reverse_geocode/", ReverseGeocodeWithNominatim.as_view(), name="reverse_geocode"),
+    # Sighting types proxy
+    path("api/sighting-types/", views.proxy_sighting_types, name="proxy_sighting_types"),
     # User location management
     path("api/backend/locations/", views.list_user_locations, name="list_locations"),
     path("api/backend/locations/create/", views.create_user_location, name="create_location"),

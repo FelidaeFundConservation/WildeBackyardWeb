@@ -316,6 +316,23 @@ class ReverseGeocodeWithNominatim(APIView):
 
 
 # ==========================================
+# Sighting Type Proxy Endpoint
+# ==========================================
+
+
+def proxy_sighting_types(request):
+    """Proxy to backend API for fetching sighting types (public endpoint)."""
+    api_client = BackendAPIClient()  # No auth token needed for public endpoint
+    result = api_client.get("/v1/socialmedia/api/sighting-types/")
+
+    if result is not None:
+        # Backend returns a list of sighting types
+        return JsonResponse(result, safe=False)
+    else:
+        return JsonResponse({"error": "Failed to fetch sighting types"}, status=500)
+
+
+# ==========================================
 # User Sighting Location Proxy Endpoints
 # ==========================================
 
