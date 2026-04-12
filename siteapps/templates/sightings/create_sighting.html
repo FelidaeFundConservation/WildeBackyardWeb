@@ -61,16 +61,17 @@
                             <i class="bi bi-camera"></i> Media Upload
                         </h3>
                         <div class="mb-3">
-                            <label for="media_file" class="form-label">Photo or Video</label>
+                            <label for="media_files" class="form-label">Photos or Videos (Up to 5)</label>
                             <input type="file"
                                    class="form-control"
-                                   id="media_file"
-                                   name="media_file"
+                                   id="media_files"
+                                   name="media_files"
                                    accept="image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo"
-                                   onchange="previewMedia(this)">
-                            <small class="text-muted">Upload a photo or video (Max 500MB for videos). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
+                                   onchange="previewMultipleMedia(this)"
+                                   multiple>
+                            <small class="text-muted">Upload up to 5 photos or videos (Max 500MB per video). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
                         </div>
-                        <div id="mediaPreview"></div>
+                        <div id="mediaPreview" class="row g-2"></div>
                     </div>
                     <!-- Species Selection Section -->
                     <div class="form-section">
@@ -98,6 +99,16 @@
                         <h3 class="required-field">
                             <i class="bi bi-geo-alt"></i> Location
                         </h3>
+                        <div class="mb-3">
+                            <label for="saved_location" class="form-label">Use Saved Location</label>
+                            <select class="form-select"
+                                    id="saved_location"
+                                    name="saved_location"
+                                    onchange="loadSavedLocation()">
+                                <option value="">-- Enter new location below --</option>
+                            </select>
+                            <small class="text-muted">Select a previously saved location or enter coordinates manually below.</small>
+                        </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="location_latitude" class="form-label required-field">Latitude</label>
@@ -128,6 +139,11 @@
                                     class="btn btn-sm btn-outline-secondary"
                                     onclick="pickLocationOnMap()">
                                 <i class="bi bi-map"></i> Pick on Map
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    onclick="saveCurrentLocation()">
+                                <i class="bi bi-star"></i> Save This Location
                             </button>
                         </div>
                         <div id="map" class="mb-3"></div>
@@ -222,6 +238,17 @@
                         <h3>
                             <i class="bi bi-info-circle"></i> Additional Information
                         </h3>
+                        <div class="mb-3">
+                            <label for="sighting_type" class="form-label">Sighting Type</label>
+                            <select class="form-select" id="sighting_type" name="sighting_type">
+                                <option value="unknown" selected>Unknown</option>
+                                <option value="live_sighting">Live Sighting</option>
+                                <option value="camera_trap">Camera Trap or Security Camera</option>
+                                <option value="track_sign">Track or Sign</option>
+                                <option value="killed">Killed</option>
+                            </select>
+                            <small class="text-muted">How did you observe this wildlife?</small>
+                        </div>
                         <div class="mb-3">
                             <label for="animal_count" class="form-label">Number of Animals</label>
                             <input type="number"
@@ -543,37 +570,74 @@ function useCurrentDateTime() {
   document.getElementById('encounter_time').value = now.toTimeString().slice(0, 5);
 }
 
-function previewMedia(input) {
+function previewMultipleMedia(input) {
   const preview = document.getElementById('mediaPreview');
   preview.innerHTML = '';
 
-  if (input.files && input.files[0]) {
-    const file = input.files[0];
-    const maxSize = 500 * 1024 * 1024; // 500MB
+  if (input.files && input.files.length > 0) {
+    const maxFiles = 5;
+    const maxSize = 500 * 1024 * 1024; // 500MB per file
 
-    // Validate file size
-    if (file.size > maxSize) {
-      alert('File is too large. Maximum size is 500MB.');
-      input.value = ''; // Clear the input
+    // Validate number of files
+    if (input.files.length > maxFiles) {
+      alert(`You can only upload up to ${maxFiles} files at once.`);
+      input.value = '';
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-      if (file.type.startsWith('image/')) {
-        preview.innerHTML = `<img src="${e.target.result}" class="media-preview" alt="Preview">`;
-
-        // Extract EXIF data for images
-        extractExifGPS(e.target.result);
-      } else if (file.type.startsWith('video/')) {
-        const sizeInfo = `<small class="text-muted">File size: ${(file.size / (1024*1024)).toFixed(2)}MB</small>`;
-        preview.innerHTML = `<video controls class="media-preview" preload="metadata"><source src="${e.target.result}" type="${file.type}"></video><br>${sizeInfo}`;
+    // Process each file
+    Array.from(input.files).forEach((file, index) => {
+      // Validate file size
+      if (file.size > maxSize) {
+        alert(`File "${file.name}" is too large. Maximum size is 500MB.`);
+        input.value = '';
+        return;
       }
-    };
 
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      const colDiv = document.createElement('div');
+      colDiv.className = 'col-md-4 col-sm-6';
+      colDiv.id = `preview-${index}`;
+
+      reader.onload = function(e) {
+        let mediaHtml = '';
+        if (file.type.startsWith('image/')) {
+          mediaHtml = `
+            <div class="position-relative">
+              <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover; width: 100%;" alt="Preview ${index + 1}">
+              <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
+            </div>
+            <small class="text-muted d-block text-truncate">${file.name}</small>
+          `;
+
+          // Extract EXIF from first image only
+          if (index === 0) {
+            extractExifGPS(e.target.result);
+          }
+        } else if (file.type.startsWith('video/')) {
+          const sizeInfo = `${(file.size / (1024*1024)).toFixed(2)}MB`;
+          mediaHtml = `
+            <div class="position-relative">
+              <video controls class="rounded" style="max-height: 200px; width: 100%;" preload="metadata">
+                <source src="${e.target.result}" type="${file.type}">
+              </video>
+              <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
+            </div>
+            <small class="text-muted d-block text-truncate">${file.name} (${sizeInfo})</small>
+          `;
+        }
+        colDiv.innerHTML = mediaHtml;
+      };
+
+      preview.appendChild(colDiv);
+      reader.readAsDataURL(file);
+    });
   }
+}
+
+// Legacy function for backwards compatibility
+function previewMedia(input) {
+  previewMultipleMedia(input);
 }
 
 function extractExifGPS(dataUrl) {
@@ -722,6 +786,108 @@ document.getElementById('location_longitude').addEventListener('change', functio
     updateMapMarker(lng, lat);
     map.flyTo({center: [lng, lat], zoom: 14});
   }
+});
+
+// Global variable to store saved locations
+let savedLocations = [];
+
+// Load user's saved locations on page load
+async function loadSavedLocations() {
+  try {
+    const response = await fetch('/sightings/api/backend/locations/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (response.ok) {
+      savedLocations = await response.json();
+      const select = document.getElementById('saved_location');
+
+      // Clear existing options except the first one
+      while (select.options.length > 1) {
+        select.remove(1);
+      }
+
+      // Add saved locations
+      savedLocations.forEach(loc => {
+        const option = document.createElement('option');
+        option.value = loc.id;
+        option.textContent = loc.name;
+        option.dataset.latitude = loc.latitude;
+        option.dataset.longitude = loc.longitude;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading saved locations:', error);
+  }
+}
+
+// Load a saved location when selected
+function loadSavedLocation() {
+  const select = document.getElementById('saved_location');
+  const selectedOption = select.options[select.selectedIndex];
+
+  if (selectedOption.value) {
+    const lat = parseFloat(selectedOption.dataset.latitude);
+    const lng = parseFloat(selectedOption.dataset.longitude);
+
+    document.getElementById('location_latitude').value = lat;
+    document.getElementById('location_longitude').value = lng;
+
+    updateMapMarker(lng, lat);
+    map.flyTo({center: [lng, lat], zoom: 14});
+  }
+}
+
+// Save current location as a new saved location
+async function saveCurrentLocation() {
+  const lat = parseFloat(document.getElementById('location_latitude').value);
+  const lng = parseFloat(document.getElementById('location_longitude').value);
+
+  if (isNaN(lat) || isNaN(lng)) {
+    alert('Please set a location first before saving.');
+    return;
+  }
+
+  const name = prompt('Enter a name for this location (e.g., "Backyard", "North Trail"):');
+  if (!name || !name.trim()) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/sightings/api/backend/locations/create/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        description: '',
+        latitude: lat,
+        longitude: lng
+      })
+    });
+
+    if (response.ok) {
+      alert('Location saved successfully!');
+      loadSavedLocations(); // Reload the dropdown
+    } else {
+      const error = await response.json();
+      alert('Error saving location: ' + (error.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error saving location:', error);
+    alert('Error saving location. Please try again.');
+  }
+}
+
+// Load saved locations when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadSavedLocations();
 });
     </script>
 {% endblock content %}

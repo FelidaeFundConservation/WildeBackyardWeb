@@ -119,14 +119,14 @@ class CreateSightingView(View):
             data["habitatType"] = request.POST.get("habitat_type")
         if request.POST.get("timestamp_offset_details"):
             data["timestampOffsetErrorDetails"] = request.POST.get("timestamp_offset_details")
+        if request.POST.get("sighting_type"):
+            data["sightingType"] = request.POST.get("sighting_type")
         if request.POST.get("license_code"):
             data["licenseCode"] = request.POST.get("license_code")
         if request.POST.get("attribution_override"):
             data["attributionOverride"] = request.POST.get("attribution_override")
 
         # Handle media upload
-        media_file = request.FILES.get("media_file")
-
         # Validation
         if not data["postTitle"]:
             messages.error(request, "Post title is required.")
@@ -140,38 +140,53 @@ class CreateSightingView(View):
             messages.error(request, "Location is required.")
             return self.get(request)
 
-        # Handle media upload - convert to base64 if provided
-        media_file = request.FILES.get("media_file")
-        if media_file:
-            try:
-                # Read the file and encode to base64
-                file_bytes = media_file.read()
+        # Handle multiple media upload - convert to base64 array if provided
+        media_files = request.FILES.getlist("media_files")
+        max_files = 5
 
-                # Determine if it's a video based on content type
-                content_type = media_file.content_type or ""
-                is_video = content_type.startswith("video/")
-
-                # Validate video size (max 500MB)
-                if is_video:
-                    max_video_size = 500 * 1024 * 1024  # 500MB
-                    if len(file_bytes) > max_video_size:
-                        messages.error(
-                            request,
-                            f"Video file is too large. Maximum size is 500MB. Your file: {len(file_bytes)/(1024*1024):.1f}MB",
-                        )
-                        return self.get(request)
-
-                encoded_bytes = base64.b64encode(file_bytes).decode("utf-8")
-                data["mediaBytes"] = encoded_bytes
-                data["isVideo"] = is_video
-
-                logger.info(
-                    f"Encoded media file: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {is_video}, content_type: {content_type}"
-                )
-            except Exception as e:
-                logger.error(f"Error encoding media file: {e}")
-                messages.error(request, "Failed to process media file. Please try again.")
+        if media_files:
+            if len(media_files) > max_files:
+                messages.error(request, f"You can only upload up to {max_files} files.")
                 return self.get(request)
+
+            media_list = []
+            for idx, media_file in enumerate(media_files):
+                try:
+                    # Read the file and encode to base64
+                    file_bytes = media_file.read()
+
+                    # Determine if it's a video based on content type
+                    content_type = media_file.content_type or ""
+                    is_video = content_type.startswith("video/")
+
+                    # Validate video size (max 500MB)
+                    if is_video:
+                        max_video_size = 500 * 1024 * 1024  # 500MB
+                        if len(file_bytes) > max_video_size:
+                            messages.error(
+                                request,
+                                f"Video file '{media_file.name}' is too large. Maximum size is 500MB. Your file: {len(file_bytes)/(1024*1024):.1f}MB",
+                            )
+                            return self.get(request)
+
+                    encoded_bytes = base64.b64encode(file_bytes).decode("utf-8")
+                    media_list.append({"mediaBytes": encoded_bytes, "isVideo": is_video, "displayOrder": idx + 1})
+
+                    logger.info(
+                        f"Encoded media file {idx + 1}: {media_file.name}, size: {len(file_bytes)} bytes, isVideo: {is_video}, content_type: {content_type}"
+                    )
+                except Exception as e:
+                    logger.error(f"Error encoding media file {media_file.name}: {e}")
+                    messages.error(request, f"Failed to process media file '{media_file.name}'. Please try again.")
+                    return self.get(request)
+
+            # Add media array to data
+            data["mediaList"] = media_list
+
+            # For backwards compatibility, also set the first media as primary
+            if media_list:
+                data["mediaBytes"] = media_list[0]["mediaBytes"]
+                data["isVideo"] = media_list[0]["isVideo"]
 
         # Submit to backend API
         api_client = BackendAPIClient(auth_token=api_token)
@@ -298,3 +313,93 @@ class ReverseGeocodeWithNominatim(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 data={"error": "Failed to reverse geocode coordinates"},
             )
+
+
+# ==========================================
+# User Sighting Location Proxy Endpoints
+# ==========================================
+
+
+@login_required
+def list_user_locations(request):
+    """Proxy to backend API for listing user's saved locations."""
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.get("/v1/socialmedia/api/locations/")
+
+    if result is not None:
+        # Backend returns a list directly
+        return JsonResponse(result, safe=False)
+    else:
+        return JsonResponse({"error": "Failed to fetch locations"}, status=500)
+
+
+@login_required
+def create_user_location(request):
+    """Proxy to backend API for creating a new saved location."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.post("/v1/socialmedia/api/locations/create/", data)
+
+    if result is not None:
+        # Backend returns the created location dict with 201 status
+        return JsonResponse(result)
+    else:
+        return JsonResponse({"error": "Failed to create location"}, status=500)
+
+
+@login_required
+def update_user_location(request, location_id):
+    """Proxy to backend API for updating a saved location."""
+    if request.method != "PUT":
+        return JsonResponse({"error": "PUT required"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.put(f"/v1/socialmedia/api/locations/{location_id}/", data)
+
+    if result is not None:
+        return JsonResponse(result)
+    else:
+        return JsonResponse({"error": "Failed to update location"}, status=500)
+
+
+@login_required
+def delete_user_location(request, location_id):
+    """Proxy to backend API for deleting a saved location."""
+    if request.method != "DELETE":
+        return JsonResponse({"error": "DELETE required"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.delete(f"/v1/socialmedia/api/locations/{location_id}/delete/")
+
+    if result is not None:
+        return JsonResponse({"status": "success"})
+    else:
+        return JsonResponse({"error": "Failed to delete location"}, status=500)
