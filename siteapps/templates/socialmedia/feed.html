@@ -83,6 +83,43 @@
                                 </div>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Verification</label>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="verification_filter"
+                                           id="vf_all"
+                                           value="all"
+                                           {% if verification_filter != 'verified' and verification_filter != 'unverified' %}checked{% endif %}
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label" for="vf_all">All</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="verification_filter"
+                                           id="vf_verified"
+                                           value="verified"
+                                           {% if verification_filter == 'verified' %}checked{% endif %}
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label" for="vf_verified">
+                                        <i class="bi bi-patch-check-fill text-success"></i> Verified
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="verification_filter"
+                                           id="vf_unverified"
+                                           value="unverified"
+                                           {% if verification_filter == 'unverified' %}checked{% endif %}
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label" for="vf_unverified">
+                                        <i class="bi bi-question-circle text-warning"></i> Unverified
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Location</label>
                                 <div class="form-check">
                                     <input class="form-check-input"
@@ -241,6 +278,11 @@
                     {% endif %}
                     {% if location_filter == 'place' and place_name %}
                         <span class="badge bg-primary"><i class="bi bi-geo"></i> {{ place_name }} ({{ place_radius }}km)</span>
+                    {% endif %}
+                    {% if verification_filter == 'verified' %}
+                        <span class="badge bg-success"><i class="bi bi-patch-check-fill"></i> Verified</span>
+                    {% elif verification_filter == 'unverified' %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-question-circle"></i> Unverified</span>
                     {% endif %}
                 </h1>
                 {% if messages %}
@@ -497,7 +539,7 @@ async function loadMore() {
             params.append('user_display_name', currentUserDisplayName);
         }
 
-        const response = await fetch(`/feed/feed/load-more/?${params}`);
+        const response = await fetch(`/feed/load-more/?${params}`);
 
         if (!response.ok) {
             throw new Error('Failed to load more posts');
