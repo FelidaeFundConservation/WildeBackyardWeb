@@ -76,6 +76,7 @@ def feed_view(request):
     location_filter = request.GET.get("location", "global")  # global, radius, zipcode, or place
     user_filter = request.GET.get("user_filter", "all")  # all, self, or other
     user_display_name_filter = request.GET.get("user_display_name", "").strip()
+    verification_filter = request.GET.get("verification_filter", "all")  # all, verified, unverified
 
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
@@ -136,6 +137,9 @@ def feed_view(request):
         elif user_filter == "other" and user_display_name_filter:
             data["userDisplayName"] = user_display_name_filter
 
+        if verification_filter in ("verified", "unverified"):
+            data["verificationFilter"] = verification_filter
+
         # Build URL with query parameters for pagination
         endpoint = "/v1/socialmedia/api/feed/get/?limit=10&offset=0"
         response = api_client.post(endpoint, data)
@@ -160,6 +164,7 @@ def feed_view(request):
         "place_radius": place_radius,
         "user_filter": user_filter,
         "user_display_name_filter": user_display_name_filter,
+        "verification_filter": verification_filter,
     }
     return render(request, "socialmedia/feed.html", context)
 
