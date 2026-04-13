@@ -132,13 +132,9 @@ repos:
   - repo: https://github.com/Riverside-Healthcare/djLint
     rev: v1.34.1
     hooks:
-      - id: djlint-reformat-django
-        files: ^siteapps/templates/.*\.html$
-        args:
-          - "--quiet"
-          - "--ignore=T002,H013,H021,H029"
       - id: djlint-django
         files: ^siteapps/templates/.*\.html$
         args:
           - "--quiet"
           - "--ignore=T002,H013,H021,H029"
+          - "--check"
