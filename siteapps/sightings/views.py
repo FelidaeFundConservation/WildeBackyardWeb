@@ -115,8 +115,6 @@ class CreateSightingView(View):
             data["cameraModel"] = request.POST.get("camera_model")
         if request.POST.get("camera_deployment_date"):
             data["cameraDeploymentDate"] = request.POST.get("camera_deployment_date")
-        if request.POST.get("habitat_type"):
-            data["habitatType"] = request.POST.get("habitat_type")
 
         # Handle timestamp offset details - combine 4 fields into JSON
         incorrect_date = request.POST.get("incorrect_date", "").strip()

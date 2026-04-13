@@ -153,19 +153,18 @@
                                     <i class="bi bi-camera"></i> <strong>Camera:</strong> {{ post.camera_model }}
                                 </div>
                             {% endif %}
-                            {% if post.iucn_habitat_lvl1_name or post.iucn_habitat_lvl2_name or post.habitat_type %}
+                            {% if post.iucn_habitat_lvl1 or post.iucn_habitat_lvl2 %}
                                 <div class="col-md-6 mb-2">
                                     <i class="bi bi-tree"></i> <strong>Habitat:</strong>
-                                    {% if post.iucn_habitat_level_used == "level2" and post.iucn_habitat_lvl2_name %}
-                                        {{ post.iucn_habitat_lvl2_name }} <span class="text-muted small">(IUCN Level 2)</span>
-                                    {% elif post.iucn_habitat_level_used == "level1" and post.iucn_habitat_lvl1_name %}
-                                        {{ post.iucn_habitat_lvl1_name }} <span class="text-muted small">(IUCN Level 1)</span>
-                                    {% elif post.iucn_habitat_lvl2_name %}
-                                        {{ post.iucn_habitat_lvl2_name }} <span class="text-muted small">(IUCN Level 2)</span>
-                                    {% elif post.iucn_habitat_lvl1_name %}
-                                        {{ post.iucn_habitat_lvl1_name }} <span class="text-muted small">(IUCN Level 1)</span>
-                                    {% else %}
-                                        {{ post.habitat_type }}
+                                    <!-- DEBUG: lvl1={{ post.iucn_habitat_lvl1|default:"NONE" }}, lvl2={{ post.iucn_habitat_lvl2|default:"NONE" }} -->
+                                    {% if post.iucn_habitat_lvl2 and post.iucn_habitat_lvl1 %}
+                                        {{ post.iucn_habitat_lvl2 }} <span class="text-muted small">(Level 2)</span>
+                                        <br>
+                                        <span class="ms-4">{{ post.iucn_habitat_lvl1 }} <span class="text-muted small">(Level 1)</span></span>
+                                    {% elif post.iucn_habitat_lvl2 %}
+                                        {{ post.iucn_habitat_lvl2 }} <span class="text-muted small">(IUCN Level 2)</span>
+                                    {% elif post.iucn_habitat_lvl1 %}
+                                        {{ post.iucn_habitat_lvl1 }} <span class="text-muted small">(IUCN Level 1)</span>
                                     {% endif %}
                                 </div>
                             {% endif %}
@@ -816,15 +815,6 @@
                                                name="camera_model"
                                                value="{{ post.camera_model|default:'' }}"
                                                placeholder="e.g., Canon EOS 5D Mark IV">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label for="edit_habitat_type" class="form-label form-label-sm">Habitat Type</label>
-                                        <input type="text"
-                                               class="form-control form-control-sm"
-                                               id="edit_habitat_type"
-                                               name="habitat_type"
-                                               value="{{ post.habitat_type|default:'' }}"
-                                               placeholder="e.g., Forest, Grassland, Urban">
                                     </div>
                                     <div class="mb-2">
                                         <label class="form-label form-label-sm">Timestamp Offset Details</label>
