@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.contrib import messages
@@ -38,6 +39,28 @@ def _normalize_post(post):
     additional = post.get("additional_info") or {}
     post["camera_model"] = additional.get("camera_model")
     post["habitat_type"] = additional.get("habitat_type")
+
+    # Parse timestamp offset JSON if present
+    timestamp_offset_json = additional.get("camera_timestamp_offset_error_details")
+    if timestamp_offset_json:
+        try:
+            timestamp_data = json.loads(timestamp_offset_json)
+            post["incorrect_date"] = timestamp_data.get("incorrectDate", "")
+            post["correct_date"] = timestamp_data.get("correctDate", "")
+            post["incorrect_time"] = timestamp_data.get("incorrectTime", "")
+            post["correct_time"] = timestamp_data.get("correctTime", "")
+        except (json.JSONDecodeError, TypeError):
+            # If JSON parsing fails, leave fields empty
+            post["incorrect_date"] = ""
+            post["correct_date"] = ""
+            post["incorrect_time"] = ""
+            post["correct_time"] = ""
+    else:
+        post["incorrect_date"] = ""
+        post["correct_date"] = ""
+        post["incorrect_time"] = ""
+        post["correct_time"] = ""
+
     # license dict passed through as-is; templates access post.license.code, .label, etc.
     return post
 
@@ -47,12 +70,25 @@ def feed_view(request):
     api_token = request.session.get("backend_api_token")
     posts = []
     species_filter = request.GET.get("species")
-    location_filter = request.GET.get("location", "global")  # global or radius
+    location_filter = request.GET.get("location", "global")  # global, radius, zipcode, or place
     user_filter = request.GET.get("user_filter", "all")  # all, self, or other
     user_display_name_filter = request.GET.get("user_display_name", "").strip()
 
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
+
+    # ZIP code boundary filter parameters
+    zip_code_boundary = request.GET.get("zip_code_boundary", "").strip()
+    zip_code_country = request.GET.get("zip_code_country", "US").upper()
+
+    # Place name filter parameters
+    place_name = request.GET.get("place_name", "").strip()
+    place_country = request.GET.get("place_country", "US").upper()
+    place_radius = request.GET.get("place_radius", "10").strip()
+    try:
+        place_radius = float(place_radius) if place_radius else 10.0
+    except ValueError:
+        place_radius = 10.0
 
     # If the user is authenticated but has no backend API token, their session
     # was created via a local-only auth path (e.g. ModelBackend). Redirect them
@@ -77,6 +113,17 @@ def feed_view(request):
             data["distanceRadius"] = radius_km
             data["userLatitude"] = center_lat
             data["userLongitude"] = center_lon
+
+        # ZIP code boundary filter
+        if location_filter == "zipcode" and zip_code_boundary:
+            data["zipCodeBoundary"] = zip_code_boundary
+            data["zipCodeCountry"] = zip_code_country
+
+        # Place name filter
+        elif location_filter == "place" and place_name:
+            data["placeName"] = place_name
+            data["placeCountry"] = place_country
+            data["placeRadius"] = place_radius
 
         # User filter: "self" = current user's backend UUID, "other" = display name search
         if user_filter == "self":
@@ -103,6 +150,11 @@ def feed_view(request):
         "center_lat": center_lat,
         "center_lon": center_lon,
         "radius_km": radius_km,
+        "zip_code_boundary": zip_code_boundary,
+        "zip_code_country": zip_code_country,
+        "place_name": place_name,
+        "place_country": place_country,
+        "place_radius": place_radius,
         "user_filter": user_filter,
         "user_display_name_filter": user_display_name_filter,
     }
@@ -230,6 +282,63 @@ def update_animal_count(request, post_id):
                 messages.error(request, "Failed to update animal count.")
             else:
                 messages.success(request, "Animal count updated.")
+
+    return redirect("socialmedia:post_detail", post_id=post_id)
+
+
+@login_required
+def update_details(request, post_id):
+    """Update camera model, habitat type, and timestamp offset details for a post.
+    Restricted to staff and superusers."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to edit sighting details.")
+        return redirect("socialmedia:post_detail", post_id=post_id)
+
+    if request.method == "POST":
+        camera_model = request.POST.get("camera_model", "").strip()
+        habitat_type = request.POST.get("habitat_type", "").strip()
+
+        # Extract timestamp offset fields
+        incorrect_date = request.POST.get("incorrect_date", "").strip()
+        correct_date = request.POST.get("correct_date", "").strip()
+        incorrect_time = request.POST.get("incorrect_time", "").strip()
+        correct_time = request.POST.get("correct_time", "").strip()
+
+        # Build timestamp offset JSON if any fields are filled
+        timestamp_offset_json = None
+        if any([incorrect_date, correct_date, incorrect_time, correct_time]):
+            timestamp_offset_data = {}
+            if incorrect_date:
+                timestamp_offset_data["incorrectDate"] = incorrect_date
+            if correct_date:
+                timestamp_offset_data["correctDate"] = correct_date
+            if incorrect_time:
+                timestamp_offset_data["incorrectTime"] = incorrect_time
+            if correct_time:
+                timestamp_offset_data["correctTime"] = correct_time
+            timestamp_offset_json = json.dumps(timestamp_offset_data)
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            payload = {
+                "postId": str(post_id),
+            }
+            if camera_model:
+                payload["cameraModel"] = camera_model
+            if habitat_type:
+                payload["habitatType"] = habitat_type
+            if timestamp_offset_json:
+                payload["timestampOffsetErrorDetails"] = timestamp_offset_json
+
+            response = api_client.post(
+                "/v1/socialmedia/api/posts/edit/",
+                payload,
+            )
+            if response is None:
+                messages.error(request, "Failed to update sighting details.")
+            else:
+                messages.success(request, "Sighting details updated successfully.")
 
     return redirect("socialmedia:post_detail", post_id=post_id)
 
@@ -392,6 +501,19 @@ def load_more_posts(request):
     # Custom radius filter parameters
     center_lat, center_lon, radius_km = _parse_radius_params(request)
 
+    # ZIP code boundary filter parameters
+    zip_code_boundary = request.GET.get("zip_code_boundary", "").strip()
+    zip_code_country = request.GET.get("zip_code_country", "US").upper()
+
+    # Place name filter parameters
+    place_name = request.GET.get("place_name", "").strip()
+    place_country = request.GET.get("place_country", "US").upper()
+    place_radius = request.GET.get("place_radius", "10").strip()
+    try:
+        place_radius = float(place_radius) if place_radius else 10.0
+    except ValueError:
+        place_radius = 10.0
+
     # Build API request data
     api_client = BackendAPIClient(auth_token=api_token)
     data = {}
@@ -409,6 +531,17 @@ def load_more_posts(request):
         data["distanceRadius"] = radius_km
         data["userLatitude"] = center_lat
         data["userLongitude"] = center_lon
+
+    # ZIP code boundary filter
+    if location_filter == "zipcode" and zip_code_boundary:
+        data["zipCodeBoundary"] = zip_code_boundary
+        data["zipCodeCountry"] = zip_code_country
+
+    # Place name filter
+    elif location_filter == "place" and place_name:
+        data["placeName"] = place_name
+        data["placeCountry"] = place_country
+        data["placeRadius"] = place_radius
 
     # User filter
     if user_filter == "self":

@@ -117,7 +117,7 @@
     <body class="d-flex flex-column h-100">
         <header class="pb-4">
             <nav class="navbar navbar-light navbar-expand-lg justify-content-center p-0 pt-1">
-                <div class="container">
+                <div class="container-fluid">
                     <a class="navbar-brand d-flex w-50 me-auto" href="{% url 'home:home' %}">
                         <img class="img-fluid ms-2 ms-sm-3 ms-lg-4 pb-1"
                              src="{% static 'images/logo.webp' %}"
@@ -159,6 +159,10 @@
                                        href="{% url 'sightings:map' %}">Sightings Map</a>
                                 </li>
                                 <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-warning bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'home:instructions' %}">Instructions</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
                                     <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
                                        href="{% url 'users:profile' %}">Profile</a>
                                 </li>
@@ -170,6 +174,10 @@
                                 <li class="nav-item mx-1 bevel">
                                     <a class="nav-link fs-5 text-white bg-success bg-opacity-75 rounded px-4 py-2"
                                        href="{% url 'socialmedia:feed' %}">Feed</a>
+                                </li>
+                                <li class="nav-item mx-1 bevel">
+                                    <a class="nav-link fs-5 text-white bg-warning bg-opacity-75 rounded px-4 py-2"
+                                       href="{% url 'home:instructions' %}">Instructions</a>
                                 </li>
                                 <li class="nav-item mx-1 bevel">
                                     <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"

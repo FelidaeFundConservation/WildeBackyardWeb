@@ -21,3 +21,9 @@ class HomeView(TemplateView):
         return context
 
     template_name = "home/home.html"
+
+
+class InstructionsView(TemplateView):
+    """Landing page for WildeBackyard instructions and user guide."""
+
+    template_name = "home/instructions.html"

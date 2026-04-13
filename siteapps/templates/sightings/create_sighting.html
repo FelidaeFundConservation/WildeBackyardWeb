@@ -61,7 +61,7 @@
                             <i class="bi bi-camera"></i> Media Upload
                         </h3>
                         <div class="mb-3">
-                            <label for="media_files" class="form-label">Photos or Videos (Up to 5)</label>
+                            <label for="media_files" class="form-label">Photos or Videos</label>
                             <input type="file"
                                    class="form-control"
                                    id="media_files"
@@ -69,7 +69,7 @@
                                    accept="image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo"
                                    onchange="previewMultipleMedia(this)"
                                    multiple>
-                            <small class="text-muted">Upload up to 5 photos or videos (Max 500MB per video). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
+                            <small id="mediaHelpText" class="text-muted">Upload up to 5 images or videos (max 500MB each). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
                         </div>
                         <div id="mediaPreview" class="row g-2"></div>
                     </div>
@@ -280,12 +280,48 @@
                                    placeholder="e.g., Forest, Grassland, Urban">
                         </div>
                         <div class="mb-3">
-                            <label for="timestamp_offset_details" class="form-label">Timestamp Offset Details</label>
-                            <textarea class="form-control"
-                                      id="timestamp_offset_details"
-                                      name="timestamp_offset_details"
-                                      rows="2"
-                                      placeholder="Any notes about camera time accuracy"></textarea>
+                            <label class="form-label">Timestamp Offset Details</label>
+                            <p class="text-muted small mb-2">If your camera time was incorrect, record the error here:</p>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label for="incorrect_date" class="form-label small">Incorrect Date (DD/MM/YYYY)</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="incorrect_date"
+                                           name="incorrect_date"
+                                           placeholder="e.g., 15/03/2026"
+                                           pattern="\d{2}/\d{2}/\d{4}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="correct_date" class="form-label small">Correct Date (DD/MM/YYYY)</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="correct_date"
+                                           name="correct_date"
+                                           placeholder="e.g., 16/03/2026"
+                                           pattern="\d{2}/\d{2}/\d{4}">
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-2">
+                                <div class="col-md-6">
+                                    <label for="incorrect_time" class="form-label small">Incorrect Time (HH:MM)</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="incorrect_time"
+                                           name="incorrect_time"
+                                           placeholder="e.g., 14:30"
+                                           pattern="\d{2}:\d{2}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="correct_time" class="form-label small">Correct Time (HH:MM)</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="correct_time"
+                                           name="correct_time"
+                                           placeholder="e.g., 16:45"
+                                           pattern="\d{2}:\d{2}">
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="license_code" class="form-label">License</label>
@@ -571,12 +607,11 @@ function previewMultipleMedia(input) {
   preview.innerHTML = '';
 
   if (input.files && input.files.length > 0) {
-    const maxFiles = 5;
     const maxSize = 500 * 1024 * 1024; // 500MB per file
 
-    // Validate number of files
-    if (input.files.length > maxFiles) {
-      alert(`You can only upload up to ${maxFiles} files at once.`);
+    // Validate number of files (use dynamically loaded limit)
+    if (input.files.length > maxSightingImages) {
+      alert(`You can only upload up to ${maxSightingImages} files at once.`);
       input.value = '';
       return;
     }
@@ -787,7 +822,38 @@ document.getElementById('location_longitude').addEventListener('change', functio
 // Global variable to store saved locations
 let savedLocations = [];
 
+// Global variable to store site configuration
+let maxSightingImages = 5; // Default value
+
 // Load user's saved locations on page load
+// Load site configuration from backend API
+async function loadSiteConfig() {
+  try {
+    const response = await fetch('{% url "sightings:proxy_site_config" %}', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (response.ok) {
+      const config = await response.json();
+      maxSightingImages = config.maxSightingImages || 5;
+      console.log('Site config loaded. Max sighting images:', maxSightingImages);
+
+      // Update help text if the input exists
+      const helpText = document.getElementById('mediaHelpText');
+      if (helpText) {
+        helpText.textContent = `Upload up to ${maxSightingImages} images or videos (max 500MB each)`;
+      }
+    } else {
+      console.error('Failed to load site configuration');
+    }
+  } catch (error) {
+    console.error('Error loading site configuration:', error);
+  }
+}
+
 // Load sighting types from backend API
 async function loadSightingTypes() {
   try {
@@ -927,6 +993,7 @@ async function saveCurrentLocation() {
 
 // Load saved locations and sighting types when page loads
 document.addEventListener('DOMContentLoaded', function() {
+  loadSiteConfig();
   loadSightingTypes();
   loadSavedLocations();
 });
