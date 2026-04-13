@@ -38,7 +38,10 @@ def _normalize_post(post):
     post["created"] = post.get("encounter_datetime")
     additional = post.get("additional_info") or {}
     post["camera_model"] = additional.get("camera_model")
-    post["habitat_type"] = additional.get("habitat_type")
+    post["iucn_habitat_lvl1"] = additional.get("iucn_habitat_lvl1_name")
+    post["iucn_habitat_lvl1_code"] = additional.get("iucn_habitat_lvl1_code")
+    post["iucn_habitat_lvl2"] = additional.get("iucn_habitat_lvl2_name")
+    post["iucn_habitat_lvl2_code"] = additional.get("iucn_habitat_lvl2_code")
 
     # Parse timestamp offset JSON if present
     timestamp_offset_json = additional.get("camera_timestamp_offset_error_details")
@@ -296,7 +299,6 @@ def update_details(request, post_id):
 
     if request.method == "POST":
         camera_model = request.POST.get("camera_model", "").strip()
-        habitat_type = request.POST.get("habitat_type", "").strip()
 
         # Extract timestamp offset fields
         incorrect_date = request.POST.get("incorrect_date", "").strip()
@@ -326,8 +328,6 @@ def update_details(request, post_id):
             }
             if camera_model:
                 payload["cameraModel"] = camera_model
-            if habitat_type:
-                payload["habitatType"] = habitat_type
             if timestamp_offset_json:
                 payload["timestampOffsetErrorDetails"] = timestamp_offset_json
 

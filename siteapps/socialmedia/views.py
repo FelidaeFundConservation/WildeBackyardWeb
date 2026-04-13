@@ -44,7 +44,10 @@ def format_post(post):
         "camera_model": post.camera_model,
         "camera_deployment_date": post.camera_deployment_date,
         "camera_timestamp_offset_error_details": post.camera_timestamp_offset_error_details,
-        "habitat_type": post.habitat_type,
+        "iucn_habitat_lvl1_name": post.iucn_habitat_lvl1.name if post.iucn_habitat_lvl1 else None,
+        "iucn_habitat_lvl1_code": post.iucn_habitat_lvl1_code,
+        "iucn_habitat_lvl2_name": post.iucn_habitat_lvl2.name if post.iucn_habitat_lvl2 else None,
+        "iucn_habitat_lvl2_code": post.iucn_habitat_lvl2_code,
     }
 
     media_data = (
@@ -212,9 +215,11 @@ def get_post_responses(request):
                     "text_content": comment.text_content,
                     "created": comment.created,
                     "like_count": comment.upvoted_by.count(),
-                    "liked_by_current_user": check_comment_is_liked_by(comment_obj=comment, user=request.user)
-                    if request.user.is_authenticated
-                    else False,
+                    "liked_by_current_user": (
+                        check_comment_is_liked_by(comment_obj=comment, user=request.user)
+                        if request.user.is_authenticated
+                        else False
+                    ),
                 }
                 comments_data.append(comment_dict)
 
@@ -462,8 +467,6 @@ class PostViewValidation:
         camera_deployment_date = data.get("cameraDeploymentDate")
         camera_timestamp_offset_error_details = data.get("timestampOffsetErrorDetails")
 
-        habitat_type = data.get("habitatType")
-
         if body is not None:
             kwargs["text_content"] = body
         if geocoded_location_locality is not None:
@@ -483,8 +486,6 @@ class PostViewValidation:
             kwargs["camera_deployment_date"] = parser.parse(camera_deployment_date)
         if camera_timestamp_offset_error_details is not None:
             kwargs["camera_timestamp_offset_error_details"] = camera_timestamp_offset_error_details
-        if habitat_type is not None:
-            kwargs["habitat_type"] = habitat_type
 
     @staticmethod
     def validate_and_extract_data(data, request):
