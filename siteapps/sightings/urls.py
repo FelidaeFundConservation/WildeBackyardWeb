@@ -13,6 +13,8 @@ urlpatterns = [
     path("api/reverse_geocode/", ReverseGeocodeWithNominatim.as_view(), name="reverse_geocode"),
     # Sighting types proxy
     path("api/sighting-types/", views.proxy_sighting_types, name="proxy_sighting_types"),
+    # Site configuration proxy
+    path("api/site-config/", views.proxy_site_config, name="proxy_site_config"),
     # User location management
     path("api/backend/locations/", views.list_user_locations, name="list_locations"),
     path("api/backend/locations/create/", views.create_user_location, name="create_location"),

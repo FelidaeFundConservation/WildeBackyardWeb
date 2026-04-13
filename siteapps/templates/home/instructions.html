@@ -1,0 +1,141 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}
+    Instructions - WildeBackyard
+{% endblock title %}
+{% block content %}
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-warning text-dark">
+                        <h1 class="mb-0">
+                            <i class="bi bi-question-circle"></i> WildeBackyard Instructions
+                        </h1>
+                    </div>
+                    <div class="card-body p-4">
+                        <h2 class="mt-4">Getting Started</h2>
+                        <p class="lead">
+                            WildeBackyard is a wildlife observation platform that helps you document and share
+                            sightings of animals in your area while contributing to conservation efforts.
+                        </p>
+                        <h3 class="mt-4">How to Report a Sighting</h3>
+                        <ol class="fs-5">
+                            <li class="mb-3">
+                                <strong>Navigate to "Report Sighting"</strong> from the top navigation menu
+                            </li>
+                            <li class="mb-3">
+                                <strong>Select Location:</strong>
+                                <ul>
+                                    <li>Click on the map to set your sighting location</li>
+                                    <li>Or use GPS to capture your current location</li>
+                                    <li>Choose saved locations for frequently visited areas</li>
+                                </ul>
+                            </li>
+                            <li class="mb-3">
+                                <strong>Upload Media:</strong>
+                                <ul>
+                                    <li>Upload up to 5 photos or videos</li>
+                                    <li>Supported formats: JPG, PNG, MP4, MOV</li>
+                                    <li>Images help with species identification</li>
+                                </ul>
+                            </li>
+                            <li class="mb-3">
+                                <strong>Identify Species:</strong>
+                                <ul>
+                                    <li>Search for the species name using the autocomplete field</li>
+                                    <li>Add multiple species if you observed more than one</li>
+                                </ul>
+                            </li>
+                            <li class="mb-3">
+                                <strong>Privacy Settings:</strong>
+                                <ul>
+                                    <li>
+                                        <span class="badge bg-success">Public</span> - Exact location visible to everyone
+                                    </li>
+                                    <li>
+                                        <span class="badge bg-warning text-dark">Obscured</span> - General area shown (protects sensitive species)
+                                    </li>
+                                    <li>
+                                        <span class="badge bg-danger">Private</span> - No location data shared
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="mb-3">
+                                <strong>Additional Details:</strong>
+                                <ul>
+                                    <li>Enter animal count if you saw multiple individuals</li>
+                                    <li>Add notes about behavior, habitat, or other observations</li>
+                                    <li>Select sighting type (e.g., track, scat, camera trap)</li>
+                                </ul>
+                            </li>
+                        </ol>
+                        <h3 class="mt-4">Using the Feed</h3>
+                        <ul class="fs-5">
+                            <li class="mb-2">Browse recent wildlife sightings from the community</li>
+                            <li class="mb-2">Filter by species, location, or user</li>
+                            <li class="mb-2">
+                                <strong>Location Filters:</strong>
+                                <ul>
+                                    <li>
+                                        <strong>Global</strong> - See all sightings worldwide
+                                    </li>
+                                    <li>
+                                        <strong>Custom Radius</strong> - Search within a specific distance from coordinates
+                                    </li>
+                                    <li>
+                                        <strong>ZIP Code Boundary</strong> - View sightings within a specific postal code area
+                                    </li>
+                                    <li>
+                                        <strong>Place Name</strong> - Find sightings near a city or landmark (with radius)
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="mb-2">Like and comment on sightings</li>
+                            <li class="mb-2">Help identify species in other users' posts</li>
+                        </ul>
+                        <h3 class="mt-4">Sightings Map</h3>
+                        <ul class="fs-5">
+                            <li class="mb-2">Interactive map showing all public sightings</li>
+                            <li class="mb-2">Filter by species to see distribution patterns</li>
+                            <li class="mb-2">Click markers to view sighting details</li>
+                            <li class="mb-2">Zoom in to see precise locations (where privacy allows)</li>
+                        </ul>
+                        <h3 class="mt-4">Profile & Settings</h3>
+                        <ul class="fs-5">
+                            <li class="mb-2">View your sighting history</li>
+                            <li class="mb-2">Manage saved locations for quick reporting</li>
+                            <li class="mb-2">Update privacy preferences</li>
+                            <li class="mb-2">Edit or delete your sightings</li>
+                        </ul>
+                        <h3 class="mt-4">Tips for Quality Sightings</h3>
+                        <div class="alert alert-info">
+                            <ul class="mb-0">
+                                <li>Take clear, well-lit photos when possible</li>
+                                <li>Note the date and time of your observation</li>
+                                <li>Include habitat details (forest, grassland, urban, etc.)</li>
+                                <li>Be accurate with location - it helps scientists track species ranges</li>
+                                <li>Use obscured privacy for rare or sensitive species</li>
+                                <li>Add behavioral notes - they provide valuable ecological data</li>
+                            </ul>
+                        </div>
+                        <h3 class="mt-4">Need Help?</h3>
+                        <p class="fs-5">If you have questions or need assistance, please:</p>
+                        <ul class="fs-5">
+                            <li>
+                                Check the <a href="{% url 'socialmedia:feed' %}">Feed</a> for examples from other users
+                            </li>
+                            <li>Contact support (coming soon)</li>
+                            <li>Join our community forums (coming soon)</li>
+                        </ul>
+                        <div class="mt-5 text-center">
+                            <a href="{% url 'sightings:create' %}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-circle"></i> Report Your First Sighting
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

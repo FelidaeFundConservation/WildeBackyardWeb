@@ -117,8 +117,25 @@ class CreateSightingView(View):
             data["cameraDeploymentDate"] = request.POST.get("camera_deployment_date")
         if request.POST.get("habitat_type"):
             data["habitatType"] = request.POST.get("habitat_type")
-        if request.POST.get("timestamp_offset_details"):
-            data["timestampOffsetErrorDetails"] = request.POST.get("timestamp_offset_details")
+
+        # Handle timestamp offset details - combine 4 fields into JSON
+        incorrect_date = request.POST.get("incorrect_date", "").strip()
+        correct_date = request.POST.get("correct_date", "").strip()
+        incorrect_time = request.POST.get("incorrect_time", "").strip()
+        correct_time = request.POST.get("correct_time", "").strip()
+
+        if any([incorrect_date, correct_date, incorrect_time, correct_time]):
+            timestamp_offset_data = {}
+            if incorrect_date:
+                timestamp_offset_data["incorrectDate"] = incorrect_date
+            if correct_date:
+                timestamp_offset_data["correctDate"] = correct_date
+            if incorrect_time:
+                timestamp_offset_data["incorrectTime"] = incorrect_time
+            if correct_time:
+                timestamp_offset_data["correctTime"] = correct_time
+            data["timestampOffsetErrorDetails"] = json.dumps(timestamp_offset_data)
+
         if request.POST.get("sighting_type"):
             data["sightingType"] = request.POST.get("sighting_type")
         if request.POST.get("license_code"):
@@ -330,6 +347,23 @@ def proxy_sighting_types(request):
         return JsonResponse(result, safe=False)
     else:
         return JsonResponse({"error": "Failed to fetch sighting types"}, status=500)
+
+
+# ==========================================
+# Site Configuration Proxy Endpoint
+# ==========================================
+
+
+def proxy_site_config(request):
+    """Proxy to backend API for fetching site configuration (public endpoint)."""
+    api_client = BackendAPIClient()  # No auth token needed for public endpoint
+    result = api_client.get("/v1/socialmedia/api/site-config/")
+
+    if result is not None:
+        # Backend returns site configuration object
+        return JsonResponse(result)
+    else:
+        return JsonResponse({"error": "Failed to fetch site configuration"}, status=500)
 
 
 # ==========================================

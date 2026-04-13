@@ -90,8 +90,8 @@
                                            name="location"
                                            id="global"
                                            value="global"
-                                           {% if location_filter != 'radius' %}checked{% endif %}
-                                           onchange="document.getElementById('radius-inputs').classList.add('d-none'); this.form.submit()">
+                                           {% if location_filter == 'global' %}checked{% endif %}
+                                           onchange="document.getElementById('radius-inputs').classList.add('d-none'); document.getElementById('zipcode-inputs').classList.add('d-none'); document.getElementById('place-inputs').classList.add('d-none'); this.form.submit()">
                                     <label class="form-check-label" for="global">Global</label>
                                 </div>
                                 <div class="form-check">
@@ -101,7 +101,7 @@
                                            id="radius"
                                            value="radius"
                                            {% if location_filter == 'radius' %}checked{% endif %}
-                                           onchange="document.getElementById('radius-inputs').classList.remove('d-none')">
+                                           onchange="document.getElementById('radius-inputs').classList.remove('d-none'); document.getElementById('zipcode-inputs').classList.add('d-none'); document.getElementById('place-inputs').classList.add('d-none')">
                                     <label class="form-check-label" for="radius">Custom Radius</label>
                                 </div>
                                 <div id="radius-inputs"
@@ -141,6 +141,77 @@
                                         <i class="bi bi-funnel-fill"></i> Apply
                                     </button>
                                 </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="location"
+                                           id="zipcode"
+                                           value="zipcode"
+                                           {% if location_filter == 'zipcode' %}checked{% endif %}
+                                           onchange="document.getElementById('zipcode-inputs').classList.remove('d-none'); document.getElementById('radius-inputs').classList.add('d-none'); document.getElementById('place-inputs').classList.add('d-none')">
+                                    <label class="form-check-label" for="zipcode">ZIP Code Boundary</label>
+                                </div>
+                                <div id="zipcode-inputs"
+                                     class="mt-2 {% if location_filter != 'zipcode' %}d-none{% endif %}">
+                                    <label for="zip_code_boundary" class="form-label small mb-1">ZIP/Postal Code</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm mb-2"
+                                           id="zip_code_boundary"
+                                           name="zip_code_boundary"
+                                           placeholder="e.g. 94102"
+                                           maxlength="10"
+                                           value="{{ zip_code_boundary|default:'' }}">
+                                    <label for="zip_code_country" class="form-label small mb-1">Country</label>
+                                    <select class="form-select form-select-sm mb-2"
+                                            id="zip_code_country"
+                                            name="zip_code_country">
+                                        <option value="US" {% if zip_code_country == 'US' %}selected{% endif %}>United States</option>
+                                        <option value="CA" {% if zip_code_country == 'CA' %}selected{% endif %}>Canada</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                        <i class="bi bi-funnel-fill"></i> Apply
+                                    </button>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="location"
+                                           id="place"
+                                           value="place"
+                                           {% if location_filter == 'place' %}checked{% endif %}
+                                           onchange="document.getElementById('place-inputs').classList.remove('d-none'); document.getElementById('radius-inputs').classList.add('d-none'); document.getElementById('zipcode-inputs').classList.add('d-none')">
+                                    <label class="form-check-label" for="place">Place Name</label>
+                                </div>
+                                <div id="place-inputs"
+                                     class="mt-2 {% if location_filter != 'place' %}d-none{% endif %}">
+                                    <label for="place_name" class="form-label small mb-1">Place Name</label>
+                                    <input type="text"
+                                           class="form-control form-control-sm mb-2"
+                                           id="place_name"
+                                           name="place_name"
+                                           placeholder="e.g. San Francisco"
+                                           value="{{ place_name|default:'' }}">
+                                    <label for="place_country" class="form-label small mb-1">Country</label>
+                                    <select class="form-select form-select-sm mb-2"
+                                            id="place_country"
+                                            name="place_country">
+                                        <option value="US" {% if place_country == 'US' %}selected{% endif %}>United States</option>
+                                        <option value="CA" {% if place_country == 'CA' %}selected{% endif %}>Canada</option>
+                                    </select>
+                                    <label for="place_radius" class="form-label small mb-1">Radius (km)</label>
+                                    <input type="number"
+                                           class="form-control form-control-sm mb-2"
+                                           id="place_radius"
+                                           name="place_radius"
+                                           placeholder="10"
+                                           step="any"
+                                           min="1"
+                                           max="500"
+                                           value="{{ place_radius|default:10 }}">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                        <i class="bi bi-funnel-fill"></i> Apply
+                                    </button>
+                                </div>
                             </div>
                         </form>
                         {% if user.is_authenticated %}
@@ -164,6 +235,12 @@
                     {% if user_filter == 'self' %}<span class="badge bg-info text-dark">My Posts</span>{% endif %}
                     {% if user_filter == 'other' and user_display_name_filter %}
                         <span class="badge bg-secondary"><i class="bi bi-person"></i> {{ user_display_name_filter }}</span>
+                    {% endif %}
+                    {% if location_filter == 'zipcode' and zip_code_boundary %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-geo-alt"></i> ZIP {{ zip_code_boundary }}</span>
+                    {% endif %}
+                    {% if location_filter == 'place' and place_name %}
+                        <span class="badge bg-primary"><i class="bi bi-geo"></i> {{ place_name }} ({{ place_radius }}km)</span>
                     {% endif %}
                 </h1>
                 {% if messages %}
@@ -273,6 +350,11 @@ const currentLocation = "{{ location_filter|default:'global' }}";
 const currentCenterLat = "{{ center_lat|default:'' }}";
 const currentCenterLon = "{{ center_lon|default:'' }}";
 const currentRadiusKm = "{{ radius_km|default:'' }}";
+const currentZipCodeBoundary = "{{ zip_code_boundary|default:'' }}";
+const currentZipCodeCountry = "{{ zip_code_country|default:'US' }}";
+const currentPlaceName = "{{ place_name|default:'' }}";
+const currentPlaceCountry = "{{ place_country|default:'US' }}";
+const currentPlaceRadius = "{{ place_radius|default:'10' }}";
 const currentUserFilter = "{{ user_filter|default:'all' }}";
 const currentUserDisplayName = "{{ user_display_name_filter|default:''|escapejs }}";
 let isLoading = false;
@@ -398,6 +480,15 @@ async function loadMore() {
             params.append('center_lat', currentCenterLat);
             params.append('center_lon', currentCenterLon);
             params.append('radius_km', currentRadiusKm);
+        }
+        if (currentLocation === 'zipcode' && currentZipCodeBoundary) {
+            params.append('zip_code_boundary', currentZipCodeBoundary);
+            params.append('zip_code_country', currentZipCodeCountry);
+        }
+        if (currentLocation === 'place' && currentPlaceName) {
+            params.append('place_name', currentPlaceName);
+            params.append('place_country', currentPlaceCountry);
+            params.append('place_radius', currentPlaceRadius);
         }
         if (currentUserFilter && currentUserFilter !== 'all') {
             params.append('user_filter', currentUserFilter);
