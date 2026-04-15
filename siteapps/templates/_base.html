@@ -9,6 +9,7 @@
             {% endblock title %}
         </title>
         <meta name="description" content="Site description">
+        <meta name="keywords" content="wildlife, backyard, conservation, sightings">
         <meta name="author" content="Justin Yee">
         <!-- Jquery -->
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"
@@ -122,6 +123,8 @@
                         <img class="img-fluid ms-2 ms-sm-3 ms-lg-4 pb-1"
                              src="{% static 'images/logo.webp' %}"
                              style="height: 60px"
+                             width="auto"
+                             height="60"
                              alt="WildeBackyard Logo">
                         <style>
                             @media (min-width: 768px) {
@@ -166,6 +169,14 @@
                                     <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
                                        href="{% url 'users:profile' %}">Profile</a>
                                 </li>
+                                {% if user.is_staff %}
+                                    <li class="nav-item mx-1 bevel">
+                                        <a class="nav-link fs-5 text-white bg-secondary bg-opacity-75 rounded px-4 py-2"
+                                           href="{{ BACKEND_ADMIN_URL }}"
+                                           target="_blank"
+                                           rel="noopener noreferrer">Admin</a>
+                                    </li>
+                                {% endif %}
                                 <li class="nav-item mx-1 bevel">
                                     <a class="nav-link fs-5 text-white bg-danger bg-opacity-75 rounded px-4 py-2"
                                        href="{% url 'users:logout' %}">Logout</a>
@@ -203,7 +214,7 @@
             <footer class="footer mt-auto py-2">
                 <div class="container text-center">
                     <p class="mb-0">
-                        &copy; 2025-<script type="text/javascript">document.write(new Date().getFullYear());</script>
+                        © 2025-<script type="text/javascript">document.write(new Date().getFullYear());</script>
                         Felidae Conservation Fund
                     </p>
                 </div>
