@@ -411,6 +411,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "siteapps.home.context_processors.backend_admin_url",
             ],
             "builtins": ["slippers.templatetags.slippers"],
         },

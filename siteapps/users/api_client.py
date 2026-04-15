@@ -270,3 +270,41 @@ class BackendAPIClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Backend API connection error during password reset: {e}")
             return False
+
+    def change_password(self, old_password, new_password1, new_password2):
+        """
+        Change the authenticated user's password via the Backend API.
+
+        Args:
+            old_password: The user's current password
+            new_password1: The new password
+            new_password2: Confirmation of the new password
+
+        Returns:
+            (bool, str): (True, "") on success, (False, error_message) on failure
+        """
+        try:
+            url = f"{self.base_url}/v1/users/profile/change-password/"
+            data = {
+                "old_password": old_password,
+                "new_password1": new_password1,
+                "new_password2": new_password2,
+            }
+            response = requests.post(url, json=data, headers=self.headers, timeout=self.timeout)
+            if response.status_code == 200:
+                return True, ""
+            elif response.status_code == 400:
+                errors = response.json()
+                # Flatten all error messages into a single string
+                messages = []
+                for field_errors in errors.values():
+                    if isinstance(field_errors, list):
+                        messages.extend(field_errors)
+                    else:
+                        messages.append(str(field_errors))
+                return False, " ".join(messages)
+            else:
+                return False, "Failed to change password."
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during password change: {e}")
+            return False, "Connection error. Please try again."

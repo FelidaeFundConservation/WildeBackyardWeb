@@ -268,8 +268,43 @@ class PasswordResetRequestView(View):
             return redirect("users:login")
 
 
+class ChangePasswordView(LoginRequiredMixin, View):
+    """Handle password change via Backend API"""
+
+    def post(self, request):
+        old_password = request.POST.get("old_password")
+        new_password1 = request.POST.get("new_password1")
+        new_password2 = request.POST.get("new_password2")
+
+        if not old_password or not new_password1 or not new_password2:
+            messages.error(request, "All password fields are required.")
+            return redirect("users:profile")
+
+        if new_password1 != new_password2:
+            messages.error(request, "New passwords do not match.")
+            return redirect("users:profile")
+
+        if len(new_password1) < 8:
+            messages.error(request, "New password must be at least 8 characters long.")
+            return redirect("users:profile")
+
+        api_token = request.session.get("backend_api_token")
+        if not api_token:
+            messages.error(request, "Authentication required.")
+            return redirect("users:login")
+
+        api_client = BackendAPIClient(auth_token=api_token)
+        success, error_message = api_client.change_password(old_password, new_password1, new_password2)
+
+        if success:
+            messages.success(request, "Password changed successfully!")
+        else:
+            messages.error(request, error_message or "Failed to change password.")
+
+        return redirect("users:profile")
+
+
 class ResendVerificationView(LoginRequiredMixin, View):
-    """Resend email verification via Backend API"""
 
     def post(self, request):
         """Resend verification email"""
