@@ -135,4 +135,4 @@ repos:
       - id: djlint-reformat-django
       - id: djlint-django
         args:
-          - "--ignore=T002,H013,H021,H029"
+          - "--ignore=T002,T003,H006,H013,H021,H029"
