@@ -84,6 +84,32 @@ class BackendAPIClient:
             logger.error(f"Backend API connection error during POST {endpoint}: {e}")
             return None
 
+    def put(self, endpoint, data=None):
+        try:
+            url = f"{self.base_url}{endpoint}"
+            response = requests.put(url, json=data, headers=self.headers, timeout=self.timeout)
+            if response.status_code in [200, 204]:
+                return response.json() if response.text else {"status": "success"}
+            else:
+                logger.warning(f"PUT request failed for {endpoint}: {response.status_code}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during PUT {endpoint}: {e}")
+            return None
+
+    def delete(self, endpoint):
+        try:
+            url = f"{self.base_url}{endpoint}"
+            response = requests.delete(url, headers=self.headers, timeout=self.timeout)
+            if response.status_code in [200, 204]:
+                return {}
+            else:
+                logger.warning(f"DELETE request failed for {endpoint}: {response.status_code}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during DELETE {endpoint}: {e}")
+            return None
+
     def register_user(self, email, password, name=None):
         """
         Register a new user via the Backend API.

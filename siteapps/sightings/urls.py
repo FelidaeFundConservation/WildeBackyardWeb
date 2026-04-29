@@ -15,6 +15,8 @@ urlpatterns = [
     path("api/sighting-types/", views.proxy_sighting_types, name="proxy_sighting_types"),
     # Site configuration proxy
     path("api/site-config/", views.proxy_site_config, name="proxy_site_config"),
+    # Manage saved locations HTML page
+    path("locations/manage/", views.ManageLocationsView.as_view(), name="manage_locations"),
     # User location management
     path("api/backend/locations/", views.list_user_locations, name="list_locations"),
     path("api/backend/locations/create/", views.create_user_location, name="create_location"),
