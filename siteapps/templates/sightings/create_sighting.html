@@ -107,7 +107,7 @@
                                     onchange="loadSavedLocation()">
                                 <option value="">-- Enter new location below --</option>
                             </select>
-                            <small class="text-muted">Select a previously saved location or enter coordinates manually below.</small>
+                            <small class="text-muted">Select a previously saved location or enter coordinates manually below. <a href="{% url 'sightings:manage_locations' %}">Manage saved locations</a></small>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -139,11 +139,6 @@
                                     class="btn btn-sm btn-outline-secondary"
                                     onclick="pickLocationOnMap()">
                                 <i class="bi bi-map"></i> Pick on Map
-                            </button>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-success"
-                                    onclick="saveCurrentLocation()">
-                                <i class="bi bi-star"></i> Save This Location
                             </button>
                         </div>
                         <div id="map" class="mb-3"></div>
@@ -362,6 +357,100 @@
                             <small class="text-muted">Custom name to use for attribution (e.g. your organization). Leave blank to use your display name.</small>
                         </div>
                     </div>
+                    {% if is_expert %}
+                        <!-- Expert Bulk Upload Section -->
+                        <div class="form-section border border-warning">
+                            <h3>
+                                <i class="bi bi-folder2-open text-warning"></i> Bulk Upload <span class="badge bg-warning text-dark ms-2" style="font-size:0.6em;">Expert</span>
+                            </h3>
+                            <p class="text-muted small">
+                                Select a local folder of camera trap images. Each image creates one sighting using the location and camera settings above.
+                            </p>
+                            <!-- Folder path input + Browse -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Image Folder Path</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control font-monospace"
+                                           id="bulk_path_display"
+                                           readonly
+                                           placeholder="No folder selected"
+                                           aria-label="Selected folder path">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary"
+                                            onclick="document.getElementById('bulk_directory_input').click()">
+                                        <i class="bi bi-folder2-open"></i> Browse…
+                                    </button>
+                                </div>
+                                <!-- Hidden file input -->
+                                <input type="file"
+                                       id="bulk_directory_input"
+                                       webkitdirectory
+                                       multiple
+                                       class="d-none"
+                                       onchange="onBulkDirectorySelected(this)">
+                                <small class="text-muted">If the folder contains a <code>predictions.json</code> from SpeciesNet, species predictions will be attached automatically.</small>
+                            </div>
+                            <!-- File count / predictions badge -->
+                            <div id="bulk_ready_row" class="d-none mb-3">
+                                <span id="bulk_file_count_badge" class="badge bg-secondary me-2"></span>
+                                <span id="bulk_predictions_badge" class="badge bg-success d-none"></span>
+                            </div>
+                            <!-- Submit button + dry run controls (shown only once files are loaded) -->
+                            <div id="bulk_submit_row"
+                                 class="d-none mb-3 d-flex align-items-center gap-3 flex-wrap">
+                                <button type="button"
+                                        class="btn btn-warning"
+                                        id="bulk_submit_btn"
+                                        onclick="bulkSubmitSelected()">
+                                    <i class="bi bi-cloud-upload"></i> Submit All
+                                </button>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="bulk_dry_run"
+                                           role="switch">
+                                    <label class="form-check-label fw-semibold text-secondary"
+                                           for="bulk_dry_run">
+                                        <i class="bi bi-eye"></i> Dry Run
+                                    </label>
+                                    <small class="d-block text-muted" style="font-size:0.75em;">Preview without submitting.</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-1" id="bulk_dry_run_max_wrap">
+                                    <label for="bulk_dry_run_max" class="text-muted small text-nowrap mb-0">Max images:</label>
+                                    <input type="number"
+                                           id="bulk_dry_run_max"
+                                           class="form-control form-control-sm"
+                                           value="20"
+                                           min="1"
+                                           max="9999"
+                                           style="width:5.5rem">
+                                </div>
+                            </div>
+                            <!-- Progress bar (shown during upload) -->
+                            <div id="bulk_progress_wrap" class="d-none mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small id="bulk_progress_label" class="text-muted">Uploading…</small>
+                                    <small id="bulk_progress_count" class="text-muted"></small>
+                                </div>
+                                <div class="progress" style="height:1.25rem;">
+                                    <div id="bulk_progress_bar"
+                                         class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                                         role="progressbar"
+                                         style="width:0%"
+                                         aria-valuenow="0"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                        <span id="bulk_progress_pct" class="text-dark fw-bold">0%</span>
+                                    </div>
+                                </div>
+                                <div id="bulk_current_file"
+                                     class="text-muted small mt-1 font-monospace text-truncate"></div>
+                            </div>
+                            <!-- Done summary -->
+                            <div id="bulk_done_row" class="d-none alert alert-success py-2"></div>
+                        </div>
+                    {% endif %}
                     <!-- Submit Button -->
                     <div class="text-center mb-4">
                         <button type="submit" class="btn btn-primary btn-lg px-5">
@@ -683,8 +772,8 @@ function extractExifGPS(dataUrl) {
         const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
 
         // Extract camera make/model and populate the camera_model field if empty
-        const make = EXIF.getTag(this, 'Make');
-        const model = EXIF.getTag(this, 'Model');
+        const make = (EXIF.getTag(this, 'Make') || '').replace(/\0/g, '').trim() || null;
+        const model = (EXIF.getTag(this, 'Model') || '').replace(/\0/g, '').trim() || null;
         if (make || model) {
           const cameraModelField = document.getElementById('camera_model');
           if (cameraModelField && cameraModelField.value === '') {
@@ -908,13 +997,17 @@ async function loadSavedLocations() {
         select.remove(1);
       }
 
-      // Add saved locations
+      // Add saved locations — store camera fields in dataset
       savedLocations.forEach(loc => {
         const option = document.createElement('option');
         option.value = loc.id;
         option.textContent = loc.name;
         option.dataset.latitude = loc.latitude;
         option.dataset.longitude = loc.longitude;
+        option.dataset.cameraModel = loc.camera_model || '';
+        option.dataset.cameraSerialNumber = loc.camera_serial_number || '';
+        option.dataset.cameraDeploymentDate = loc.camera_deployment_date || '';
+        option.dataset.cameraTimestampOffset = loc.camera_timestamp_offset_error_details || '';
         select.appendChild(option);
       });
     }
@@ -923,7 +1016,7 @@ async function loadSavedLocations() {
   }
 }
 
-// Load a saved location when selected
+// Load a saved location when selected — also populates camera fields
 function loadSavedLocation() {
   const select = document.getElementById('saved_location');
   const selectedOption = select.options[select.selectedIndex];
@@ -937,51 +1030,335 @@ function loadSavedLocation() {
 
     updateMapMarker(lng, lat);
     map.flyTo({center: [lng, lat], zoom: 14});
+
+    // Populate camera fields from saved location (always override with location's values)
+    const cameraModelField = document.getElementById('camera_model');
+    if (selectedOption.dataset.cameraModel !== undefined) {
+      cameraModelField.value = selectedOption.dataset.cameraModel;
+    }
+    const deploymentField = document.getElementById('camera_deployment_date');
+    if (selectedOption.dataset.cameraDeploymentDate !== undefined) {
+      deploymentField.value = selectedOption.dataset.cameraDeploymentDate;
+    }
+    // Serial number — no existing form field yet, skip silently
+    // Timestamp offset details — no single existing form field; skip silently
   }
 }
 
-// Save current location as a new saved location
-async function saveCurrentLocation() {
+// -------------------------------------------------------
+// Expert Bulk Upload
+// -------------------------------------------------------
+let bulkFiles = [];
+// Keyed by image basename -> full prediction entry from predictions.json
+let bulkPredictions = {};
+
+function onBulkDirectorySelected(input) {
+  const allFiles = Array.from(input.files);
+
+  // Show selected folder name from the first file's relative path
+  const pathDisplay = document.getElementById('bulk_path_display');
+  if (allFiles.length > 0 && allFiles[0].webkitRelativePath) {
+    pathDisplay.value = allFiles[0].webkitRelativePath.split('/')[0];
+  } else if (allFiles.length > 0) {
+    pathDisplay.value = '(selected: ' + allFiles.length + ' files)';
+  } else {
+    pathDisplay.value = '';
+  }
+
+  processBulkFiles(allFiles);
+}
+
+function processBulkFiles(allFiles) {
+  bulkFiles = allFiles.filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|gif|webp|tiff?|bmp|heic|heif|arw|cr2|nef|raf|dng)$/i.test(f.name));
+  bulkPredictions = {};
+
+  // Hide progress / done from a previous run
+  document.getElementById('bulk_progress_wrap').classList.add('d-none');
+  document.getElementById('bulk_done_row').classList.add('d-none');
+
+  if (bulkFiles.length === 0) {
+    document.getElementById('bulk_ready_row').classList.add('d-none');
+    document.getElementById('bulk_submit_row').classList.add('d-none');
+    return;
+  }
+
+  // Update count badge
+  const countBadge = document.getElementById('bulk_file_count_badge');
+  countBadge.textContent = `${bulkFiles.length} image${bulkFiles.length !== 1 ? 's' : ''} ready`;
+  document.getElementById('bulk_ready_row').classList.remove('d-none');
+  document.getElementById('bulk_submit_row').classList.remove('d-none');
+  document.getElementById('bulk_submit_btn').disabled = false;
+
+  // Parse predictions.json if present
+  const predFile = allFiles.find(f => f.name.toLowerCase() === 'predictions.json');
+  const predBadge = document.getElementById('bulk_predictions_badge');
+  predBadge.classList.add('d-none');
+  if (predFile) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const json = JSON.parse(ev.target.result);
+        let items = null;
+        if (Array.isArray(json)) {
+          items = json;
+        } else if (json.predictions && Array.isArray(json.predictions)) {
+          items = json.predictions;
+        }
+        if (items) {
+          items.forEach(item => {
+            const fp = item.filepath || item.file || item.filename || item.image || item.img || '';
+            if (fp) {
+              bulkPredictions[fp.split(/[/\\]/).pop()] = item;
+            }
+          });
+        } else if (json.predictions && typeof json.predictions === 'object') {
+          Object.entries(json.predictions).forEach(([fp, val]) => {
+            bulkPredictions[fp.split(/[/\\]/).pop()] = val;
+          });
+        }
+        const count = Object.keys(bulkPredictions).length;
+        if (count > 0) {
+          predBadge.textContent = `predictions.json (${count} entries)`;
+          predBadge.classList.remove('d-none');
+        }
+      } catch (err) {
+        console.warn('Failed to parse predictions.json:', err);
+      }
+    };
+    reader.readAsText(predFile);
+  }
+}
+
+// Helper: extract common name from SpeciesNet prediction string
+// Format: "UUID;phylum;class;order;family;genus;species;common_name"
+function extractCommonName(predictionStr) {
+  if (!predictionStr) return '';
+  const parts = predictionStr.split(';');
+  return parts.length >= 2 ? parts[parts.length - 1].trim() : '';
+}
+
+// Helper: look up a species name via the suggest endpoint
+async function matchSpecies(rawName) {
+  if (!rawName) return '';
+  try {
+    const resp = await fetch(`/species/api/suggest/?q=${encodeURIComponent(rawName)}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.choice) return data.choice;
+    }
+  } catch (e) { /* ignore */ }
+  return rawName;
+}
+
+// Wraps exif-js in a Promise. Returns { date, time, cameraModel } with nulls for any tag not found.
+function readExifDate(file) {
+  return new Promise((resolve) => {
+    EXIF.getData(file, function() {
+      const rawDate = EXIF.getTag(this, 'DateTimeOriginal')
+                   || EXIF.getTag(this, 'DateTimeDigitized')
+                   || EXIF.getTag(this, 'DateTime');
+      const make  = (EXIF.getTag(this, 'Make')  || '').replace(/\0/g, '').trim();
+      const model = (EXIF.getTag(this, 'Model') || '').replace(/\0/g, '').trim();
+      // Filter out placeholder strings that indicate no real camera info
+      const _isUnknown = (s) => !s || /^(unknown|n\/a|none|-|na)$/i.test(s.trim());
+      const cameraModel = [make, model].filter(s => s && !_isUnknown(s)).join(' ').trim() || null;
+      if (rawDate && rawDate.length >= 19) {
+        const date = rawDate.substring(0, 10).replace(/:/g, '-');
+        const time = rawDate.substring(11, 19);
+        resolve({ date, time, cameraModel });
+      } else {
+        resolve({ date: null, time: null, cameraModel });
+      }
+    });
+  });
+}
+
+function _setProgress(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const bar = document.getElementById('bulk_progress_bar');
+  bar.style.width = pct + '%';
+  bar.setAttribute('aria-valuenow', pct);
+  document.getElementById('bulk_progress_pct').textContent = pct + '%';
+  document.getElementById('bulk_progress_count').textContent = `${done} / ${total}`;
+}
+
+async function bulkSubmitSelected() {
   const lat = parseFloat(document.getElementById('location_latitude').value);
   const lng = parseFloat(document.getElementById('location_longitude').value);
+  const encounterDate = document.getElementById('encounter_date').value;
+  const isDryRun = document.getElementById('bulk_dry_run').checked;
 
   if (isNaN(lat) || isNaN(lng)) {
-    alert('Please set a location first before saving.');
+    alert('Please set a location before submitting.');
+    return;
+  }
+  // encounterDate is used only as a fallback; individual files use EXIF date when available.
+  if (bulkFiles.length === 0) {
+    alert('No image files loaded. Please select a folder first.');
     return;
   }
 
-  const name = prompt('Enter a name for this location (e.g., "Backyard", "North Trail"):');
-  if (!name || !name.trim()) {
-    return;
-  }
+  if (isDryRun) {
+    const maxPhotos = Math.max(1, parseInt(document.getElementById('bulk_dry_run_max').value) || 20);
+    const slice = bulkFiles.slice(0, maxPhotos);
+    const truncated = bulkFiles.length > maxPhotos;
+    const encounterTime = document.getElementById('encounter_time').value || '—';
+    const savedLocSel = document.getElementById('saved_location');
+    const savedLocOpt = savedLocSel ? savedLocSel.options[savedLocSel.selectedIndex] : null;
+    const locationCameraModel = savedLocOpt ? (savedLocOpt.dataset.cameraModel || '') : '';
+    const cameraModel = document.getElementById('camera_model').value || locationCameraModel || '—';
+    const privacyEl = document.getElementById('privacy_setting');
+    const privacyLabel = privacyEl ? (privacyEl.options[privacyEl.selectedIndex]?.text || privacyEl.value) : '';
+    const sightingTypeEl = document.getElementById('sighting_type');
+    const sightingType = sightingTypeEl ? (sightingTypeEl.options[sightingTypeEl.selectedIndex]?.text || sightingTypeEl.value || '—') : '—';
 
-  try {
-    const response = await fetch('/sightings/api/backend/locations/create/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({
-        name: name.trim(),
-        description: '',
-        latitude: lat,
-        longitude: lng
-      })
-    });
+    // Show spinner while building the preview
+    const doneRow = document.getElementById('bulk_done_row');
+    doneRow.className = 'alert alert-info py-2';
+    doneRow.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      <strong>Preparing dry run preview…</strong> <span id="dry_run_progress">0 / ${slice.length}</span>`;
+    doneRow.classList.remove('d-none');
 
-    if (response.ok) {
-      alert('Location saved successfully!');
-      loadSavedLocations(); // Reload the dropdown
-    } else {
-      const error = await response.json();
-      alert('Error saving location: ' + (error.error || 'Unknown error'));
+    let html = `<table class="table table-sm table-bordered mb-0"><thead class="table-dark"><tr>
+      <th>#</th><th>Filename</th><th>Species</th><th>Date / Time</th><th>Location</th><th>Camera</th><th>Type</th>
+    </tr></thead><tbody>`;
+    for (let i = 0; i < slice.length; i++) {
+      const f = slice[i];
+      document.getElementById('dry_run_progress').textContent = `${i + 1} / ${slice.length}`;
+      const prediction = bulkPredictions[f.name];
+      let speciesName = '—';
+      if (prediction) {
+        const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
+        if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+      }
+      const exif = await readExifDate(f);
+      const fileDate = exif.date || encounterDate || '—';
+      const fileTime = exif.time || encounterTime;
+      const savedLocSelDR = document.getElementById('saved_location');
+      const savedLocOptDR = savedLocSelDR ? savedLocSelDR.options[savedLocSelDR.selectedIndex] : null;
+      const locationCameraModelDR = savedLocOptDR ? (savedLocOptDR.dataset.cameraModel || '') : '';
+      const fileCameraModel = exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelDR || '—';
+      html += `<tr>
+        <td class="text-muted">${i + 1}</td>
+        <td class="text-truncate" style="max-width:220px;" title="${f.name}">${f.name}</td>
+        <td>${speciesName !== '—' ? `<span class="badge bg-success">${speciesName}</span>` : '<span class="text-muted">—</span>'}</td>
+        <td class="text-nowrap">${fileDate} ${fileTime}${exif.date ? ' <small class="text-muted">(exif)</small>' : ''}</td>
+        <td class="text-nowrap">${lat.toFixed(5)}, ${lng.toFixed(5)}<br><small class="text-muted">${privacyLabel}</small></td>
+        <td>${fileCameraModel}</td>
+        <td><small class="text-muted">${sightingType}</small></td>
+      </tr>`;
     }
-  } catch (error) {
-    console.error('Error saving location:', error);
-    alert('Error saving location. Please try again.');
+    html += '</tbody></table>';
+    const countMsg = truncated
+      ? `Showing ${slice.length} of ${bulkFiles.length} — ${bulkFiles.length} sighting(s) would be created in total.`
+      : `${bulkFiles.length} sighting(s) would be created.`;
+
+    doneRow.innerHTML = `<strong><i class="bi bi-eye me-1"></i>Dry Run Preview</strong> — <em>${countMsg}</em>
+      <div class="table-responsive mt-2" style="max-height:300px;overflow-y:auto;">${html}</div>
+      <div class="mt-2">
+        <button type="button" class="btn btn-sm btn-warning" onclick="document.getElementById('bulk_dry_run').checked=false; bulkSubmitSelected();">
+          <i class="bi bi-cloud-upload"></i> Submit for real
+        </button>
+      </div>`;
+    return;
   }
+
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const total = bulkFiles.length;
+  let done = 0;
+  let failed = 0;
+
+  // Show progress, disable submit button
+  const submitBtn = document.getElementById('bulk_submit_btn');
+  submitBtn.disabled = true;
+  const progressWrap = document.getElementById('bulk_progress_wrap');
+  progressWrap.classList.remove('d-none');
+  document.getElementById('bulk_done_row').classList.add('d-none');
+  _setProgress(0, total);
+  document.getElementById('bulk_progress_label').textContent = 'Uploading…';
+
+  for (let i = 0; i < total; i++) {
+    const f = bulkFiles[i];
+    document.getElementById('bulk_current_file').textContent = f.name;
+
+    // Resolve species from prediction
+    const prediction = bulkPredictions[f.name];
+    let speciesName = '';
+    if (prediction) {
+      const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
+      if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+    }
+
+    const exif = await readExifDate(f);
+    const fileDate = exif.date || encounterDate;
+    const fileTime = exif.time || document.getElementById('encounter_time').value || '';
+    const savedLocSelR = document.getElementById('saved_location');
+    const savedLocOptR = savedLocSelR ? savedLocSelR.options[savedLocSelR.selectedIndex] : null;
+    const locationCameraModelR = savedLocOptR ? (savedLocOptR.dataset.cameraModel || '') : '';
+    const fileCameraModel = exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelR || '';
+
+    const locationName = savedLocOptR && savedLocOptR.value ? savedLocOptR.textContent.trim() : '';
+    const titleSpecies = speciesName && !/^(unknown|animal)$/i.test(speciesName.trim()) ? speciesName.trim() : '';
+    const titleParts = ['Bulk Upload'];
+    if (locationName) titleParts.push(locationName);
+    if (fileCameraModel) titleParts.push(fileCameraModel);
+    if (titleSpecies) titleParts.push(titleSpecies);
+    const sightingTitle = titleParts.join(' - ');
+
+    const formData = new FormData();
+    formData.append('media_files', f, f.name);
+    formData.append('location_latitude', lat);
+    formData.append('location_longitude', lng);
+    formData.append('encounter_date', fileDate);
+    formData.append('encounter_time', fileTime);
+    formData.append('privacy_setting', document.getElementById('privacy_setting').value);
+    formData.append('camera_model', fileCameraModel);
+    formData.append('camera_deployment_date', document.getElementById('camera_deployment_date').value || '');
+    formData.append('sighting_type', document.getElementById('sighting_type').value || '');
+    formData.append('post_title', sightingTitle);
+    formData.append('post_body', '');
+    formData.append('species', speciesName);
+    if (prediction) {
+      formData.append('speciesnet_predictions', JSON.stringify(prediction));
+    }
+
+    try {
+      const resp = await fetch('/sightings/create/', {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'X-CSRFToken': csrfToken },
+        body: formData
+      });
+      // Success = 302 redirect (opaque response, status 0); failure = 200 form re-render or 4xx/5xx
+      if (resp.type !== 'opaqueredirect') failed++;
+    } catch (e) {
+      failed++;
+    }
+
+    done++;
+    _setProgress(done, total);
+  }
+
+  // Done — stop animation, show summary
+  const bar = document.getElementById('bulk_progress_bar');
+  bar.classList.remove('progress-bar-animated', 'progress-bar-striped');
+  bar.classList.add(failed === 0 ? 'bg-success' : 'bg-warning');
+  document.getElementById('bulk_progress_label').textContent = 'Complete';
+  document.getElementById('bulk_current_file').textContent = '';
+
+  const doneRow = document.getElementById('bulk_done_row');
+  const succeeded = done - failed;
+  if (failed === 0) {
+    doneRow.className = 'alert alert-success py-2';
+    doneRow.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> <strong>${succeeded}</strong> sighting${succeeded !== 1 ? 's' : ''} created successfully.`;
+  } else {
+    doneRow.className = 'alert alert-warning py-2';
+    doneRow.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>${succeeded}</strong> succeeded, <strong>${failed}</strong> failed.`;
+  }
+  doneRow.classList.remove('d-none');
+  submitBtn.disabled = false;
 }
+
 
 // Load saved locations and sighting types when page loads
 document.addEventListener('DOMContentLoaded', function() {

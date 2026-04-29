@@ -1,0 +1,768 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block title %}
+    My Saved Locations - WildeBackyard
+{% endblock title %}
+{% block header_includes %}
+    <link href='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css'
+          rel='stylesheet' />
+    <script src='https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js'></script>
+    <style>
+  #loc-map, #edit-loc-map {
+    width: 100%;
+    height: 320px;
+    border-radius: 0.5rem;
+  }
+    </style>
+{% endblock header_includes %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10">
+                <!-- Page header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="text-white">
+                        <i class="bi bi-geo-alt-fill"></i> My Saved Locations
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'sightings:create' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Report Sighting
+                        </a>
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#createLocationModal">
+                            <i class="bi bi-pin-map-fill"></i> Add Location
+                        </button>
+                    </div>
+                </div>
+                <!-- Location cards -->
+                <div id="loc-loading" class="text-white text-center py-5">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Loading saved locations…</p>
+                </div>
+                <div id="loc-empty" class="d-none">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        You have no saved locations yet. Click <strong>Add Location</strong> above to create one.
+                    </div>
+                </div>
+                <div id="loc-list" class="row g-3 d-none"></div>
+            </div>
+        </div>
+    </div>
+    <!-- ===========================
+         CREATE LOCATION MODAL
+         =========================== -->
+    <div class="modal fade"
+         id="createLocationModal"
+         tabindex="-1"
+         aria-labelledby="createLocationModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createLocationModalLabel">
+                        <i class="bi bi-pin-map-fill"></i> Add Saved Location
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Map picker -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Pick Location on Map <span class="text-danger">*</span>
+                        </label>
+                        <p class="text-muted small mb-1">Click the map to set coordinates, or enter them manually below.</p>
+                        <div id="loc-map" class="mb-2"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="create_lat" class="form-label fw-bold">
+                                Latitude <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   step="any"
+                                   class="form-control"
+                                   id="create_lat"
+                                   placeholder="e.g., 37.7749"
+                                   oninput="syncCreateMapFromInputs()">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="create_lng" class="form-label fw-bold">
+                                Longitude <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   step="any"
+                                   class="form-control"
+                                   id="create_lng"
+                                   placeholder="e.g., -122.4194"
+                                   oninput="syncCreateMapFromInputs()">
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="create_name" class="form-label fw-bold">
+                            Location Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="create_name"
+                               maxlength="100"
+                               placeholder="e.g., Backyard, North Trail Camera">
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_description" class="form-label">Description</label>
+                        <textarea class="form-control"
+                                  id="create_description"
+                                  rows="2"
+                                  maxlength="500"
+                                  placeholder="Optional notes about this location"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_camera_model" class="form-label">Camera Model</label>
+                        <input type="text"
+                               class="form-control"
+                               id="create_camera_model"
+                               maxlength="64"
+                               placeholder="e.g., Bushnell Core S-4">
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_camera_serial" class="form-label">Camera Serial Number</label>
+                        <input type="text"
+                               class="form-control"
+                               id="create_camera_serial"
+                               maxlength="64"
+                               placeholder="Serial number from camera label">
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_deployment_date" class="form-label">Camera Deployment Date</label>
+                        <input type="date" class="form-control" id="create_deployment_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timestamp Offset Details</label>
+                        <p class="text-muted small mb-2">If the camera clock was wrong, record the error here:</p>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="create_incorrect_date" class="form-label small">Incorrect Date (DD/MM/YYYY)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="create_incorrect_date"
+                                       placeholder="e.g., 15/03/2026"
+                                       pattern="\d{2}/\d{2}/\d{4}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="create_correct_date" class="form-label small">Correct Date (DD/MM/YYYY)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="create_correct_date"
+                                       placeholder="e.g., 16/03/2026"
+                                       pattern="\d{2}/\d{2}/\d{4}">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <label for="create_incorrect_time" class="form-label small">Incorrect Time (HH:MM)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="create_incorrect_time"
+                                       placeholder="e.g., 14:30"
+                                       pattern="\d{2}:\d{2}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="create_correct_time" class="form-label small">Correct Time (HH:MM)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="create_correct_time"
+                                       placeholder="e.g., 16:45"
+                                       pattern="\d{2}:\d{2}">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="create_error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="create_save_btn"
+                            onclick="submitCreateLocation()">
+                        <i class="bi bi-pin-map-fill"></i> Save Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ===========================
+         EDIT LOCATION MODAL
+         =========================== -->
+    <div class="modal fade"
+         id="editLocationModal"
+         tabindex="-1"
+         aria-labelledby="editLocationModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editLocationModalLabel">
+                        <i class="bi bi-pencil-square"></i> Edit Location
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_id">
+                    <!-- Map picker -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Location on Map</label>
+                        <p class="text-muted small mb-1">Click the map to move the pin, or edit coordinates below.</p>
+                        <div id="edit-loc-map" class="mb-2"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="edit_lat" class="form-label fw-bold">
+                                Latitude <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   step="any"
+                                   class="form-control"
+                                   id="edit_lat"
+                                   oninput="syncEditMapFromInputs()">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_lng" class="form-label fw-bold">
+                                Longitude <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   step="any"
+                                   class="form-control"
+                                   id="edit_lng"
+                                   oninput="syncEditMapFromInputs()">
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label fw-bold">
+                            Location Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="edit_name" maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit_description" rows="2" maxlength="500"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_camera_model" class="form-label">Camera Model</label>
+                        <input type="text"
+                               class="form-control"
+                               id="edit_camera_model"
+                               maxlength="64">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_camera_serial" class="form-label">Camera Serial Number</label>
+                        <input type="text"
+                               class="form-control"
+                               id="edit_camera_serial"
+                               maxlength="64">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_deployment_date" class="form-label">Camera Deployment Date</label>
+                        <input type="date" class="form-control" id="edit_deployment_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timestamp Offset Details</label>
+                        <p class="text-muted small mb-2">If the camera clock was wrong, record the error here:</p>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="edit_incorrect_date" class="form-label small">Incorrect Date (DD/MM/YYYY)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="edit_incorrect_date"
+                                       placeholder="e.g., 15/03/2026"
+                                       pattern="\d{2}/\d{2}/\d{4}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_correct_date" class="form-label small">Correct Date (DD/MM/YYYY)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="edit_correct_date"
+                                       placeholder="e.g., 16/03/2026"
+                                       pattern="\d{2}/\d{2}/\d{4}">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <label for="edit_incorrect_time" class="form-label small">Incorrect Time (HH:MM)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="edit_incorrect_time"
+                                       placeholder="e.g., 14:30"
+                                       pattern="\d{2}:\d{2}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_correct_time" class="form-label small">Correct Time (HH:MM)</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       id="edit_correct_time"
+                                       placeholder="e.g., 16:45"
+                                       pattern="\d{2}:\d{2}">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="edit_error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditLocation()">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ===========================
+         DELETE CONFIRMATION MODAL
+         =========================== -->
+    <div class="modal fade"
+         id="deleteLocationModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-trash3"></i> Delete Location
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        Are you sure you want to delete <strong id="delete_loc_name"></strong>?
+                    </p>
+                    <p class="text-muted small">This cannot be undone.</p>
+                    <input type="hidden" id="delete_loc_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitDeleteLocation()">
+                        <i class="bi bi-trash3"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    // -------------------------------------------------------
+    // Map helpers
+    // -------------------------------------------------------
+    let createMap = null;
+    let createMarker = null;
+    let editMap = null;
+    let editMarker = null;
+
+    // Lazy-init the Create map when the modal shows
+    document.getElementById('createLocationModal').addEventListener('shown.bs.modal', function () {
+        if (!createMap) {
+            createMap = new maplibregl.Map({
+                container: 'loc-map',
+                style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+                center: [-98.5, 39.5],
+                zoom: 3,
+            });
+            createMap.addControl(new maplibregl.NavigationControl());
+            createMap.on('click', function (e) {
+                const {lng, lat} = e.lngLat;
+                document.getElementById('create_lat').value = lat.toFixed(6);
+                document.getElementById('create_lng').value = lng.toFixed(6);
+                if (createMarker) {
+                    createMarker.setLngLat([lng, lat]);
+                } else {
+                    createMarker = new maplibregl.Marker({color: '#198754'}).setLngLat([lng, lat]).addTo(createMap);
+                }
+            });
+        } else {
+            createMap.resize();
+        }
+    });
+
+    // Lazy-init the Edit map when the modal shows
+    document.getElementById('editLocationModal').addEventListener('shown.bs.modal', function () {
+        if (!editMap) {
+            const lat = parseFloat(document.getElementById('edit_lat').value) || 39.5;
+            const lng = parseFloat(document.getElementById('edit_lng').value) || -98.5;
+            editMap = new maplibregl.Map({
+                container: 'edit-loc-map',
+                style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+                center: [lng, lat],
+                zoom: lat === 39.5 ? 3 : 13,
+            });
+            editMap.addControl(new maplibregl.NavigationControl());
+            editMarker = new maplibregl.Marker({color: '#0d6efd', draggable: true}).setLngLat([lng, lat]).addTo(editMap);
+            editMarker.on('dragend', function () {
+                const pos = editMarker.getLngLat();
+                document.getElementById('edit_lat').value = pos.lat.toFixed(6);
+                document.getElementById('edit_lng').value = pos.lng.toFixed(6);
+            });
+            editMap.on('click', function (e) {
+                const {lng, lat} = e.lngLat;
+                document.getElementById('edit_lat').value = lat.toFixed(6);
+                document.getElementById('edit_lng').value = lng.toFixed(6);
+                editMarker.setLngLat([lng, lat]);
+            });
+        } else {
+            editMap.resize();
+            const lat = parseFloat(document.getElementById('edit_lat').value);
+            const lng = parseFloat(document.getElementById('edit_lng').value);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                editMarker.setLngLat([lng, lat]);
+                editMap.flyTo({center: [lng, lat], zoom: 13});
+            }
+        }
+    });
+
+    function syncCreateMapFromInputs() {
+        const lat = parseFloat(document.getElementById('create_lat').value);
+        const lng = parseFloat(document.getElementById('create_lng').value);
+        if (isNaN(lat) || isNaN(lng) || !createMap) return;
+        if (createMarker) {
+            createMarker.setLngLat([lng, lat]);
+        } else {
+            createMarker = new maplibregl.Marker({color: '#198754'}).setLngLat([lng, lat]).addTo(createMap);
+        }
+        createMap.flyTo({center: [lng, lat], zoom: 13});
+    }
+
+    function syncEditMapFromInputs() {
+        const lat = parseFloat(document.getElementById('edit_lat').value);
+        const lng = parseFloat(document.getElementById('edit_lng').value);
+        if (isNaN(lat) || isNaN(lng) || !editMap) return;
+        editMarker.setLngLat([lng, lat]);
+        editMap.flyTo({center: [lng, lat], zoom: 13});
+    }
+
+    // -------------------------------------------------------
+    // Load & render location cards
+    // -------------------------------------------------------
+    let allLocations = [];
+    let locationsById = {};
+
+    async function loadLocations() {
+        try {
+            const resp = await fetch('/sightings/api/backend/locations/');
+            if (!resp.ok) throw new Error('Non-OK response');
+            allLocations = await resp.json();
+            locationsById = {};
+            allLocations.forEach(l => { locationsById[l.id] = l; });
+            renderLocations();
+        } catch (err) {
+            console.error('Error loading locations:', err);
+            document.getElementById('loc-loading').innerHTML =
+                '<div class="alert alert-danger">Failed to load locations. Please refresh the page.</div>';
+        }
+    }
+
+    function renderLocations() {
+        document.getElementById('loc-loading').classList.add('d-none');
+        const list = document.getElementById('loc-list');
+        list.innerHTML = '';
+
+        if (allLocations.length === 0) {
+            document.getElementById('loc-empty').classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('loc-empty').classList.add('d-none');
+        list.classList.remove('d-none');
+
+        allLocations.forEach(loc => {
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-xl-4';
+            col.innerHTML = buildLocationCard(loc);
+            list.appendChild(col);
+        });
+    }
+
+    function buildLocationCard(loc) {
+        const deployDate = loc.camera_deployment_date
+            ? `<li class="list-group-item py-2"><small class="text-muted"><i class="bi bi-calendar3"></i> Deployed:</small><br><span>${loc.camera_deployment_date}</span></li>`
+            : '';
+        const serial = loc.camera_serial_number
+            ? `<li class="list-group-item py-2"><small class="text-muted"><i class="bi bi-upc-scan"></i> Serial:</small><br><span class="font-monospace">${escHtml(loc.camera_serial_number)}</span></li>`
+            : '';
+        const offset = loc.camera_timestamp_offset_error_details
+            ? `<li class="list-group-item py-2"><small class="text-muted"><i class="bi bi-clock-history"></i> Time offset:</small><br><span class="small">${escHtml(loc.camera_timestamp_offset_error_details)}</span></li>`
+            : '';
+        const cameraModel = loc.camera_model
+            ? `<li class="list-group-item py-2"><small class="text-muted"><i class="bi bi-camera"></i> Camera:</small><br><span>${escHtml(loc.camera_model)}</span></li>`
+            : '';
+        const description = loc.description
+            ? `<p class="card-text text-muted small mb-2">${escHtml(loc.description)}</p>`
+            : '';
+
+        return `
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-start">
+                <span class="fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>${escHtml(loc.name)}</span>
+            </div>
+            <div class="card-body pb-1">
+                ${description}
+                <p class="mb-1 small">
+                    <i class="bi bi-pin-map"></i>
+                    <span class="font-monospace">${parseFloat(loc.latitude).toFixed(5)}, ${parseFloat(loc.longitude).toFixed(5)}</span>
+                </p>
+            </div>
+            <ul class="list-group list-group-flush small">
+                ${cameraModel}${deployDate}${serial}${offset}
+            </ul>
+            <div class="card-footer d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-primary" data-loc-id="${loc.id}" onclick="openEditModal(this.dataset.locId)">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-outline-danger" data-loc-id="${loc.id}" data-loc-name="${escHtml(loc.name)}" onclick="openDeleteModal(this.dataset.locId, this.dataset.locName)">
+                    <i class="bi bi-trash3"></i> Delete
+                </button>
+            </div>
+        </div>`;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g , '&lt;') .replace( />/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // -------------------------------------------------------
+    // Create location
+    // -------------------------------------------------------
+    async function submitCreateLocation() {
+        const errorEl = document.getElementById('create_error');
+        errorEl.classList.add('d-none');
+
+        const name = document.getElementById('create_name').value.trim();
+        const lat = parseFloat(document.getElementById('create_lat').value);
+        const lng = parseFloat(document.getElementById('create_lng').value);
+
+        if (!name) {
+            errorEl.textContent = 'Location name is required.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+        if (isNaN(lat) || isNaN(lng)) {
+            errorEl.textContent = 'Latitude and longitude are required. Click the map or enter values above.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('create_save_btn');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        const payload = {
+            name: name,
+            description: document.getElementById('create_description').value.trim() || null,
+            latitude: lat,
+            longitude: lng,
+            camera_model: document.getElementById('create_camera_model').value.trim() || null,
+            camera_serial_number: document.getElementById('create_camera_serial').value.trim() || null,
+            camera_deployment_date: document.getElementById('create_deployment_date').value || null,
+            camera_timestamp_offset_error_details: buildTimestampOffset(
+                document.getElementById('create_incorrect_date').value.trim(),
+                document.getElementById('create_correct_date').value.trim(),
+                document.getElementById('create_incorrect_time').value.trim(),
+                document.getElementById('create_correct_time').value.trim()
+            ),
+        };
+
+        try {
+            const resp = await fetch('/sightings/api/backend/locations/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrf(),
+                },
+                body: JSON.stringify(payload),
+            });
+            if (resp.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('createLocationModal')).hide();
+                resetCreateForm();
+                await loadLocations();
+            } else {
+                const data = await resp.json().catch(() => ({}));
+                errorEl.textContent = 'Error: ' + (data.error || resp.statusText);
+                errorEl.classList.remove('d-none');
+            }
+        } catch (err) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-pin-map-fill"></i> Save Location';
+        }
+    }
+
+    function resetCreateForm() {
+        ['create_name', 'create_description', 'create_lat', 'create_lng',
+         'create_camera_model', 'create_camera_serial', 'create_deployment_date',
+         'create_incorrect_date', 'create_correct_date', 'create_incorrect_time', 'create_correct_time'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        if (createMarker) { createMarker.remove(); createMarker = null; }
+    }
+
+    // -------------------------------------------------------
+    // Timestamp offset helpers
+    // -------------------------------------------------------
+    function buildTimestampOffset(incorrectDate, correctDate, incorrectTime, correctTime) {
+        const data = {};
+        if (incorrectDate) data.incorrectDate = incorrectDate;
+        if (correctDate) data.correctDate = correctDate;
+        if (incorrectTime) data.incorrectTime = incorrectTime;
+        if (correctTime) data.correctTime = correctTime;
+        if (Object.keys(data).length === 0) return null;
+        return JSON.stringify(data);
+    }
+
+    function parseTimestampOffset(str) {
+        if (!str) return {};
+        try { return JSON.parse(str); } catch { return {}; }
+    }
+
+    // -------------------------------------------------------
+    // Edit location
+    // -------------------------------------------------------
+    function openEditModal(id) {
+        const loc = locationsById[id];
+        if (!loc) return;
+        document.getElementById('edit_id').value = loc.id;
+        document.getElementById('edit_name').value = loc.name || '';
+        document.getElementById('edit_description').value = loc.description || '';
+        document.getElementById('edit_lat').value = loc.latitude || '';
+        document.getElementById('edit_lng').value = loc.longitude || '';
+        document.getElementById('edit_camera_model').value = loc.camera_model || '';
+        document.getElementById('edit_camera_serial').value = loc.camera_serial_number || '';
+        document.getElementById('edit_deployment_date').value = loc.camera_deployment_date || '';
+        const ts = parseTimestampOffset(loc.camera_timestamp_offset_error_details);
+        document.getElementById('edit_incorrect_date').value = ts.incorrectDate || '';
+        document.getElementById('edit_correct_date').value = ts.correctDate || '';
+        document.getElementById('edit_incorrect_time').value = ts.incorrectTime || '';
+        document.getElementById('edit_correct_time').value = ts.correctTime || '';
+        document.getElementById('edit_error').classList.add('d-none');
+
+        // Destroy old edit map so it re-centres on this location when shown
+        if (editMap) { editMap.remove(); editMap = null; editMarker = null; }
+
+        new bootstrap.Modal(document.getElementById('editLocationModal')).show();
+    }
+
+    async function submitEditLocation() {
+        const errorEl = document.getElementById('edit_error');
+        errorEl.classList.add('d-none');
+
+        const id = document.getElementById('edit_id').value;
+        const name = document.getElementById('edit_name').value.trim();
+        const lat = parseFloat(document.getElementById('edit_lat').value);
+        const lng = parseFloat(document.getElementById('edit_lng').value);
+
+        if (!name) {
+            errorEl.textContent = 'Location name is required.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+        if (isNaN(lat) || isNaN(lng)) {
+            errorEl.textContent = 'Valid latitude and longitude are required.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+
+        const payload = {
+            name: name,
+            description: document.getElementById('edit_description').value.trim() || null,
+            latitude: lat,
+            longitude: lng,
+            camera_model: document.getElementById('edit_camera_model').value.trim() || null,
+            camera_serial_number: document.getElementById('edit_camera_serial').value.trim() || null,
+            camera_deployment_date: document.getElementById('edit_deployment_date').value || null,
+            camera_timestamp_offset_error_details: buildTimestampOffset(
+                document.getElementById('edit_incorrect_date').value.trim(),
+                document.getElementById('edit_correct_date').value.trim(),
+                document.getElementById('edit_incorrect_time').value.trim(),
+                document.getElementById('edit_correct_time').value.trim()
+            ),
+        };
+
+        try {
+            const resp = await fetch(`/sightings/api/backend/locations/${id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrf(),
+                },
+                body: JSON.stringify(payload),
+            });
+            if (resp.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editLocationModal')).hide();
+                await loadLocations();
+            } else {
+                const data = await resp.json().catch(() => ({}));
+                errorEl.textContent = 'Error: ' + (data.error || resp.statusText);
+                errorEl.classList.remove('d-none');
+            }
+        } catch (err) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.classList.remove('d-none');
+        }
+    }
+
+    // -------------------------------------------------------
+    // Delete location
+    // -------------------------------------------------------
+    function openDeleteModal(id, name) {
+        document.getElementById('delete_loc_id').value = id;
+        document.getElementById('delete_loc_name').textContent = name;
+        new bootstrap.Modal(document.getElementById('deleteLocationModal')).show();
+    }
+
+    async function submitDeleteLocation() {
+        const id = document.getElementById('delete_loc_id').value;
+
+        try {
+            const resp = await fetch(`/sightings/api/backend/locations/${id}/delete/`, {
+                method: 'DELETE',
+                headers: {'X-CSRFToken': getCsrf()},
+            });
+            if (resp.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteLocationModal')).hide();
+                await loadLocations();
+            } else {
+                alert('Failed to delete location. Please try again.');
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+        }
+    }
+
+    // -------------------------------------------------------
+    // CSRF helper
+    // -------------------------------------------------------
+    function getCsrf() {
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    // -------------------------------------------------------
+    // Initialise
+    // -------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', loadLocations);
+    </script>
+{% endblock content %}
