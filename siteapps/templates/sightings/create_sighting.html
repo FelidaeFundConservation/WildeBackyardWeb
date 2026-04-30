@@ -1321,6 +1321,7 @@ async function bulkSubmitSelected() {
     if (prediction) {
       formData.append('speciesnet_predictions', JSON.stringify(prediction));
     }
+    formData.append('is_bulk_upload', '1');
 
     try {
       const resp = await fetch('/sightings/create/', {
