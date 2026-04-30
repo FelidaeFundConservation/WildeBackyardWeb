@@ -222,7 +222,8 @@ class CreateSightingView(View):
         response = api_client.post("/v1/socialmedia/api/posts/create/", data)
 
         if response and response.get("status") == "success":
-            messages.success(request, "Sighting submitted successfully!")
+            if not request.POST.get("is_bulk_upload"):
+                messages.success(request, "Sighting submitted successfully!")
             return redirect("socialmedia:feed")
         else:
             error_msg = "Failed to submit sighting."
