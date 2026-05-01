@@ -1,0 +1,4 @@
+dispatch:
+  # Route all requests to wildebackyard.com (and its paths) to the default service
+  - url: "wildebackyard.com/*"
+    service: default
