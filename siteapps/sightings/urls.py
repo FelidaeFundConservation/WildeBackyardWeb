@@ -22,4 +22,7 @@ urlpatterns = [
     path("api/backend/locations/create/", views.create_user_location, name="create_location"),
     path("api/backend/locations/<uuid:location_id>/", views.update_user_location, name="update_location"),
     path("api/backend/locations/<uuid:location_id>/delete/", views.delete_user_location, name="delete_location"),
+    path("api/bulk-upload/start/", views.StartBulkUploadView.as_view(), name="start_bulk_upload"),
+    path("bulk-upload/history/", views.BulkUploadHistoryView.as_view(), name="bulk_upload_history"),
+    path("bulk-upload/<uuid:pk>/", views.BulkUploadDetailView.as_view(), name="bulk_upload_detail"),
 ]

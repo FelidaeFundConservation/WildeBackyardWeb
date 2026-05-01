@@ -18,6 +18,8 @@ from siteapps.sightings.utils import reverse_geocode_with_nominatim
 from siteapps.socialmedia.web_views import _normalize_post
 from siteapps.users.api_client import BackendAPIClient
 
+from .models import BulkUpload
+
 logger = logging.getLogger(__name__)
 
 
@@ -224,6 +226,15 @@ class CreateSightingView(View):
         if response and response.get("status") == "success":
             if not request.POST.get("is_bulk_upload"):
                 messages.success(request, "Sighting submitted successfully!")
+            else:
+                bulk_upload_id = request.POST.get("bulk_upload_id")
+                post_id = response.get("post_id")
+                if bulk_upload_id and post_id:
+                    try:
+                        bulk_upload = BulkUpload.objects.get(id=bulk_upload_id, user=request.user)
+                        bulk_upload.add_sighting(post_id)
+                    except (BulkUpload.DoesNotExist, Exception) as e:
+                        logger.warning(f"Could not record bulk upload sighting association: {e}")
             return redirect("socialmedia:feed")
         else:
             error_msg = "Failed to submit sighting."
@@ -341,6 +352,29 @@ class ReverseGeocodeWithNominatim(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 data={"error": "Failed to reverse geocode coordinates"},
             )
+
+
+# ==========================================
+# Bulk Upload Tracking Endpoint
+# ==========================================
+
+
+@method_decorator(login_required, name="dispatch")
+class StartBulkUploadView(APIView):
+    """Create a BulkUpload record and return its ID before the batch submission starts."""
+
+    authentication_classes = [authentication.SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        name = request.data.get("name", "").strip() or "Bulk Upload"
+        image_count = int(request.data.get("image_count", 0))
+        bulk_upload = BulkUpload.objects.create(
+            user=request.user,
+            name=name,
+            image_count=image_count,
+        )
+        return Response({"id": str(bulk_upload.id), "name": bulk_upload.name}, status=status.HTTP_201_CREATED)
 
 
 # ==========================================
@@ -469,9 +503,49 @@ def delete_user_location(request, location_id):
 
 @method_decorator(login_required, name="dispatch")
 class ManageLocationsView(View):
-    """Display the Manage Saved Locations page."""
-
-    template_name = "sightings/manage_locations.html"
+    """Redirect to profile page which now hosts the Saved Locations section."""
 
     def get(self, request):
-        return render(request, self.template_name)
+        return redirect("users:profile")
+
+
+@method_decorator(login_required, name="dispatch")
+class BulkUploadHistoryView(View):
+    """List the current user's bulk upload records."""
+
+    template_name = "sightings/bulk_upload_history.html"
+
+    def get(self, request):
+        uploads = BulkUpload.objects.filter(user=request.user).prefetch_related("sightings").order_by("-created")
+        return render(request, self.template_name, {"uploads": uploads})
+
+
+@method_decorator(login_required, name="dispatch")
+class BulkUploadDetailView(View):
+    """Show the sightings belonging to a specific bulk upload."""
+
+    template_name = "sightings/bulk_upload_detail.html"
+
+    def get(self, request, pk):
+        try:
+            upload = BulkUpload.objects.prefetch_related("sightings").get(pk=pk, user=request.user)
+        except BulkUpload.DoesNotExist:
+            from django.http import Http404
+
+            raise Http404
+
+        post_ids = [str(s.backend_post_id) for s in upload.sightings.all()]
+        sightings = []
+
+        if post_ids:
+            api_token = request.session.get("backend_api_token")
+            if api_token:
+                api_client = BackendAPIClient(auth_token=api_token)
+                response = api_client.post(
+                    f"/v1/socialmedia/api/feed/get/?limit={len(post_ids)}&offset=0",
+                    {"postIds": post_ids},
+                )
+                if response:
+                    sightings = [_normalize_post(p) for p in response.get("results", [])]
+
+        return render(request, self.template_name, {"upload": upload, "sightings": sightings})
