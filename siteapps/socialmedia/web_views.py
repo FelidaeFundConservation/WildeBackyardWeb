@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
+from siteapps.sightings.models import BulkUploadSighting
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
@@ -203,11 +204,18 @@ def post_detail_view(request, post_id):
         post["user_has_liked"] = comments_response.get("liked_by_current_user", False)
         post["likes_count"] = comments_response.get("like_count", 0)
 
+    # Support a ?back= param so callers (e.g. bulk upload detail) can override the back URL.
+    back_url = request.GET.get("back", "")
+    # Only allow relative paths to prevent open-redirect.
+    if not back_url.startswith("/") or back_url.startswith("//"):
+        back_url = ""
+
     context = {
         "post": post,
         "post_id": post_id,
         "comments": comments,
         "quality_metrics": quality_metrics,
+        "back_url": back_url,
     }
     return render(request, "socialmedia/post_detail.html", context)
 
@@ -254,9 +262,13 @@ def update_sighting_species(request, post_id):
         api_token = request.session.get("backend_api_token")
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
+            is_bulk_upload = BulkUploadSighting.objects.filter(backend_post_id=post_id).exists()
+            payload = {"species_list": species_names}
+            if is_bulk_upload:
+                payload["update_title"] = True
             response = api_client.post(
                 f"/v1/socialmedia/api/posts/{post_id}/species/",
-                {"species_list": species_names},
+                payload,
             )
             if response is None:
                 messages.error(request, "Failed to update species list.")

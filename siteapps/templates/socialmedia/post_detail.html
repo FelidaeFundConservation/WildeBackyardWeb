@@ -19,9 +19,14 @@
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
             <div class="col-12 col-lg-10 col-xl-8">
-                <a href="{% url 'socialmedia:feed' %}"
+                <a href="{% if back_url %}{{ back_url }}{% else %}{% url 'socialmedia:feed' %}{% endif %}"
                    class="btn btn-outline-light mb-3">
-                    <i class="bi bi-arrow-left"></i> Back to Feed
+                    <i class="bi bi-arrow-left"></i>
+                    {% if back_url %}
+                        Back
+                    {% else %}
+                        Back to Feed
+                    {% endif %}
                 </a>
                 {% if messages %}
                     {% for message in messages %}

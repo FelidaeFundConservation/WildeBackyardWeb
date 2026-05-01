@@ -1277,6 +1277,25 @@ async function bulkSubmitSelected() {
   _setProgress(0, total);
   document.getElementById('bulk_progress_label').textContent = 'Uploading…';
 
+  // Create a BulkUpload tracking record before starting the batch
+  let bulkUploadId = null;
+  try {
+    const savedLocSelB = document.getElementById('saved_location');
+    const savedLocOptB = savedLocSelB ? savedLocSelB.options[savedLocSelB.selectedIndex] : null;
+    const bulkName = savedLocOptB && savedLocOptB.value ? savedLocOptB.textContent.trim() : `Bulk Upload ${new Date().toLocaleDateString()}`;
+    const startResp = await fetch('/sightings/api/bulk-upload/start/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: bulkName, image_count: total }),
+    });
+    if (startResp.ok) {
+      const startData = await startResp.json();
+      bulkUploadId = startData.id;
+    }
+  } catch (e) {
+    // Non-critical — proceed without association tracking
+  }
+
   for (let i = 0; i < total; i++) {
     const f = bulkFiles[i];
     document.getElementById('bulk_current_file').textContent = f.name;
@@ -1299,7 +1318,7 @@ async function bulkSubmitSelected() {
 
     const locationName = savedLocOptR && savedLocOptR.value ? savedLocOptR.textContent.trim() : '';
     const titleSpecies = speciesName && !/^(unknown|animal)$/i.test(speciesName.trim()) ? speciesName.trim() : '';
-    const titleParts = ['Bulk Upload'];
+    const titleParts = [];
     if (locationName) titleParts.push(locationName);
     if (fileCameraModel) titleParts.push(fileCameraModel);
     if (titleSpecies) titleParts.push(titleSpecies);
@@ -1322,6 +1341,9 @@ async function bulkSubmitSelected() {
       formData.append('speciesnet_predictions', JSON.stringify(prediction));
     }
     formData.append('is_bulk_upload', '1');
+    if (bulkUploadId) {
+      formData.append('bulk_upload_id', bulkUploadId);
+    }
 
     try {
       const resp = await fetch('/sightings/create/', {
