@@ -33,7 +33,15 @@ IS_HEROKU_APP = "DYNO" in os.environ and "CI" not in os.environ
 if IS_HEROKU_APP:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = [".localhost", "127.0.0.1", "[::1]", "0.0.0.0", ".wl.r.appspot.com"]
+    ALLOWED_HOSTS = [
+        ".localhost",
+        "127.0.0.1",
+        "[::1]",
+        "0.0.0.0",
+        ".wl.r.appspot.com",
+        "wildebackyard.com",
+        "www.wildebackyard.com",
+    ]
 
 SITE_ID = 1
 
