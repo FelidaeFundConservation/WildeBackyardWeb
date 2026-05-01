@@ -44,9 +44,9 @@ def format_post(post):
         "camera_model": post.camera_model,
         "camera_deployment_date": post.camera_deployment_date,
         "camera_timestamp_offset_error_details": post.camera_timestamp_offset_error_details,
-        "iucn_habitat_lvl1_name": post.iucn_habitat_lvl1.name if post.iucn_habitat_lvl1 else None,
+        "iucn_habitat_lvl1_name": post.iucn_habitat_lvl1_name,
         "iucn_habitat_lvl1_code": post.iucn_habitat_lvl1_code,
-        "iucn_habitat_lvl2_name": post.iucn_habitat_lvl2.name if post.iucn_habitat_lvl2 else None,
+        "iucn_habitat_lvl2_name": post.iucn_habitat_lvl2_name,
         "iucn_habitat_lvl2_code": post.iucn_habitat_lvl2_code,
     }
 
