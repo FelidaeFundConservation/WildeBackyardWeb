@@ -115,6 +115,12 @@ class MediaPost(TextComment):
 
     habitat_type = models.CharField(max_length=64, null=True)
 
+    # IUCN habitat classification fields
+    iucn_habitat_lvl1_name = models.CharField(max_length=255, null=True, blank=True)
+    iucn_habitat_lvl1_code = models.CharField(max_length=50, null=True, blank=True)
+    iucn_habitat_lvl2_name = models.CharField(max_length=255, null=True, blank=True)
+    iucn_habitat_lvl2_code = models.CharField(max_length=50, null=True, blank=True)
+
     ##############################
     # Sighting Type
     ##############################
