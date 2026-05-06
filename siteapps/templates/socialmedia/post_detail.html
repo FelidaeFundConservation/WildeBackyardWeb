@@ -378,6 +378,7 @@
                                     <form method="post"
                                           action="{% url 'socialmedia:update_sighting_species' post_id %}">
                                         {% csrf_token %}
+                                        {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
                                         <div id="speciesRows">
                                             {% if post.species_list %}
                                                 {% for sp in post.species_list %}
@@ -573,6 +574,7 @@
                                       action="{% url 'socialmedia:update_animal_count' post_id %}"
                                       class="d-flex align-items-center gap-2">
                                     {% csrf_token %}
+                                    {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
                                     <input type="number"
                                            name="animal_count"
                                            class="form-control form-control-sm"
@@ -622,6 +624,7 @@
                                   action="{% url 'socialmedia:update_location' post_id %}"
                                   id="locationEditFormEl">
                                 {% csrf_token %}
+                                {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-6">
                                         <label for="edit_location_latitude" class="form-label form-label-sm">Latitude</label>
@@ -770,6 +773,111 @@
                                 };
                             })();
                         </script>
+                        <!-- Title edit panel -->
+                        {% if user.is_staff or user.is_superuser %}
+                        <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1"><i class="bi bi-pencil-square"></i> Title</h6>
+                                <span class="text-muted small">{{ post.title }}</span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#titleEditForm"
+                                    aria-expanded="false">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        </div>
+                        <div class="collapse mt-2" id="titleEditForm">
+                            <form method="post" action="{% url 'socialmedia:update_post_title' post_id %}">
+                                {% csrf_token %}
+                                {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
+                                <div class="mb-2">
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           name="post_title"
+                                           value="{{ post.title|default:'' }}"
+                                           placeholder="Sighting title"
+                                           required>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-check-lg"></i> Save Title
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                        <!-- ML Predictions panel (staff only) -->
+                        {% if user.is_staff or user.is_superuser %}
+                        {% if post.speciesnet_predictions %}
+                        <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1"><i class="bi bi-cpu"></i> ML Predictions</h6>
+                                <span class="text-muted small">SpeciesNet / iNat / timm</span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#mlPredictionsPanel"
+                                    aria-expanded="false">
+                                <i class="bi bi-chevron-down"></i> Show
+                            </button>
+                        </div>
+                        <div class="collapse mt-2" id="mlPredictionsPanel">
+                            {% with p=post.speciesnet_predictions %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered small mb-2">
+                                    <tbody>
+                                        {% if p.final_species %}
+                                        <tr><th class="text-muted" style="width:38%">Final species</th><td><strong>{{ p.final_species }}</strong></td></tr>
+                                        {% endif %}
+                                        {% if p.prediction %}
+                                        <tr><th class="text-muted">SpeciesNet label</th>
+                                            <td class="text-break font-monospace" style="font-size:0.78em">{{ p.prediction }}</td></tr>
+                                        {% endif %}
+                                        {% if p.prediction_score is not None %}
+                                        <tr><th class="text-muted">SpeciesNet score</th><td>{{ p.prediction_score }}</td></tr>
+                                        {% endif %}
+                                        {% if p.inat_label %}
+                                        <tr><th class="text-muted">iNat CV label</th><td>{{ p.inat_label }}{% if p.inat_score %} <span class="text-muted">({{ p.inat_score }})</span>{% endif %}</td></tr>
+                                        {% endif %}
+                                        {% if p.timm_label %}
+                                        <tr><th class="text-muted">timm iNat21 label</th><td>{{ p.timm_label }}{% if p.timm_score %} <span class="text-muted">({{ p.timm_score }})</span>{% endif %}</td></tr>
+                                        {% endif %}
+                                        {% if p.description %}
+                                        <tr><th class="text-muted">AI description</th><td>{{ p.description }}{% if p.description_model %} <span class="text-muted small">({{ p.description_model }})</span>{% endif %}</td></tr>
+                                        {% endif %}
+                                        {% if p.weather %}
+                                        <tr><th class="text-muted">Weather</th>
+                                            <td>
+                                                {% if p.weather.temp_f is not None %}{{ p.weather.temp_f }}&deg;F{% endif %}
+                                                {% if p.weather.conditions %} &mdash; {{ p.weather.conditions }}{% endif %}
+                                                {% if p.weather.humidity_pct is not None %}, {{ p.weather.humidity_pct }}% humidity{% endif %}
+                                                {% if p.weather.wind_mph is not None %}, {{ p.weather.wind_mph }} mph {{ p.weather.wind_dir|default:"" }}{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if p.skip is not None %}
+                                        <tr><th class="text-muted">skip flag</th><td>{% if p.skip %}<span class="badge bg-warning text-dark">skipped</span>{% else %}<span class="badge bg-success">included</span>{% endif %}</td></tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <details>
+                                <summary class="text-muted small" style="cursor:pointer">Raw JSON</summary>
+                                {{ post.speciesnet_predictions|json_script:"snPredData" }}
+                                <pre id="snPredRaw" class="mt-1 p-2 bg-light border rounded small text-break" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></pre>
+                                <script>
+                                  (function() {
+                                    var d = document.getElementById('snPredData');
+                                    var pre = document.getElementById('snPredRaw');
+                                    if (d && pre) pre.textContent = JSON.stringify(JSON.parse(d.textContent), null, 2);
+                                  })();
+                                </script>
+                            </details>
+                            {% endwith %}
+                        </div>
+                        {% endif %}
+                        {% endif %}
                         <!-- Camera/Timestamp/Habitat edit panel -->
                         <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
                             <div>
@@ -791,6 +899,7 @@
                                   action="{% url 'socialmedia:update_details' post_id %}"
                                   id="detailsEditFormEl">
                                 {% csrf_token %}
+                                {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
                                 <div class="mb-2">
                                     <label for="edit_camera_model" class="form-label form-label-sm">Camera Model</label>
                                     <input type="text"

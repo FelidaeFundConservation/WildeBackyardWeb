@@ -5,11 +5,20 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from siteapps.sightings.models import BulkUploadSighting
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
+
+
+def _post_detail_redirect(post_id, back=""):
+    """Return a redirect to the post detail view, preserving the back URL if safe."""
+    url = reverse("socialmedia:post_detail", kwargs={"post_id": post_id})
+    if back and back.startswith("/") and not back.startswith("//"):
+        url = f"{url}?back={back}"
+    return redirect(url)
 
 # Pagination constants
 MAX_POSTS_PER_REQUEST = 100
@@ -247,9 +256,11 @@ def vote_quality_metric(request, post_id, metric):
 @login_required
 def update_sighting_species(request, post_id):
     """Replace the species list for a post. Restricted to staff and superusers."""
+    back = request.POST.get("back", "")
+
     if not (request.user.is_staff or request.user.is_superuser):
         messages.error(request, "You do not have permission to edit species.")
-        return redirect("socialmedia:post_detail", post_id=post_id)
+        return _post_detail_redirect(post_id, back)
 
     if request.method == "POST":
         species_names = request.POST.getlist("species_list")
@@ -257,7 +268,7 @@ def update_sighting_species(request, post_id):
 
         if not species_names:
             messages.error(request, "At least one species is required.")
-            return redirect("socialmedia:post_detail", post_id=post_id)
+            return _post_detail_redirect(post_id, back)
 
         api_token = request.session.get("backend_api_token")
         if api_token:
@@ -275,21 +286,53 @@ def update_sighting_species(request, post_id):
             else:
                 messages.success(request, "Species list updated.")
 
-    return redirect("socialmedia:post_detail", post_id=post_id)
+    return _post_detail_redirect(post_id, back)
+
+
+@login_required
+def update_post_title(request, post_id):
+    """Update the title of a post. Restricted to staff and superusers."""
+    back = request.POST.get("back", "")
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "You do not have permission to edit the title.")
+        return _post_detail_redirect(post_id, back)
+
+    if request.method == "POST":
+        title = request.POST.get("post_title", "").strip()
+        if not title:
+            messages.error(request, "Title cannot be empty.")
+            return _post_detail_redirect(post_id, back)
+
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            response = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/title/",
+                {"title": title},
+            )
+            if response is None:
+                messages.error(request, "Failed to update title.")
+            else:
+                messages.success(request, "Title updated.")
+
+    return _post_detail_redirect(post_id, back)
 
 
 @login_required
 def update_animal_count(request, post_id):
     """Update the animal count for a post. Restricted to staff and superusers."""
+    back = request.POST.get("back", "")
+
     if not (request.user.is_staff or request.user.is_superuser):
         messages.error(request, "You do not have permission to edit animal count.")
-        return redirect("socialmedia:post_detail", post_id=post_id)
+        return _post_detail_redirect(post_id, back)
 
     if request.method == "POST":
         animal_count = request.POST.get("animal_count", "").strip()
         if not animal_count:
             messages.error(request, "Animal count is required.")
-            return redirect("socialmedia:post_detail", post_id=post_id)
+            return _post_detail_redirect(post_id, back)
 
         api_token = request.session.get("backend_api_token")
         if api_token:
@@ -303,16 +346,18 @@ def update_animal_count(request, post_id):
             else:
                 messages.success(request, "Animal count updated.")
 
-    return redirect("socialmedia:post_detail", post_id=post_id)
+    return _post_detail_redirect(post_id, back)
 
 
 @login_required
 def update_details(request, post_id):
     """Update camera model, habitat type, and timestamp offset details for a post.
     Restricted to staff and superusers."""
+    back = request.POST.get("back", "")
+
     if not (request.user.is_staff or request.user.is_superuser):
         messages.error(request, "You do not have permission to edit sighting details.")
-        return redirect("socialmedia:post_detail", post_id=post_id)
+        return _post_detail_redirect(post_id, back)
 
     if request.method == "POST":
         camera_model = request.POST.get("camera_model", "").strip()
@@ -357,16 +402,18 @@ def update_details(request, post_id):
             else:
                 messages.success(request, "Sighting details updated successfully.")
 
-    return redirect("socialmedia:post_detail", post_id=post_id)
+    return _post_detail_redirect(post_id, back)
 
 
 @login_required
 def update_location(request, post_id):
     """Update latitude, longitude, privacy setting, and obfuscation radius for a post.
     Restricted to staff and superusers."""
+    back = request.POST.get("back", "")
+
     if not (request.user.is_staff or request.user.is_superuser):
         messages.error(request, "You do not have permission to edit location.")
-        return redirect("socialmedia:post_detail", post_id=post_id)
+        return _post_detail_redirect(post_id, back)
 
     if request.method == "POST":
         latitude = request.POST.get("location_latitude", "").strip()
@@ -377,7 +424,7 @@ def update_location(request, post_id):
 
         if not latitude or not longitude:
             messages.error(request, "Latitude and longitude are required.")
-            return redirect("socialmedia:post_detail", post_id=post_id)
+            return _post_detail_redirect(post_id, back)
 
         api_token = request.session.get("backend_api_token")
         if api_token:
@@ -399,7 +446,7 @@ def update_location(request, post_id):
             else:
                 messages.success(request, "Location updated.")
 
-    return redirect("socialmedia:post_detail", post_id=post_id)
+    return _post_detail_redirect(post_id, back)
 
 
 @login_required

@@ -1,6 +1,10 @@
 import base64
 import json
 import logging
+import re
+import xml.etree.ElementTree as ET
+
+from django.conf import settings
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -21,6 +25,21 @@ from siteapps.users.api_client import BackendAPIClient
 from .models import BulkUpload
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_gpx_track(gpx_file_obj):
+    """Parse an open GPX file-like object; return [[lng, lat], ...] for a GeoJSON LineString."""
+    try:
+        tree = ET.parse(gpx_file_obj)
+        root = tree.getroot()
+        ns_match = re.match(r"\{[^}]*\}", root.tag)
+        ns = ns_match.group(0) if ns_match else ""
+        coords = []
+        for trkpt in root.iter(f"{ns}trkpt"):
+            coords.append([float(trkpt.get("lon")), float(trkpt.get("lat"))])
+        return coords
+    except Exception:
+        return []
 
 
 @method_decorator(login_required, name="dispatch")
@@ -82,6 +101,11 @@ class CreateSightingView(View):
             "privacySetting": request.POST.get("privacy_setting", "obscured"),
             "accuracyMeters": float(request.POST.get("location_accuracy_meters", 5)),  # Default 5m accuracy
         }
+
+        # Bulk upload sightings are always public — GPS coords come from EXIF and
+        # the user is explicitly logging a walk, so obscuring them defeats the purpose.
+        if request.POST.get("is_bulk_upload"):
+            data["privacySetting"] = settings.PRIVACY_SETTING_PUBLIC
 
         # Add geocoded location data if available
         if geocoded_location:
@@ -369,12 +393,20 @@ class StartBulkUploadView(APIView):
     def post(self, request):
         name = request.data.get("name", "").strip() or "Bulk Upload"
         image_count = int(request.data.get("image_count", 0))
+        cover_image = request.FILES.get("cover_image")
+        gpx_file = request.FILES.get("gpx_file")
         bulk_upload = BulkUpload.objects.create(
             user=request.user,
             name=name,
             image_count=image_count,
+            cover_image=cover_image,
+            gpx_file=gpx_file,
         )
-        return Response({"id": str(bulk_upload.id), "name": bulk_upload.name}, status=status.HTTP_201_CREATED)
+        cover_image_url = request.build_absolute_uri(bulk_upload.cover_image.url) if bulk_upload.cover_image else None
+        return Response(
+            {"id": str(bulk_upload.id), "name": bulk_upload.name, "cover_image_url": cover_image_url},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ==========================================
@@ -548,4 +580,74 @@ class BulkUploadDetailView(View):
                 if response:
                     sightings = [_normalize_post(p) for p in response.get("results", [])]
 
-        return render(request, self.template_name, {"upload": upload, "sightings": sightings})
+        # Sort by encounter_datetime (actual photo capture time) rather than DB insertion order.
+        # Default: oldest first (chronological walk order). sort=desc for newest first.
+        sort_order = request.GET.get("sort", "asc")
+
+        def _sort_key(p):
+            dt = p.get("encounter_datetime") or ""
+            return dt
+
+        sightings.sort(key=_sort_key, reverse=(sort_order == "desc"))
+
+        # Build GeoJSON-ready list of sightings that have real coordinates.
+        # Skip sightings whose geoprivacy is "private" — the backend substitutes
+        # the continental-US centre (~39.5°N, -98.35°W) for those, which would
+        # displace the map view and show phantom markers far from the walk.
+        sightings_geo = []
+        for s in sightings:
+            if s.get("geoprivacy") == settings.PRIVACY_SETTING_PRIVATE:
+                continue
+            lat = s.get("latitude")
+            lng = s.get("longitude")
+            if lat is None or lng is None:
+                continue
+            try:
+                sightings_geo.append({
+                    "id": str(s.get("id", "")),
+                    "lat": float(lat),
+                    "lng": float(lng),
+                    "title": s.get("title") or "",
+                    "species": s.get("species") or (s.get("species_list") or [""])[0] or "",
+                })
+            except (ValueError, TypeError):
+                pass
+
+        # Parse GPX track if one has been attached to this upload.
+        gpx_track = []
+        if upload.gpx_file:
+            try:
+                upload.gpx_file.open("rb")
+                gpx_track = _parse_gpx_track(upload.gpx_file)
+                upload.gpx_file.close()
+            except Exception:
+                pass
+
+        return render(request, self.template_name, {
+            "upload": upload,
+            "sightings": sightings,
+            "sort_order": sort_order,
+            "sightings_geo": sightings_geo,
+            "gpx_track": gpx_track,
+        })
+
+
+@login_required
+def upload_bulk_upload_gpx(request, pk):
+    """Accept a GPX file POST and attach it to an existing BulkUpload owned by the current user."""
+    from django.http import Http404
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        upload = BulkUpload.objects.get(pk=pk, user=request.user)
+    except BulkUpload.DoesNotExist:
+        raise Http404
+    gpx_file = request.FILES.get("gpx_file")
+    if not gpx_file:
+        messages.error(request, "No GPX file selected.")
+        return redirect("sightings:bulk_upload_detail", pk=pk)
+    upload.gpx_file = gpx_file
+    upload.save()
+    messages.success(request, "GPX track uploaded.")
+    return redirect("sightings:bulk_upload_detail", pk=pk)

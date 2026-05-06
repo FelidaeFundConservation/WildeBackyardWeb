@@ -3,6 +3,64 @@
 {% block title %}
     {{ upload.name }} - WildeBackyard
 {% endblock title %}
+{% block header_includes %}
+    <link href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" rel="stylesheet">
+    <style>
+        #bulk-upload-map {
+            width: 100%;
+            height: 500px;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        #cover-image-wrapper img {
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .sighting-card {
+            transition: transform 0.15s, box-shadow 0.15s, outline 0.15s;
+            position: relative;
+        }
+        .sighting-card .map-pin-bar {
+            height: 4px;
+            background: transparent;
+            transition: background 0.15s;
+            border-radius: 0.375rem 0.375rem 0 0;
+            flex-shrink: 0;
+        }
+        .sighting-card.map-hover .map-pin-bar {
+            background: #198754;
+        }
+        .sighting-card.map-selected .map-pin-bar {
+            background: #0d6efd;
+        }
+        .sighting-card.map-selected {
+            outline: 2px solid #0d6efd;
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1.5rem rgba(13, 110, 253, 0.4) !important;
+        }
+        .sighting-card.map-hover:not(.map-selected) {
+            outline: 2px solid #198754;
+            box-shadow: 0 0.25rem 0.75rem rgba(25, 135, 84, 0.3) !important;
+        }
+        /* Pulsing badge shown in selected state */
+        .sighting-card .map-selected-badge {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .sighting-card.map-selected .map-selected-badge {
+            display: flex;
+        }
+        .maplibregl-popup-content {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            max-width: 200px;
+        }
+    </style>
+{% endblock header_includes %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
@@ -21,10 +79,71 @@
                             {{ sightings|length }} sighting{{ sightings|length|pluralize }} loaded
                         </p>
                     </div>
-                    <a href="{% url 'sightings:bulk_upload_history' %}"
-                       class="btn btn-outline-light btn-sm">
-                        <i class="bi bi-arrow-left"></i> Back to History
-                    </a>
+                    <div class="d-flex gap-2">
+                        {% if sort_order == 'asc' %}
+                            <a href="?sort=desc" class="btn btn-outline-light btn-sm" title="Currently: oldest first">
+                                <i class="bi bi-sort-up"></i> Oldest first
+                            </a>
+                        {% else %}
+                            <a href="?sort=asc" class="btn btn-outline-light btn-sm" title="Currently: newest first">
+                                <i class="bi bi-sort-down"></i> Newest first
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'sightings:bulk_upload_history' %}"
+                           class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-arrow-left"></i> Back to History
+                        </a>
+                    </div>
+                </div>
+                <!-- Flash messages from GPX upload -->
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+                <!-- Map / cover image section -->
+                <div class="mb-4">
+                    <!-- Static cover image (fallback; hidden by JS once the interactive map loads) -->
+                    {% if upload.cover_image %}
+                        <div id="cover-image-wrapper">
+                            <img src="{{ upload.cover_image.url }}"
+                                 alt="{{ upload.name }}"
+                                 class="img-fluid rounded shadow d-block mx-auto"
+                                 style="max-height:500px;max-width:100%;object-fit:contain;">
+                        </div>
+                    {% endif %}
+                    <!-- Interactive MapLibre GL map (shown only when sighting coordinates are available) -->
+                    <div id="bulk-upload-map" style="display:none;"></div>
+                    <!-- GPX track controls -->
+                    <div class="mt-2 d-flex justify-content-end align-items-center gap-2">
+                        {% if upload.gpx_file %}
+                            <span class="text-white-50 small">
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>GPX track attached
+                            </span>
+                        {% else %}
+                            <button class="btn btn-outline-light btn-sm"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#gpx-upload-form"
+                                    aria-expanded="false">
+                                <i class="bi bi-map me-1"></i>Add GPX track
+                            </button>
+                        {% endif %}
+                    </div>
+                    {% if not upload.gpx_file %}
+                        <div class="collapse mt-2" id="gpx-upload-form">
+                            <form method="post"
+                                  action="{% url 'sightings:bulk_upload_gpx' upload.id %}"
+                                  enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm">
+                                    <input type="file" class="form-control" name="gpx_file" accept=".gpx">
+                                    <button class="btn btn-success" type="submit">Upload</button>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
                 </div>
                 <!-- Sightings grid -->
                 {% if not sightings %}
@@ -37,17 +156,23 @@
                     <div class="row">
                         {% for sighting in sightings %}
                             <div class="col-12 col-md-6 col-lg-4 mb-4">
-                                <div class="card shadow-sm h-100">
+                                <div class="card shadow-sm h-100 sighting-card"
+                                     id="card-{{ sighting.id }}"
+                                     data-sighting-id="{{ sighting.id }}">
+                                    <div class="map-pin-bar"></div>
+                                    <span class="badge bg-primary map-selected-badge">
+                                        <i class="bi bi-geo-alt-fill me-1"></i>Selected
+                                    </span>
                                     {% if sighting.media_url %}
                                         {% if sighting.is_video %}
-                                            <video class="card-img-top" style="max-height:200px;object-fit:cover;">
+                                            <video class="card-img-top"
+                                                   style="max-height:200px;object-fit:cover;">
                                                 <source src="{{ sighting.media_url }}" type="video/mp4">
                                             </video>
                                         {% else %}
                                             <img src="{{ sighting.media_url }}"
                                                  class="card-img-top"
-                                                 style="max-height:200px;
-                                                        object-fit:cover"
+                                                 style="max-height:200px;object-fit:cover"
                                                  alt="{{ sighting.title }}">
                                         {% endif %}
                                     {% endif %}
@@ -56,7 +181,11 @@
                                         <p class="card-text text-muted small">
                                             <i class="bi bi-calendar"></i> {{ sighting.created|date:"M d, Y" }}
                                         </p>
-                                        {% if sighting.species %}<span class="badge bg-success">{{ sighting.species }}</span>{% endif %}
+                                        {% if sighting.species %}
+                                            <span class="badge bg-success">{{ sighting.species }}</span>
+                                        {% elif sighting.species_list %}
+                                            <span class="badge bg-success">{{ sighting.species_list.0 }}</span>
+                                        {% endif %}
                                         <div class="mt-3">
                                             <a href="{% url 'socialmedia:post_detail' sighting.id %}?back={% url 'sightings:bulk_upload_detail' upload.id %}"
                                                class="btn btn-sm btn-outline-primary">View Details</a>
@@ -70,4 +199,200 @@
             </div>
         </div>
     </div>
+    <!-- Embed map data as safe JSON script tags (XSS-safe) -->
+    {{ sightings_geo|json_script:"sightings-geo-data" }}
+    {{ gpx_track|json_script:"gpx-track-data" }}
+    <script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
+    <script>
+    (function () {
+        const SIGHTINGS = JSON.parse(document.getElementById('sightings-geo-data').textContent);
+        const GPX_TRACK = JSON.parse(document.getElementById('gpx-track-data').textContent);
+
+        if (SIGHTINGS.length === 0 && GPX_TRACK.length === 0) {
+            // No coordinate data — leave static cover image visible.
+            return;
+        }
+
+        // Replace the static cover image with the interactive map.
+        const coverWrapper = document.getElementById('cover-image-wrapper');
+        const mapEl = document.getElementById('bulk-upload-map');
+        if (coverWrapper) coverWrapper.style.display = 'none';
+        mapEl.style.display = 'block';
+
+        const map = new maplibregl.Map({
+            container: 'bulk-upload-map',
+            style: 'https://tiles.openfreemap.org/styles/bright',
+            center: [0, 0],
+            zoom: 10,
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+
+        map.on('load', function () {
+            // Fit the map to the bounding box of all sightings (mirrors the pre-rendered PNG).
+            if (SIGHTINGS.length > 0) {
+                const lngs = SIGHTINGS.map(s => s.lng);
+                const lats = SIGHTINGS.map(s => s.lat);
+                map.fitBounds(
+                    [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+                    { padding: 60, maxZoom: 16 }
+                );
+            } else if (GPX_TRACK.length > 0) {
+                const lngs = GPX_TRACK.map(c => c[0]);
+                const lats = GPX_TRACK.map(c => c[1]);
+                map.fitBounds(
+                    [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+                    { padding: 60 }
+                );
+            }
+
+            // ── GPX track layer ──────────────────────────────────────────────
+            if (GPX_TRACK.length > 1) {
+                map.addSource('gpx-track', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: { type: 'LineString', coordinates: GPX_TRACK },
+                    },
+                });
+                map.addLayer({
+                    id: 'gpx-track-line',
+                    type: 'line',
+                    source: 'gpx-track',
+                    paint: { 'line-color': '#20c997', 'line-width': 2.5, 'line-opacity': 0.8 },
+                });
+            }
+
+            // ── Sighting markers ─────────────────────────────────────────────
+            if (SIGHTINGS.length > 0) {
+                const geojson = {
+                    type: 'FeatureCollection',
+                    features: SIGHTINGS.map(s => ({
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
+                        properties: { id: s.id, title: s.title, species: s.species },
+                    })),
+                };
+
+                map.addSource('sightings', { type: 'geojson', data: geojson });
+
+                // Drop shadow for depth.
+                map.addLayer({
+                    id: 'sightings-shadow',
+                    type: 'circle',
+                    source: 'sightings',
+                    paint: {
+                        'circle-radius': 11,
+                        'circle-color': 'rgba(0,0,0,0.25)',
+                        'circle-blur': 1,
+                        'circle-translate': [1, 2],
+                    },
+                });
+
+                // Normal state circles.
+                map.addLayer({
+                    id: 'sightings-circles',
+                    type: 'circle',
+                    source: 'sightings',
+                    paint: {
+                        'circle-radius': 8,
+                        'circle-color': '#198754',
+                        'circle-stroke-color': '#fff',
+                        'circle-stroke-width': 2,
+                    },
+                });
+
+                // Highlighted state (filter driven — only one active at a time).
+                map.addLayer({
+                    id: 'sightings-circles-active',
+                    type: 'circle',
+                    source: 'sightings',
+                    filter: ['==', ['get', 'id'], ''],
+                    paint: {
+                        'circle-radius': 12,
+                        'circle-color': '#0d6efd',
+                        'circle-stroke-color': '#fff',
+                        'circle-stroke-width': 3,
+                    },
+                });
+
+                const popup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    offset: 14,
+                });
+
+                function highlightCard(sightingId) {
+                    document.querySelectorAll('.sighting-card').forEach(el => el.classList.remove('map-hover'));
+                    if (sightingId) {
+                        const card = document.getElementById('card-' + sightingId);
+                        if (card) card.classList.add('map-hover');
+                    }
+                }
+
+                map.on('mousemove', 'sightings-circles', function (e) {
+                    const props = e.features[0].properties;
+                    map.setFilter('sightings-circles-active', ['==', ['get', 'id'], props.id]);
+                    popup.setLngLat(e.features[0].geometry.coordinates)
+                        .setHTML(
+                            '<strong>' + (props.title || '') + '</strong>' +
+                            (props.species ? '<br><em style="color:#198754">' + props.species + '</em>' : '')
+                        )
+                        .addTo(map);
+                    highlightCard(props.id);
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+
+                map.on('mouseleave', 'sightings-circles', function () {
+                    // Restore active-filter to the currently selected card (if any).
+                    const selectedCard = document.querySelector('.sighting-card.map-selected');
+                    const activeSid = selectedCard ? selectedCard.dataset.sightingId : '';
+                    map.setFilter('sightings-circles-active', ['==', ['get', 'id'], activeSid || '']);
+                    popup.remove();
+                    highlightCard(null);
+                    map.getCanvas().style.cursor = '';
+                });
+
+                map.on('click', 'sightings-circles', function (e) {
+                    const props = e.features[0].properties;
+                    const card = document.getElementById('card-' + props.id);
+                    // Clear previous selection.
+                    document.querySelectorAll('.sighting-card.map-selected').forEach(el => el.classList.remove('map-selected'));
+                    if (card) {
+                        card.classList.add('map-selected');
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+
+                // Click on empty map area clears selection.
+                map.on('click', function (e) {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['sightings-circles'] });
+                    if (features.length === 0) {
+                        document.querySelectorAll('.sighting-card.map-selected').forEach(el => el.classList.remove('map-selected'));
+                    }
+                });
+
+                // Card hover → highlight corresponding marker on the map.
+                document.querySelectorAll('.sighting-card').forEach(function (cardEl) {
+                    const sid = cardEl.dataset.sightingId;
+                    if (!sid) return;
+                    cardEl.addEventListener('mouseenter', function () {
+                        map.setFilter('sightings-circles-active', ['==', ['get', 'id'], sid]);
+                    });
+                    cardEl.addEventListener('mouseleave', function () {
+                        // Keep the active-layer filter showing the selected card's marker.
+                        const selectedCard = document.querySelector('.sighting-card.map-selected');
+                        const activeSid = selectedCard ? selectedCard.dataset.sightingId : '';
+                        map.setFilter('sightings-circles-active', ['==', ['get', 'id'], activeSid || '']);
+                    });
+                });
+            }
+        });
+
+        map.on('error', function (e) {
+            console.warn('[bulk-upload-map] MapLibre error:', e.error || e);
+        });
+    })();
+    </script>
 {% endblock content %}

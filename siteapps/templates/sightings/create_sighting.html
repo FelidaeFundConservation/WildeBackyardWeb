@@ -391,6 +391,37 @@
                                        onchange="onBulkDirectorySelected(this)">
                                 <small class="text-muted">If the folder contains a <code>predictions.json</code> from SpeciesNet, species predictions will be attached automatically.</small>
                             </div>
+                            <!-- Cover image for this bulk upload session -->
+                            <div class="mb-3">
+                                <label for="bulk_cover_image" class="form-label fw-bold">
+                                    <i class="bi bi-image me-1"></i>Cover Image <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                <input type="file"
+                                       class="form-control form-control-sm"
+                                       id="bulk_cover_image"
+                                       accept="image/*"
+                                       onchange="onBulkCoverImageSelected(this)">
+                                <small class="text-muted">Representative photo displayed at the top of this upload's sightings page.</small>
+                                <div id="bulk_cover_preview" class="mt-2 d-none">
+                                    <img id="bulk_cover_preview_img" src="" alt="Cover preview"
+                                         class="img-thumbnail" style="max-height:120px;object-fit:cover;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2"
+                                            onclick="clearBulkCoverImage()">
+                                        <i class="bi bi-x"></i> Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Optional GPX track for this bulk upload session -->
+                            <div class="mb-3">
+                                <label for="bulk_gpx_file" class="form-label fw-bold">
+                                    <i class="bi bi-map me-1"></i>GPX Track <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                <input type="file"
+                                       class="form-control form-control-sm"
+                                       id="bulk_gpx_file"
+                                       accept=".gpx">
+                                <small class="text-muted">Walk/hike GPX file — displayed as a route line on the interactive map.</small>
+                            </div>
                             <!-- File count / predictions badge -->
                             <div id="bulk_ready_row" class="d-none mb-3">
                                 <span id="bulk_file_count_badge" class="badge bg-secondary me-2"></span>
@@ -1089,44 +1120,81 @@ function processBulkFiles(allFiles) {
   document.getElementById('bulk_submit_row').classList.remove('d-none');
   document.getElementById('bulk_submit_btn').disabled = false;
 
-  // Parse predictions.json if present
-  const predFile = allFiles.find(f => f.name.toLowerCase() === 'predictions.json');
+  // Parse prediction JSON files if present.
+  // predictions_orig.json — raw SpeciesNet output: { predictions: [{ filepath, classifications, detections }] }
+  // predictions.json     — processed by prepare_walk_sightings.py: { generated, rows: [...rich fields...] }
+  //                        OR may still be raw SpeciesNet format if prepare_walk_sightings.py hasn't run.
+  // predictions.json entries override predictions_orig.json entries for the same image.
   const predBadge = document.getElementById('bulk_predictions_badge');
   predBadge.classList.add('d-none');
-  if (predFile) {
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      try {
-        const json = JSON.parse(ev.target.result);
-        let items = null;
-        if (Array.isArray(json)) {
-          items = json;
-        } else if (json.predictions && Array.isArray(json.predictions)) {
-          items = json.predictions;
-        }
-        if (items) {
-          items.forEach(item => {
-            const fp = item.filepath || item.file || item.filename || item.image || item.img || '';
-            if (fp) {
-              bulkPredictions[fp.split(/[/\\]/).pop()] = item;
-            }
-          });
-        } else if (json.predictions && typeof json.predictions === 'object') {
-          Object.entries(json.predictions).forEach(([fp, val]) => {
-            bulkPredictions[fp.split(/[/\\]/).pop()] = val;
-          });
-        }
-        const count = Object.keys(bulkPredictions).length;
-        if (count > 0) {
-          predBadge.textContent = `predictions.json (${count} entries)`;
-          predBadge.classList.remove('d-none');
-        }
-      } catch (err) {
-        console.warn('Failed to parse predictions.json:', err);
-      }
-    };
-    reader.readAsText(predFile);
+
+  function parseRawSpeciesNet(json) {
+    // SpeciesNet format: { predictions: [...] } — raw or enriched by prepare_walk_sightings.py.
+    // Enriched items have extra KV pairs (date, time, lat, lon, camera_make/model,
+    // final_species, inat_label, title, description, weather, skip, etc.) added directly.
+    const list = Array.isArray(json) ? json
+                 : (json.predictions && Array.isArray(json.predictions)) ? json.predictions
+                 : null;
+    if (!list) return 0;
+    let added = 0;
+    list.forEach(item => {
+      const fp = item.filepath || item.filename || item.file || item.image || '';
+      if (!fp) return;
+      const basename = fp.split(/[/\\]/).pop();
+      // Spread all fields from the item so enrichment KVs are preserved.
+      // Normalise `prediction` to the best classification string for extractCommonName().
+      const bestClass = (item.classifications && item.classifications.classes && item.classifications.classes[0]) || '';
+      bulkPredictions[basename] = {
+        ...item,
+        prediction: item.prediction || bestClass,
+        _source: item.final_species ? 'speciesnet_enriched' : 'speciesnet_raw',
+      };
+      added++;
+    });
+    return added;
   }
+
+  function parsePredictionsFile(json) {
+    // Enriched SpeciesNet format: { generated, predictions: [{...extra kv pairs...}] }
+    // or raw SpeciesNet format:   { predictions: [{filepath, classifications, detections}] }
+    return parseRawSpeciesNet(json);
+  }
+
+  function updatePredBadge(fileLabel) {
+    const count = Object.keys(bulkPredictions).length;
+    if (count > 0) {
+      predBadge.textContent = `${fileLabel} (${count} entries)`;
+      predBadge.classList.remove('d-none');
+    }
+  }
+
+  const origFile = allFiles.find(f => f.name.toLowerCase() === 'predictions_orig.json');
+  const predFile = allFiles.find(f => f.name.toLowerCase() === 'predictions.json');
+
+  // Load predictions_orig.json first (lower priority), then predictions.json (overrides).
+  function loadOrigThenMain() {
+    if (origFile) {
+      const r = new FileReader();
+      r.onload = function(ev) {
+        try { parseRawSpeciesNet(JSON.parse(ev.target.result)); } catch(e) { console.warn('Failed to parse predictions_orig.json:', e); }
+        if (predFile) loadMain(); else updatePredBadge('predictions_orig.json');
+      };
+      r.readAsText(origFile);
+    } else if (predFile) {
+      loadMain();
+    }
+  }
+
+  function loadMain() {
+    const r = new FileReader();
+    r.onload = function(ev) {
+      try { parsePredictionsFile(JSON.parse(ev.target.result)); } catch(e) { console.warn('Failed to parse predictions.json:', e); }
+      updatePredBadge('predictions.json');
+    };
+    r.readAsText(predFile);
+  }
+
+  loadOrigThenMain();
 }
 
 // Helper: extract common name from SpeciesNet prediction string
@@ -1162,12 +1230,32 @@ function readExifDate(file) {
       // Filter out placeholder strings that indicate no real camera info
       const _isUnknown = (s) => !s || /^(unknown|n\/a|none|-|na)$/i.test(s.trim());
       const cameraModel = [make, model].filter(s => s && !_isUnknown(s)).join(' ').trim() || null;
+
+      // Extract GPS coordinates
+      let lat = null;
+      let lon = null;
+      try {
+        const gpsLat = EXIF.getTag(this, 'GPSLatitude');
+        const gpsLatRef = EXIF.getTag(this, 'GPSLatitudeRef');
+        const gpsLon = EXIF.getTag(this, 'GPSLongitude');
+        const gpsLonRef = EXIF.getTag(this, 'GPSLongitudeRef');
+        if (gpsLat && gpsLatRef && gpsLon && gpsLonRef) {
+          const latDec = convertDMSToDD(gpsLat, gpsLatRef);
+          const lonDec = convertDMSToDD(gpsLon, gpsLonRef);
+          if (isFinite(latDec) && isFinite(lonDec) &&
+              latDec >= -90 && latDec <= 90 && lonDec >= -180 && lonDec <= 180) {
+            lat = latDec;
+            lon = lonDec;
+          }
+        }
+      } catch (_) {}
+
       if (rawDate && rawDate.length >= 19) {
         const date = rawDate.substring(0, 10).replace(/:/g, '-');
         const time = rawDate.substring(11, 19);
-        resolve({ date, time, cameraModel });
+        resolve({ date, time, cameraModel, lat, lon });
       } else {
-        resolve({ date: null, time: null, cameraModel });
+        resolve({ date: null, time: null, cameraModel, lat, lon });
       }
     });
   });
@@ -1180,6 +1268,25 @@ function _setProgress(done, total) {
   bar.setAttribute('aria-valuenow', pct);
   document.getElementById('bulk_progress_pct').textContent = pct + '%';
   document.getElementById('bulk_progress_count').textContent = `${done} / ${total}`;
+}
+
+function onBulkCoverImageSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('bulk_cover_preview');
+    const img = document.getElementById('bulk_cover_preview_img');
+    img.src = e.target.result;
+    preview.classList.remove('d-none');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearBulkCoverImage() {
+  document.getElementById('bulk_cover_image').value = '';
+  document.getElementById('bulk_cover_preview').classList.add('d-none');
+  document.getElementById('bulk_cover_preview_img').src = '';
 }
 
 async function bulkSubmitSelected() {
@@ -1228,22 +1335,34 @@ async function bulkSubmitSelected() {
       const prediction = bulkPredictions[f.name];
       let speciesName = '—';
       if (prediction) {
-        const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
-        if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+        const directName = prediction.final_species || prediction.inat_label || '';
+        if (directName) {
+          speciesName = directName;
+        } else {
+          const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
+          if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+        }
       }
       const exif = await readExifDate(f);
-      const fileDate = exif.date || encounterDate || '—';
-      const fileTime = exif.time || encounterTime;
+      const fileDate = (prediction && prediction.date) || exif.date || encounterDate || '—';
+      const fileTime = (prediction && prediction.time) || exif.time || encounterTime;
       const savedLocSelDR = document.getElementById('saved_location');
       const savedLocOptDR = savedLocSelDR ? savedLocSelDR.options[savedLocSelDR.selectedIndex] : null;
       const locationCameraModelDR = savedLocOptDR ? (savedLocOptDR.dataset.cameraModel || '') : '';
-      const fileCameraModel = exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelDR || '—';
+      const predCameraModelDR = prediction ? (prediction.camera_model || (prediction.camera_make ? `${prediction.camera_make} ${prediction.camera_model || ''}`.trim() : '')) : '';
+      const fileCameraModel = predCameraModelDR || exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelDR || '—';
+      const predLatDR = (prediction && prediction.lat != null) ? parseFloat(prediction.lat) : null;
+      const predLonDR = (prediction && prediction.lon != null) ? parseFloat(prediction.lon) : null;
+      const fileLat = (predLatDR !== null && isFinite(predLatDR)) ? predLatDR : (exif.lat !== null && exif.lat !== undefined) ? exif.lat : lat;
+      const fileLon = (predLonDR !== null && isFinite(predLonDR)) ? predLonDR : (exif.lon !== null && exif.lon !== undefined) ? exif.lon : lng;
+      const locSource = (predLatDR !== null) ? ' <small class="text-muted">(pred)</small>' : (exif.lat !== null && exif.lat !== undefined) ? ' <small class="text-muted">(exif)</small>' : '';
+      const dateSource = (prediction && prediction.date) ? ' <small class="text-muted">(pred)</small>' : exif.date ? ' <small class="text-muted">(exif)</small>' : '';
       html += `<tr>
         <td class="text-muted">${i + 1}</td>
         <td class="text-truncate" style="max-width:220px;" title="${f.name}">${f.name}</td>
         <td>${speciesName !== '—' ? `<span class="badge bg-success">${speciesName}</span>` : '<span class="text-muted">—</span>'}</td>
-        <td class="text-nowrap">${fileDate} ${fileTime}${exif.date ? ' <small class="text-muted">(exif)</small>' : ''}</td>
-        <td class="text-nowrap">${lat.toFixed(5)}, ${lng.toFixed(5)}<br><small class="text-muted">${privacyLabel}</small></td>
+        <td class="text-nowrap">${fileDate} ${fileTime}${dateSource}</td>
+        <td class="text-nowrap">${fileLat.toFixed(5)}, ${fileLon.toFixed(5)}${locSource}<br><small class="text-muted">${privacyLabel}</small></td>
         <td>${fileCameraModel}</td>
         <td><small class="text-muted">${sightingType}</small></td>
       </tr>`;
@@ -1283,10 +1402,22 @@ async function bulkSubmitSelected() {
     const savedLocSelB = document.getElementById('saved_location');
     const savedLocOptB = savedLocSelB ? savedLocSelB.options[savedLocSelB.selectedIndex] : null;
     const bulkName = savedLocOptB && savedLocOptB.value ? savedLocOptB.textContent.trim() : `Bulk Upload ${new Date().toLocaleDateString()}`;
+    const startFormData = new FormData();
+    startFormData.append('name', bulkName);
+    startFormData.append('image_count', total);
+    const coverImageFile = document.getElementById('bulk_cover_image').files[0];
+    if (coverImageFile) {
+      startFormData.append('cover_image', coverImageFile, coverImageFile.name);
+    }
+    const gpxFileEl = document.getElementById('bulk_gpx_file');
+    const gpxFile = gpxFileEl && gpxFileEl.files[0];
+    if (gpxFile) {
+      startFormData.append('gpx_file', gpxFile, gpxFile.name);
+    }
     const startResp = await fetch('/sightings/api/bulk-upload/start/', {
       method: 'POST',
-      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: bulkName, image_count: total }),
+      headers: { 'X-CSRFToken': csrfToken },
+      body: startFormData,
     });
     if (startResp.ok) {
       const startData = await startResp.json();
@@ -1304,17 +1435,29 @@ async function bulkSubmitSelected() {
     const prediction = bulkPredictions[f.name];
     let speciesName = '';
     if (prediction) {
-      const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
-      if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+      const directName = prediction.final_species || prediction.inat_label || '';
+      if (directName) {
+        speciesName = directName;
+      } else {
+        const rawSpecies = extractCommonName(prediction.prediction || prediction.label || prediction.species || '');
+        if (rawSpecies) speciesName = await matchSpecies(rawSpecies);
+      }
     }
 
     const exif = await readExifDate(f);
-    const fileDate = exif.date || encounterDate;
-    const fileTime = exif.time || document.getElementById('encounter_time').value || '';
+    // New format rows have date/time/lat/lon/camera_model directly — prefer those, then EXIF, then form defaults
+    const fileDate = (prediction && prediction.date) || exif.date || encounterDate;
+    const fileTime = (prediction && prediction.time) || exif.time || document.getElementById('encounter_time').value || '';
     const savedLocSelR = document.getElementById('saved_location');
     const savedLocOptR = savedLocSelR ? savedLocSelR.options[savedLocSelR.selectedIndex] : null;
     const locationCameraModelR = savedLocOptR ? (savedLocOptR.dataset.cameraModel || '') : '';
-    const fileCameraModel = exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelR || '';
+    const predCameraModel = prediction ? (prediction.camera_model || (prediction.camera_make ? `${prediction.camera_make} ${prediction.camera_model || ''}`.trim() : '')) : '';
+    const fileCameraModel = predCameraModel || exif.cameraModel || document.getElementById('camera_model').value || locationCameraModelR || '';
+    // Use prediction GPS → EXIF GPS → form defaults (in priority order)
+    const predLat = (prediction && prediction.lat != null) ? parseFloat(prediction.lat) : null;
+    const predLon = (prediction && prediction.lon != null) ? parseFloat(prediction.lon) : null;
+    const fileLat = (predLat !== null && isFinite(predLat)) ? predLat : (exif.lat !== null && exif.lat !== undefined) ? exif.lat : lat;
+    const fileLon = (predLon !== null && isFinite(predLon)) ? predLon : (exif.lon !== null && exif.lon !== undefined) ? exif.lon : lng;
 
     const locationName = savedLocOptR && savedLocOptR.value ? savedLocOptR.textContent.trim() : '';
     const titleSpecies = speciesName && !/^(unknown|animal)$/i.test(speciesName.trim()) ? speciesName.trim() : '';
@@ -1322,12 +1465,12 @@ async function bulkSubmitSelected() {
     if (locationName) titleParts.push(locationName);
     if (fileCameraModel) titleParts.push(fileCameraModel);
     if (titleSpecies) titleParts.push(titleSpecies);
-    const sightingTitle = titleParts.join(' - ');
+    const sightingTitle = (prediction && prediction.title) || titleParts.join(' - ');
 
     const formData = new FormData();
     formData.append('media_files', f, f.name);
-    formData.append('location_latitude', lat);
-    formData.append('location_longitude', lng);
+    formData.append('location_latitude', fileLat);
+    formData.append('location_longitude', fileLon);
     formData.append('encounter_date', fileDate);
     formData.append('encounter_time', fileTime);
     formData.append('privacy_setting', document.getElementById('privacy_setting').value);

@@ -25,4 +25,5 @@ urlpatterns = [
     path("api/bulk-upload/start/", views.StartBulkUploadView.as_view(), name="start_bulk_upload"),
     path("bulk-upload/history/", views.BulkUploadHistoryView.as_view(), name="bulk_upload_history"),
     path("bulk-upload/<uuid:pk>/", views.BulkUploadDetailView.as_view(), name="bulk_upload_detail"),
+    path("bulk-upload/<uuid:pk>/gpx/", views.upload_bulk_upload_gpx, name="bulk_upload_gpx"),
 ]
