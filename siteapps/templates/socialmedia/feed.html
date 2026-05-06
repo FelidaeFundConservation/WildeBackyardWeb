@@ -330,9 +330,11 @@
                                                         object-fit: cover"
                                                  alt="{{ post.title }}">
                                         {% endif %}
-                                        {% if post.species %}
-                                            <span class="badge bg-success position-absolute top-0 end-0 m-2">{{ post.species }}</span>
-                                        {% endif %}
+                                        {% with sp=post.species|default:post.species_list.0 %}
+                                            {% if sp %}
+                                                <span class="badge bg-success position-absolute top-0 end-0 m-2">{{ sp }}</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                 {% endif %}
                                 <div class="card-body">
@@ -439,14 +441,14 @@ function createPostCard(post) {
                         <source src="${escapeHtml(post.media_url)}" type="video/webm">
                         Your browser does not support the video tag.
                     </video>
-                    ${post.species ? `<span class="badge bg-success position-absolute top-0 start-0 m-2">${escapeHtml(post.species)}</span>` : ''}
+                    ${(post.species || post.species_list?.[0]) ? `<span class="badge bg-success position-absolute top-0 start-0 m-2">${escapeHtml(post.species || post.species_list[0])}</span>` : ''}
                 </div>
             `;
         } else {
             mediaHtml = `
                 <div class="position-relative">
                     <img src="${escapeHtml(post.media_url)}" class="card-img-top" style="max-height: 300px; object-fit: cover" alt="${escapeHtml(post.title)}">
-                    ${post.species ? `<span class="badge bg-success position-absolute top-0 end-0 m-2">${escapeHtml(post.species)}</span>` : ''}
+                    ${(post.species || post.species_list?.[0]) ? `<span class="badge bg-success position-absolute top-0 end-0 m-2">${escapeHtml(post.species || post.species_list[0])}</span>` : ''}
                 </div>
             `;
         }

@@ -29,6 +29,7 @@ from siteapps.socialmedia.web_views import (
     update_animal_count,
     update_details,
     update_location,
+    update_post_title,
     update_sighting_species,
     vote_quality_metric,
 )
@@ -47,6 +48,7 @@ urlpatterns = [
     path("post/<uuid:post_id>/quality/<str:metric>/", vote_quality_metric, name="vote_quality_metric"),
     path("post/<uuid:post_id>/species/", update_sighting_species, name="update_sighting_species"),
     path("post/<uuid:post_id>/animal-count/", update_animal_count, name="update_animal_count"),
+    path("post/<uuid:post_id>/title/", update_post_title, name="update_post_title"),
     path("post/<uuid:post_id>/details/", update_details, name="update_details"),
     path("post/<uuid:post_id>/location/", update_location, name="update_location"),
     # API views
