@@ -110,6 +110,33 @@ class BackendAPIClient:
             logger.error(f"Backend API connection error during DELETE {endpoint}: {e}")
             return None
 
+    def post_file(self, endpoint, files, data=None):
+        """Make a multipart/form-data POST (for file uploads such as GPX tracks).
+
+        Args:
+            endpoint: API endpoint path
+            files: dict mapping field name to file-like object, e.g. {"gpx_file": open(...)}
+            data: optional extra form fields dict
+
+        Returns:
+            dict: Response data if successful, None otherwise
+        """
+        try:
+            url = f"{self.base_url}{endpoint}"
+            # Do NOT set Content-Type here — requests sets the correct multipart boundary automatically.
+            headers = {}
+            if self.auth_token:
+                headers["Authorization"] = f"Token {self.auth_token}"
+            response = requests.post(url, files=files, data=data or {}, headers=headers, timeout=self.timeout)
+            if response.status_code in [200, 201]:
+                return response.json() if response.text else {"status": "success"}
+            else:
+                logger.warning(f"POST file request failed for {endpoint}: {response.status_code}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during POST file {endpoint}: {e}")
+            return None
+
     def register_user(self, email, password, name=None):
         """
         Register a new user via the Backend API.

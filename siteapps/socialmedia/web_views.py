@@ -7,7 +7,6 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from siteapps.sightings.models import BulkUploadSighting
 from siteapps.users.api_client import BackendAPIClient
 
 logger = logging.getLogger(__name__)
@@ -283,10 +282,7 @@ def update_sighting_species(request, post_id):
         api_token = request.session.get("backend_api_token")
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
-            is_bulk_upload = BulkUploadSighting.objects.filter(backend_post_id=post_id).exists()
             payload = {"species_list": species_names}
-            if is_bulk_upload:
-                payload["update_title"] = True
             response = api_client.post(
                 f"/v1/socialmedia/api/posts/{post_id}/species/",
                 payload,
