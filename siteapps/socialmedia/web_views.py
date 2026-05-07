@@ -412,6 +412,29 @@ def update_details(request, post_id):
 
 
 @login_required
+def update_description(request, post_id):
+    """Update the text description of a post. Any authenticated user may attempt;
+    the backend enforces ownership."""
+    back = request.POST.get("back", "")
+
+    if request.method == "POST":
+        description = request.POST.get("description", "").strip()
+        api_token = request.session.get("backend_api_token")
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            result = api_client.post(
+                f"/v1/socialmedia/api/posts/{post_id}/description/",
+                {"description": description},
+            )
+            if result is None:
+                messages.error(request, "Failed to update description.")
+            else:
+                messages.success(request, "Description updated.")
+
+    return _post_detail_redirect(post_id, back)
+
+
+@login_required
 def update_location(request, post_id):
     """Update latitude, longitude, privacy setting, and obfuscation radius for a post.
     Restricted to staff and superusers."""

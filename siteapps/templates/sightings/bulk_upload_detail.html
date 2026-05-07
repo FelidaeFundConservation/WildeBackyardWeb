@@ -63,15 +63,43 @@
     </style>
 {% endblock header_includes %}
 {% block content %}
+    {% csrf_token %}
     <div class="container-fluid py-4">
         <div class="row justify-content-center">
             <div class="col-12 col-lg-10">
                 <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h1 class="text-white mb-1">
-                            <i class="bi bi-folder2-open"></i> {{ upload.name }}
+                        <h1 class="text-white mb-1 d-flex align-items-center gap-2"
+                            id="upload-title-display">
+                            <i class="bi bi-folder2-open"></i>
+                            <span id="upload-title-text">{{ upload.name }}</span>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-light py-0 px-1"
+                                    title="Rename this upload session"
+                                    onclick="startTitleEdit()">
+                                <i class="bi bi-pencil" style="font-size:0.7em"></i>
+                            </button>
                         </h1>
+                        <div class="d-none align-items-center gap-2" id="upload-title-edit">
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   id="upload-title-input"
+                                   value="{{ upload.name|escapejs }}"
+                                   maxlength="255"
+                                   style="min-width:260px;
+                                          max-width:420px">
+                            <button type="button"
+                                    class="btn btn-sm btn-success"
+                                    onclick="saveTitleEdit()">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-light"
+                                    onclick="cancelTitleEdit()">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                         <p class="text-white-50 mb-0 small">
                             <i class="bi bi-calendar3 me-1"></i>{{ upload.created|date:"N j, Y, g:i A" }}
                             &nbsp;•&nbsp;
@@ -391,5 +419,53 @@
             console.warn('[bulk-upload-map] MapLibre error:', e.error || e);
         });
     })();
+    </script>
+    <script>
+    const RENAME_URL = '{% url "sightings:bulk_upload_rename" upload.id %}';
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    function startTitleEdit() {
+        document.getElementById('upload-title-display').classList.add('d-none');
+        const editRow = document.getElementById('upload-title-edit');
+        editRow.classList.remove('d-none');
+        editRow.classList.add('d-flex');
+        const inp = document.getElementById('upload-title-input');
+        inp.value = document.getElementById('upload-title-text').textContent.trim();
+        inp.focus();
+        inp.select();
+    }
+
+    function cancelTitleEdit() {
+        document.getElementById('upload-title-display').classList.remove('d-none');
+        const editRow = document.getElementById('upload-title-edit');
+        editRow.classList.add('d-none');
+        editRow.classList.remove('d-flex');
+    }
+
+    async function saveTitleEdit() {
+        const newName = document.getElementById('upload-title-input').value.trim();
+        if (!newName) return;
+        try {
+            const resp = await fetch(RENAME_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+                body: JSON.stringify({name: newName})
+            });
+            if (resp.ok) {
+                document.getElementById('upload-title-text').textContent = newName;
+                document.title = newName + ' - WildeBackyard';
+            } else {
+                alert('Failed to rename session.');
+            }
+        } catch (e) {
+            alert('Network error — could not rename session.');
+        }
+        cancelTitleEdit();
+    }
+
+    document.getElementById('upload-title-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') saveTitleEdit();
+        if (e.key === 'Escape') cancelTitleEdit();
+    });
     </script>
 {% endblock content %}
