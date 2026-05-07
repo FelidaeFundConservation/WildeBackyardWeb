@@ -330,10 +330,8 @@
                                                         object-fit: cover"
                                                  alt="{{ post.title }}">
                                         {% endif %}
-                                        {% with sp=post.species|default:post.species_list.0 %}
-                                            {% if sp %}
-                                                <span class="badge bg-success position-absolute top-0 end-0 m-2">{{ sp }}</span>
-                                            {% endif %}
+                                        {% with sp=post.species %}
+                                            {% if sp %}<span class="badge bg-success position-absolute top-0 end-0 m-2">{{ sp }}</span>{% endif %}
                                         {% endwith %}
                                     </div>
                                 {% endif %}

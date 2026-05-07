@@ -75,9 +75,14 @@ def _normalize_post(post):
         post["incorrect_time"] = ""
         post["correct_time"] = ""
 
-    # Ensure species_list key always exists so templates can do post.species_list.0
+    # Ensure species_list key always exists
     if "species_list" not in post:
         post["species_list"] = []
+
+    # Resolve primary species for templates — avoids post.species_list.0 in template
+    # (Django evaluates filter arguments eagerly, so species_list.0 on [] raises VariableDoesNotExist)
+    if not post.get("species") and post["species_list"]:
+        post["species"] = post["species_list"][0]
 
     # license dict passed through as-is; templates access post.license.code, .label, etc.
     return post
