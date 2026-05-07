@@ -5,7 +5,6 @@ import re
 import xml.etree.ElementTree as ET
 
 from django.conf import settings
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -393,18 +392,13 @@ class StartBulkUploadView(APIView):
     def post(self, request):
         name = request.data.get("name", "").strip() or "Bulk Upload"
         image_count = int(request.data.get("image_count", 0))
-        cover_image = request.FILES.get("cover_image")
-        gpx_file = request.FILES.get("gpx_file")
         bulk_upload = BulkUpload.objects.create(
             user=request.user,
             name=name,
             image_count=image_count,
-            cover_image=cover_image,
-            gpx_file=gpx_file,
         )
-        cover_image_url = request.build_absolute_uri(bulk_upload.cover_image.url) if bulk_upload.cover_image else None
         return Response(
-            {"id": str(bulk_upload.id), "name": bulk_upload.name, "cover_image_url": cover_image_url},
+            {"id": str(bulk_upload.id), "name": bulk_upload.name, "cover_image_url": None},
             status=status.HTTP_201_CREATED,
         )
 
@@ -603,13 +597,15 @@ class BulkUploadDetailView(View):
             if lat is None or lng is None:
                 continue
             try:
-                sightings_geo.append({
-                    "id": str(s.get("id", "")),
-                    "lat": float(lat),
-                    "lng": float(lng),
-                    "title": s.get("title") or "",
-                    "species": s.get("species") or (s.get("species_list") or [""])[0] or "",
-                })
+                sightings_geo.append(
+                    {
+                        "id": str(s.get("id", "")),
+                        "lat": float(lat),
+                        "lng": float(lng),
+                        "title": s.get("title") or "",
+                        "species": s.get("species") or (s.get("species_list") or [""])[0] or "",
+                    }
+                )
             except (ValueError, TypeError):
                 pass
 
@@ -623,13 +619,17 @@ class BulkUploadDetailView(View):
             except Exception:
                 pass
 
-        return render(request, self.template_name, {
-            "upload": upload,
-            "sightings": sightings,
-            "sort_order": sort_order,
-            "sightings_geo": sightings_geo,
-            "gpx_track": gpx_track,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "upload": upload,
+                "sightings": sightings,
+                "sort_order": sort_order,
+                "sightings_geo": sightings_geo,
+                "gpx_track": gpx_track,
+            },
+        )
 
 
 @login_required
