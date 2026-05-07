@@ -20,6 +20,7 @@ def _post_detail_redirect(post_id, back=""):
         url = f"{url}?back={back}"
     return redirect(url)
 
+
 # Pagination constants
 MAX_POSTS_PER_REQUEST = 100
 
@@ -73,6 +74,10 @@ def _normalize_post(post):
         post["correct_date"] = ""
         post["incorrect_time"] = ""
         post["correct_time"] = ""
+
+    # Ensure species_list key always exists so templates can do post.species_list.0
+    if "species_list" not in post:
+        post["species_list"] = []
 
     # license dict passed through as-is; templates access post.license.code, .label, etc.
     return post
