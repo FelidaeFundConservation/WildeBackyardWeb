@@ -391,6 +391,18 @@
                                        onchange="onBulkDirectorySelected(this)">
                                 <small class="text-muted">If the folder contains a <code>predictions.json</code> from SpeciesNet, species predictions will be attached automatically.</small>
                             </div>
+                            <!-- Session title for this bulk upload -->
+                            <div class="mb-3">
+                                <label for="bulk_session_title" class="form-label fw-bold">
+                                    <i class="bi bi-pencil me-1"></i>Session Title
+                                </label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="bulk_session_title"
+                                       maxlength="255"
+                                       placeholder="e.g. Morning walk – Stafford Lake 5/7">
+                                <small class="text-muted">A name for this upload session. Defaults to location name or today's date if left blank.</small>
+                            </div>
                             <!-- Cover image for this bulk upload session -->
                             <div class="mb-3">
                                 <label for="bulk_cover_image" class="form-label fw-bold">
@@ -403,9 +415,14 @@
                                        onchange="onBulkCoverImageSelected(this)">
                                 <small class="text-muted">Representative photo displayed at the top of this upload's sightings page.</small>
                                 <div id="bulk_cover_preview" class="mt-2 d-none">
-                                    <img id="bulk_cover_preview_img" src="" alt="Cover preview"
-                                         class="img-thumbnail" style="max-height:120px;object-fit:cover;">
-                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2"
+                                    <img id="bulk_cover_preview_img"
+                                         src=""
+                                         alt="Cover preview"
+                                         class="img-thumbnail"
+                                         style="max-height:120px;
+                                                object-fit:cover">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger ms-2"
                                             onclick="clearBulkCoverImage()">
                                         <i class="bi bi-x"></i> Remove
                                     </button>
@@ -1401,7 +1418,10 @@ async function bulkSubmitSelected() {
   try {
     const savedLocSelB = document.getElementById('saved_location');
     const savedLocOptB = savedLocSelB ? savedLocSelB.options[savedLocSelB.selectedIndex] : null;
-    const bulkName = savedLocOptB && savedLocOptB.value ? savedLocOptB.textContent.trim() : `Bulk Upload ${new Date().toLocaleDateString()}`;
+    const sessionTitleInput = document.getElementById('bulk_session_title');
+    const userTitle = sessionTitleInput ? sessionTitleInput.value.trim() : '';
+    const bulkName = userTitle || (savedLocOptB && savedLocOptB.value ? savedLocOptB.textContent.trim() : `Bulk Upload ${new Date().toLocaleDateString()}`);
+    if (sessionTitleInput && !userTitle && bulkName) { sessionTitleInput.placeholder = bulkName; }
     const startFormData = new FormData();
     startFormData.append('name', bulkName);
     startFormData.append('image_count', total);

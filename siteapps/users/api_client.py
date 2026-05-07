@@ -97,6 +97,19 @@ class BackendAPIClient:
             logger.error(f"Backend API connection error during PUT {endpoint}: {e}")
             return None
 
+    def patch(self, endpoint, data=None):
+        try:
+            url = f"{self.base_url}{endpoint}"
+            response = requests.patch(url, json=data, headers=self.headers, timeout=self.timeout)
+            if response.status_code in [200, 204]:
+                return response.json() if response.text else {"status": "success"}
+            else:
+                logger.warning(f"PATCH request failed for {endpoint}: {response.status_code}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during PATCH {endpoint}: {e}")
+            return None
+
     def delete(self, endpoint):
         try:
             url = f"{self.base_url}{endpoint}"

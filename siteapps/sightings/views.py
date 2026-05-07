@@ -660,3 +660,29 @@ def upload_bulk_upload_gpx(request, pk):
     else:
         messages.success(request, "GPX track uploaded.")
     return redirect("sightings:bulk_upload_detail", pk=pk)
+
+
+@login_required
+def rename_bulk_upload(request, pk):
+    """PATCH the bulk upload session name via the backend API."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    new_name = data.get("name", "").strip()
+    if not new_name:
+        return JsonResponse({"error": "name is required."}, status=400)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.patch(f"/v1/socialmedia/api/bulk-upload/{pk}/", {"name": new_name})
+    if result is None:
+        return JsonResponse({"error": "Failed to rename session."}, status=502)
+    return JsonResponse(result)
