@@ -1498,7 +1498,7 @@ async function bulkSubmitSelected() {
     formData.append('camera_deployment_date', document.getElementById('camera_deployment_date').value || '');
     formData.append('sighting_type', document.getElementById('sighting_type').value || '');
     formData.append('post_title', sightingTitle);
-    formData.append('post_body', '');
+    formData.append('post_body', (prediction && prediction.description) ? prediction.description : '');
     formData.append('species', speciesName);
     if (prediction) {
       formData.append('speciesnet_predictions', JSON.stringify(prediction));
