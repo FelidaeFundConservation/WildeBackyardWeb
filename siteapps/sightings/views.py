@@ -21,8 +21,6 @@ from siteapps.sightings.utils import reverse_geocode_with_nominatim
 from siteapps.socialmedia.web_views import _normalize_post
 from siteapps.users.api_client import BackendAPIClient
 
-from .models import BulkUpload
-
 logger = logging.getLogger(__name__)
 
 
@@ -254,9 +252,11 @@ class CreateSightingView(View):
                 post_id = response.get("post_id")
                 if bulk_upload_id and post_id:
                     try:
-                        bulk_upload = BulkUpload.objects.get(id=bulk_upload_id, user=request.user)
-                        bulk_upload.add_sighting(post_id)
-                    except (BulkUpload.DoesNotExist, Exception) as e:
+                        api_client.post(
+                            f"/v1/socialmedia/api/bulk-upload/{bulk_upload_id}/add-post/",
+                            {"post_id": post_id},
+                        )
+                    except Exception as e:
                         logger.warning(f"Could not record bulk upload sighting association: {e}")
             return redirect("socialmedia:feed")
         else:
@@ -384,21 +384,29 @@ class ReverseGeocodeWithNominatim(APIView):
 
 @method_decorator(login_required, name="dispatch")
 class StartBulkUploadView(APIView):
-    """Create a BulkUpload record and return its ID before the batch submission starts."""
+    """Create a bulk upload session on the backend and return its ID."""
 
     authentication_classes = [authentication.SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        api_token = request.session.get("backend_api_token")
+        if not api_token:
+            return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
         name = request.data.get("name", "").strip() or "Bulk Upload"
         image_count = int(request.data.get("image_count", 0))
-        bulk_upload = BulkUpload.objects.create(
-            user=request.user,
-            name=name,
-            image_count=image_count,
+
+        api_client = BackendAPIClient(auth_token=api_token)
+        result = api_client.post(
+            "/v1/socialmedia/api/bulk-upload/",
+            {"name": name, "image_count": image_count},
         )
+        if result is None:
+            return Response({"error": "Failed to create bulk upload session."}, status=status.HTTP_502_BAD_GATEWAY)
+
         return Response(
-            {"id": str(bulk_upload.id), "name": bulk_upload.name, "cover_image_url": None},
+            {"id": result["id"], "name": result["name"], "cover_image_url": None},
             status=status.HTTP_201_CREATED,
         )
 
@@ -537,57 +545,57 @@ class ManageLocationsView(View):
 
 @method_decorator(login_required, name="dispatch")
 class BulkUploadHistoryView(View):
-    """List the current user's bulk upload records."""
+    """List the current user's bulk upload sessions (fetched from backend)."""
 
     template_name = "sightings/bulk_upload_history.html"
 
     def get(self, request):
-        uploads = BulkUpload.objects.filter(user=request.user).prefetch_related("sightings").order_by("-created")
+        api_token = request.session.get("backend_api_token")
+        uploads = []
+        if api_token:
+            api_client = BackendAPIClient(auth_token=api_token)
+            result = api_client.get("/v1/socialmedia/api/bulk-upload/list/")
+            if result is not None:
+                uploads = result
         return render(request, self.template_name, {"uploads": uploads})
 
 
 @method_decorator(login_required, name="dispatch")
 class BulkUploadDetailView(View):
-    """Show the sightings belonging to a specific bulk upload."""
+    """Show the sightings belonging to a specific bulk upload session."""
 
     template_name = "sightings/bulk_upload_detail.html"
 
     def get(self, request, pk):
-        try:
-            upload = BulkUpload.objects.prefetch_related("sightings").get(pk=pk, user=request.user)
-        except BulkUpload.DoesNotExist:
-            from django.http import Http404
+        from django.http import Http404
 
+        api_token = request.session.get("backend_api_token")
+        if not api_token:
             raise Http404
 
-        post_ids = [str(s.backend_post_id) for s in upload.sightings.all()]
+        api_client = BackendAPIClient(auth_token=api_token)
+
+        # Fetch the session (post_ids + gpx_track coords) from backend
+        session = api_client.get(f"/v1/socialmedia/api/bulk-upload/{pk}/")
+        if session is None:
+            raise Http404
+
+        post_ids = session.get("post_ids", [])
         sightings = []
 
         if post_ids:
-            api_token = request.session.get("backend_api_token")
-            if api_token:
-                api_client = BackendAPIClient(auth_token=api_token)
-                response = api_client.post(
-                    f"/v1/socialmedia/api/feed/get/?limit={len(post_ids)}&offset=0",
-                    {"postIds": post_ids},
-                )
-                if response:
-                    sightings = [_normalize_post(p) for p in response.get("results", [])]
+            response = api_client.post(
+                f"/v1/socialmedia/api/feed/get/?limit={len(post_ids)}&offset=0",
+                {"postIds": post_ids},
+            )
+            if response:
+                sightings = [_normalize_post(p) for p in response.get("results", [])]
 
-        # Sort by encounter_datetime (actual photo capture time) rather than DB insertion order.
-        # Default: oldest first (chronological walk order). sort=desc for newest first.
+        # Sort by encounter_datetime (actual photo capture time), oldest first by default.
         sort_order = request.GET.get("sort", "asc")
-
-        def _sort_key(p):
-            dt = p.get("encounter_datetime") or ""
-            return dt
-
-        sightings.sort(key=_sort_key, reverse=(sort_order == "desc"))
+        sightings.sort(key=lambda p: p.get("encounter_datetime") or "", reverse=(sort_order == "desc"))
 
         # Build GeoJSON-ready list of sightings that have real coordinates.
-        # Skip sightings whose geoprivacy is "private" — the backend substitutes
-        # the continental-US centre (~39.5°N, -98.35°W) for those, which would
-        # displace the map view and show phantom markers far from the walk.
         sightings_geo = []
         for s in sightings:
             if s.get("geoprivacy") == settings.PRIVACY_SETTING_PRIVATE:
@@ -609,21 +617,14 @@ class BulkUploadDetailView(View):
             except (ValueError, TypeError):
                 pass
 
-        # Parse GPX track if one has been attached to this upload.
-        gpx_track = []
-        if upload.gpx_file:
-            try:
-                upload.gpx_file.open("rb")
-                gpx_track = _parse_gpx_track(upload.gpx_file)
-                upload.gpx_file.close()
-            except Exception:
-                pass
+        # GPX track returned by backend as [[lng, lat], ...] (already parsed coords)
+        gpx_track = session.get("gpx_track", [])
 
         return render(
             request,
             self.template_name,
             {
-                "upload": upload,
+                "upload": session,
                 "sightings": sightings,
                 "sort_order": sort_order,
                 "sightings_geo": sightings_geo,
@@ -634,20 +635,28 @@ class BulkUploadDetailView(View):
 
 @login_required
 def upload_bulk_upload_gpx(request, pk):
-    """Accept a GPX file POST and attach it to an existing BulkUpload owned by the current user."""
+    """Accept a GPX file POST and proxy it to the backend bulk upload session."""
     from django.http import Http404
 
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
-    try:
-        upload = BulkUpload.objects.get(pk=pk, user=request.user)
-    except BulkUpload.DoesNotExist:
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
         raise Http404
+
     gpx_file = request.FILES.get("gpx_file")
     if not gpx_file:
         messages.error(request, "No GPX file selected.")
         return redirect("sightings:bulk_upload_detail", pk=pk)
-    upload.gpx_file = gpx_file
-    upload.save()
-    messages.success(request, "GPX track uploaded.")
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.post_file(
+        f"/v1/socialmedia/api/bulk-upload/{pk}/gpx/",
+        files={"gpx_file": (gpx_file.name, gpx_file, gpx_file.content_type or "application/gpx+xml")},
+    )
+    if result is None:
+        messages.error(request, "Failed to upload GPX track.")
+    else:
+        messages.success(request, "GPX track uploaded.")
     return redirect("sightings:bulk_upload_detail", pk=pk)
