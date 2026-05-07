@@ -4,7 +4,8 @@
     {{ upload.name }} - WildeBackyard
 {% endblock title %}
 {% block header_includes %}
-    <link href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" rel="stylesheet">
+    <link href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css"
+          rel="stylesheet">
     <style>
         #bulk-upload-map {
             width: 100%;
@@ -81,11 +82,15 @@
                     </div>
                     <div class="d-flex gap-2">
                         {% if sort_order == 'asc' %}
-                            <a href="?sort=desc" class="btn btn-outline-light btn-sm" title="Currently: oldest first">
+                            <a href="?sort=desc"
+                               class="btn btn-outline-light btn-sm"
+                               title="Currently: oldest first">
                                 <i class="bi bi-sort-up"></i> Oldest first
                             </a>
                         {% else %}
-                            <a href="?sort=asc" class="btn btn-outline-light btn-sm" title="Currently: newest first">
+                            <a href="?sort=asc"
+                               class="btn btn-outline-light btn-sm"
+                               title="Currently: newest first">
                                 <i class="bi bi-sort-down"></i> Newest first
                             </a>
                         {% endif %}
@@ -97,22 +102,14 @@
                 </div>
                 <!-- Flash messages from GPX upload -->
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                         role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
-                <!-- Map / cover image section -->
+                <!-- Map section -->
                 <div class="mb-4">
-                    <!-- Static cover image (fallback; hidden by JS once the interactive map loads) -->
-                    {% if upload.cover_image %}
-                        <div id="cover-image-wrapper">
-                            <img src="{{ upload.cover_image.url }}"
-                                 alt="{{ upload.name }}"
-                                 class="img-fluid rounded shadow d-block mx-auto"
-                                 style="max-height:500px;max-width:100%;object-fit:contain;">
-                        </div>
-                    {% endif %}
                     <!-- Interactive MapLibre GL map (shown only when sighting coordinates are available) -->
                     <div id="bulk-upload-map" style="display:none;"></div>
                     <!-- GPX track controls -->
@@ -165,14 +162,14 @@
                                     </span>
                                     {% if sighting.media_url %}
                                         {% if sighting.is_video %}
-                                            <video class="card-img-top"
-                                                   style="max-height:200px;object-fit:cover;">
+                                            <video class="card-img-top" style="max-height:200px;object-fit:cover;">
                                                 <source src="{{ sighting.media_url }}" type="video/mp4">
                                             </video>
                                         {% else %}
                                             <img src="{{ sighting.media_url }}"
                                                  class="card-img-top"
-                                                 style="max-height:200px;object-fit:cover"
+                                                 style="max-height:200px;
+                                                        object-fit:cover"
                                                  alt="{{ sighting.title }}">
                                         {% endif %}
                                     {% endif %}
