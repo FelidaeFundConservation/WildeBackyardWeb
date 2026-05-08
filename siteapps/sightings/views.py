@@ -405,8 +405,18 @@ class StartBulkUploadView(APIView):
         if result is None:
             return Response({"error": "Failed to create bulk upload session."}, status=status.HTTP_502_BAD_GATEWAY)
 
+        session_id = result["id"]
+
+        # Forward GPX file to backend if provided
+        gpx_file = request.FILES.get("gpx_file")
+        if gpx_file:
+            api_client.post_file(
+                f"/v1/socialmedia/api/bulk-upload/{session_id}/gpx/",
+                files={"gpx_file": (gpx_file.name, gpx_file, gpx_file.content_type or "application/gpx+xml")},
+            )
+
         return Response(
-            {"id": result["id"], "name": result["name"], "cover_image_url": None},
+            {"id": session_id, "name": result["name"], "cover_image_url": None},
             status=status.HTTP_201_CREATED,
         )
 
