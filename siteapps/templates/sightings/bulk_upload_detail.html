@@ -60,6 +60,46 @@
             font-size: 0.85rem;
             max-width: 200px;
         }
+        .map-layer-control {
+            background: rgba(255, 255, 255, 0.93);
+            border-radius: 0.375rem;
+            padding: 7px 12px;
+            font-size: 0.8rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            line-height: 1.6;
+        }
+        .map-layer-control .layer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            user-select: none;
+            margin: 1px 0;
+            white-space: nowrap;
+        }
+        .map-layer-control .layer-toggle input[type=checkbox] {
+            cursor: pointer;
+            accent-color: #198754;
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+        .layer-swatch-line {
+            display: inline-block;
+            width: 18px;
+            height: 3px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .layer-swatch-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
     </style>
 {% endblock header_includes %}
 {% block content %}
@@ -412,6 +452,39 @@
                         map.setFilter('sightings-circles-active', ['==', ['get', 'id'], activeSid || '']);
                     });
                 });
+            }
+
+            // ── Layer toggle control ─────────────────────────────────────────
+            const _hasGpx = GPX_TRACK.length > 1;
+            const _hasSightings = SIGHTINGS.length > 0;
+            if (_hasGpx || _hasSightings) {
+                const panel = document.createElement('div');
+                panel.className = 'map-layer-control maplibregl-ctrl';
+                let html = '';
+                if (_hasGpx) {
+                    html += '<label class="layer-toggle"><input type="checkbox" id="toggle-gpx" checked>' +
+                        '<span class="layer-swatch-line" style="background:#20c997"></span>GPX Track</label>';
+                }
+                if (_hasSightings) {
+                    html += '<label class="layer-toggle"><input type="checkbox" id="toggle-sightings" checked>' +
+                        '<span class="layer-swatch-dot" style="background:#198754"></span>Sightings</label>';
+                }
+                panel.innerHTML = html;
+                map.addControl({ onAdd: () => panel, onRemove: () => panel.remove() }, 'bottom-left');
+
+                if (_hasGpx) {
+                    document.getElementById('toggle-gpx').addEventListener('change', function () {
+                        map.setLayoutProperty('gpx-track-line', 'visibility', this.checked ? 'visible' : 'none');
+                    });
+                }
+                if (_hasSightings) {
+                    document.getElementById('toggle-sightings').addEventListener('change', function () {
+                        const vis = this.checked ? 'visible' : 'none';
+                        ['sightings-shadow', 'sightings-circles', 'sightings-circles-active'].forEach(function (id) {
+                            map.setLayoutProperty(id, 'visibility', vis);
+                        });
+                    });
+                }
             }
         });
 
