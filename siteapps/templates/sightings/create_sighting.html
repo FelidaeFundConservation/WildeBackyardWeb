@@ -439,6 +439,17 @@
                                        accept=".gpx">
                                 <small class="text-muted">Walk/hike GPX file — displayed as a route line on the interactive map.</small>
                             </div>
+                            <!-- Optional bird calls GeoJSON for this bulk upload session -->
+                            <div class="mb-3">
+                                <label for="bulk_bird_calls_file" class="form-label fw-bold">
+                                    <i class="bi bi-music-note-beamed me-1"></i>Bird Calls <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                <input type="file"
+                                       class="form-control form-control-sm"
+                                       id="bulk_bird_calls_file"
+                                       accept=".geojson,.json">
+                                <small class="text-muted">GeoJSON FeatureCollection of Point features — each feature should have a <code>species</code> property with the bird's name.</small>
+                            </div>
                             <!-- File count / predictions badge -->
                             <div id="bulk_ready_row" class="d-none mb-3">
                                 <span id="bulk_file_count_badge" class="badge bg-secondary me-2"></span>
@@ -1433,6 +1444,11 @@ async function bulkSubmitSelected() {
     const gpxFile = gpxFileEl && gpxFileEl.files[0];
     if (gpxFile) {
       startFormData.append('gpx_file', gpxFile, gpxFile.name);
+    }
+    const birdCallsFileEl = document.getElementById('bulk_bird_calls_file');
+    const birdCallsFile = birdCallsFileEl && birdCallsFileEl.files[0];
+    if (birdCallsFile) {
+      startFormData.append('bird_calls_file', birdCallsFile, birdCallsFile.name);
     }
     const startResp = await fetch('/sightings/api/bulk-upload/start/', {
       method: 'POST',

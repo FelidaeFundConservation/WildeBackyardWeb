@@ -415,6 +415,20 @@ class StartBulkUploadView(APIView):
                 files={"gpx_file": (gpx_file.name, gpx_file, gpx_file.content_type or "application/gpx+xml")},
             )
 
+        # Forward bird calls GeoJSON file to backend if provided
+        bird_calls_file = request.FILES.get("bird_calls_file")
+        if bird_calls_file:
+            api_client.post_file(
+                f"/v1/socialmedia/api/bulk-upload/{session_id}/bird-calls/",
+                files={
+                    "bird_calls_file": (
+                        bird_calls_file.name,
+                        bird_calls_file,
+                        bird_calls_file.content_type or "application/geo+json",
+                    )
+                },
+            )
+
         return Response(
             {"id": session_id, "name": result["name"], "cover_image_url": None},
             status=status.HTTP_201_CREATED,
@@ -630,6 +644,9 @@ class BulkUploadDetailView(View):
         # GPX track returned by backend as [[lng, lat], ...] (already parsed coords)
         gpx_track = session.get("gpx_track", [])
 
+        # Bird calls GeoJSON FeatureCollection (or None)
+        bird_calls = session.get("bird_calls")
+
         return render(
             request,
             self.template_name,
@@ -639,6 +656,7 @@ class BulkUploadDetailView(View):
                 "sort_order": sort_order,
                 "sightings_geo": sightings_geo,
                 "gpx_track": gpx_track,
+                "bird_calls": bird_calls,
             },
         )
 
@@ -669,6 +687,41 @@ def upload_bulk_upload_gpx(request, pk):
         messages.error(request, "Failed to upload GPX track.")
     else:
         messages.success(request, "GPX track uploaded.")
+    return redirect("sightings:bulk_upload_detail", pk=pk)
+
+
+@login_required
+def upload_bulk_upload_bird_calls(request, pk):
+    """Accept a GeoJSON file POST and proxy it to the backend bulk upload session."""
+    from django.http import Http404
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        raise Http404
+
+    bird_calls_file = request.FILES.get("bird_calls_file")
+    if not bird_calls_file:
+        messages.error(request, "No bird calls GeoJSON file selected.")
+        return redirect("sightings:bulk_upload_detail", pk=pk)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.post_file(
+        f"/v1/socialmedia/api/bulk-upload/{pk}/bird-calls/",
+        files={
+            "bird_calls_file": (
+                bird_calls_file.name,
+                bird_calls_file,
+                bird_calls_file.content_type or "application/geo+json",
+            )
+        },
+    )
+    if result is None:
+        messages.error(request, "Failed to upload bird calls.")
+    else:
+        messages.success(request, f"Bird calls uploaded ({result.get('feature_count', '?')} calls).")
     return redirect("sightings:bulk_upload_detail", pk=pk)
 
 
