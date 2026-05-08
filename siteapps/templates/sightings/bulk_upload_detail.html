@@ -181,7 +181,7 @@
                     <!-- Interactive MapLibre GL map (shown only when sighting coordinates are available) -->
                     <div id="bulk-upload-map" style="display:none;"></div>
                     <!-- GPX track controls -->
-                    <div class="mt-2 d-flex justify-content-end align-items-center gap-2">
+                    <div class="mt-2 d-flex justify-content-end align-items-center gap-2 flex-wrap">
                         {% if upload.gpx_file %}
                             <span class="text-white-50 small">
                                 <i class="bi bi-check-circle-fill text-success me-1"></i>GPX track attached
@@ -195,6 +195,20 @@
                                 <i class="bi bi-map me-1"></i>Add GPX track
                             </button>
                         {% endif %}
+                        <!-- Bird calls controls -->
+                        {% if bird_calls %}
+                            <span class="text-white-50 small">
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>Bird calls attached
+                            </span>
+                        {% else %}
+                            <button class="btn btn-outline-light btn-sm"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#bird-calls-upload-form"
+                                    aria-expanded="false">
+                                <i class="bi bi-music-note-beamed me-1"></i>Add bird calls
+                            </button>
+                        {% endif %}
                     </div>
                     {% if not upload.gpx_file %}
                         <div class="collapse mt-2" id="gpx-upload-form">
@@ -206,6 +220,24 @@
                                     <input type="file" class="form-control" name="gpx_file" accept=".gpx">
                                     <button class="btn btn-success" type="submit">Upload</button>
                                 </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                    {% if not bird_calls %}
+                        <div class="collapse mt-2" id="bird-calls-upload-form">
+                            <form method="post"
+                                  action="{% url 'sightings:bulk_upload_bird_calls' upload.id %}"
+                                  enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm">
+                                    <input type="file"
+                                           class="form-control"
+                                           name="bird_calls_file"
+                                           accept=".geojson,.json"
+                                           placeholder="GeoJSON FeatureCollection">
+                                    <button class="btn btn-success" type="submit">Upload</button>
+                                </div>
+                                <small class="text-muted d-block mt-1">GeoJSON FeatureCollection of Point features — each feature should have a <code>species</code> property.</small>
                             </form>
                         </div>
                     {% endif %}
@@ -267,13 +299,17 @@
     <!-- Embed map data as safe JSON script tags (XSS-safe) -->
     {{ sightings_geo|json_script:"sightings-geo-data" }}
     {{ gpx_track|json_script:"gpx-track-data" }}
+    {{ bird_calls|json_script:"bird-calls-data" }}
     <script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
     <script>
     (function () {
         const SIGHTINGS = JSON.parse(document.getElementById('sightings-geo-data').textContent);
         const GPX_TRACK = JSON.parse(document.getElementById('gpx-track-data').textContent);
+        const BIRD_CALLS_RAW = document.getElementById('bird-calls-data').textContent;
+        const BIRD_CALLS = BIRD_CALLS_RAW && BIRD_CALLS_RAW !== 'null' ? JSON.parse(BIRD_CALLS_RAW) : null;
+        const hasBirdCalls = BIRD_CALLS && BIRD_CALLS.features && BIRD_CALLS.features.length > 0;
 
-        if (SIGHTINGS.length === 0 && GPX_TRACK.length === 0) {
+        if (SIGHTINGS.length === 0 && GPX_TRACK.length === 0 && !hasBirdCalls) {
             // No coordinate data — leave static cover image visible.
             return;
         }
@@ -309,6 +345,13 @@
                 map.fitBounds(
                     [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
                     { padding: 60 }
+                );
+            } else if (hasBirdCalls) {
+                const lngs = BIRD_CALLS.features.map(f => f.geometry.coordinates[0]);
+                const lats = BIRD_CALLS.features.map(f => f.geometry.coordinates[1]);
+                map.fitBounds(
+                    [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+                    { padding: 60, maxZoom: 16 }
                 );
             }
 
@@ -454,10 +497,87 @@
                 });
             }
 
+            // ── Bird calls markers ───────────────────────────────────────────
+            if (hasBirdCalls) {
+                map.addSource('bird-calls', { type: 'geojson', data: BIRD_CALLS });
+
+                // Outer ring.
+                map.addLayer({
+                    id: 'bird-calls-shadow',
+                    type: 'circle',
+                    source: 'bird-calls',
+                    paint: {
+                        'circle-radius': 10,
+                        'circle-color': 'rgba(0,0,0,0.20)',
+                        'circle-blur': 1,
+                        'circle-translate': [1, 2],
+                    },
+                });
+
+                map.addLayer({
+                    id: 'bird-calls-circles',
+                    type: 'circle',
+                    source: 'bird-calls',
+                    paint: {
+                        'circle-radius': 7,
+                        'circle-color': '#e8a000',
+                        'circle-stroke-color': '#fff',
+                        'circle-stroke-width': 2,
+                    },
+                });
+
+                // Highlighted state.
+                map.addLayer({
+                    id: 'bird-calls-active',
+                    type: 'circle',
+                    source: 'bird-calls',
+                    filter: ['==', ['get', 'species'], '__none__'],
+                    paint: {
+                        'circle-radius': 11,
+                        'circle-color': '#fd7e14',
+                        'circle-stroke-color': '#fff',
+                        'circle-stroke-width': 3,
+                    },
+                });
+
+                const birdPopup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    offset: 12,
+                });
+
+                map.on('mousemove', 'bird-calls-circles', function (e) {
+                    const props = e.features[0].properties;
+                    const species = props.species || props.common_name || props.name || 'Unknown species';
+                    const confidence = props.confidence ? (' <span style="color:#aaa;font-size:0.85em">' + Math.round(props.confidence * 100) + '%</span>') : '';
+                    map.setFilter('bird-calls-active', ['==', ['get', 'species'], props.species || '']);
+                    birdPopup.setLngLat(e.features[0].geometry.coordinates)
+                        .setHTML('<i class="bi bi-music-note-beamed" style="color:#e8a000"></i> <strong>' + species + '</strong>' + confidence)
+                        .addTo(map);
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+
+                map.on('mouseleave', 'bird-calls-circles', function () {
+                    map.setFilter('bird-calls-active', ['==', ['get', 'species'], '__none__']);
+                    birdPopup.remove();
+                    map.getCanvas().style.cursor = '';
+                });
+
+                map.on('click', 'bird-calls-circles', function (e) {
+                    const props = e.features[0].properties;
+                    const species = props.species || props.common_name || props.name || 'Unknown species';
+                    const confidence = props.confidence ? (' (' + Math.round(props.confidence * 100) + '%)') : '';
+                    new maplibregl.Popup({ offset: 12 })
+                        .setLngLat(e.features[0].geometry.coordinates)
+                        .setHTML('<i class="bi bi-music-note-beamed" style="color:#e8a000"></i> <strong>' + species + '</strong>' + confidence)
+                        .addTo(map);
+                });
+            }
+
             // ── Layer toggle control ─────────────────────────────────────────
             const _hasGpx = GPX_TRACK.length > 1;
             const _hasSightings = SIGHTINGS.length > 0;
-            if (_hasGpx || _hasSightings) {
+            if (_hasGpx || _hasSightings || hasBirdCalls) {
                 const panel = document.createElement('div');
                 panel.className = 'map-layer-control maplibregl-ctrl';
                 let html = '';
@@ -468,6 +588,10 @@
                 if (_hasSightings) {
                     html += '<label class="layer-toggle"><input type="checkbox" id="toggle-sightings" checked>' +
                         '<span class="layer-swatch-dot" style="background:#198754"></span>Sightings</label>';
+                }
+                if (hasBirdCalls) {
+                    html += '<label class="layer-toggle"><input type="checkbox" id="toggle-bird-calls" checked>' +
+                        '<span class="layer-swatch-dot" style="background:#e8a000"></span>Bird Calls</label>';
                 }
                 panel.innerHTML = html;
                 map.addControl({ onAdd: () => panel, onRemove: () => panel.remove() }, 'bottom-left');
@@ -481,6 +605,14 @@
                     document.getElementById('toggle-sightings').addEventListener('change', function () {
                         const vis = this.checked ? 'visible' : 'none';
                         ['sightings-shadow', 'sightings-circles', 'sightings-circles-active'].forEach(function (id) {
+                            map.setLayoutProperty(id, 'visibility', vis);
+                        });
+                    });
+                }
+                if (hasBirdCalls) {
+                    document.getElementById('toggle-bird-calls').addEventListener('change', function () {
+                        const vis = this.checked ? 'visible' : 'none';
+                        ['bird-calls-shadow', 'bird-calls-circles', 'bird-calls-active'].forEach(function (id) {
                             map.setLayoutProperty(id, 'visibility', vis);
                         });
                     });
