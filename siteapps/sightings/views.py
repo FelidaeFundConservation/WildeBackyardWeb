@@ -576,12 +576,16 @@ class BulkUploadHistoryView(View):
     def get(self, request):
         api_token = request.session.get("backend_api_token")
         uploads = []
+        api_error = False
         if api_token:
             api_client = BackendAPIClient(auth_token=api_token)
             result = api_client.get("/v1/socialmedia/api/bulk-upload/list/")
             if result is not None:
                 uploads = result
-        return render(request, self.template_name, {"uploads": uploads})
+            else:
+                api_error = True
+                messages.error(request, "Could not load upload history — backend API error. Please try again.")
+        return render(request, self.template_name, {"uploads": uploads, "api_error": api_error})
 
 
 @method_decorator(login_required, name="dispatch")
