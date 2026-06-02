@@ -56,6 +56,7 @@ static/
 
 # Media files
 media/
+config/media/
 
 # Logs
 *.log
