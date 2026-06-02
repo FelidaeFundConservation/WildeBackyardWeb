@@ -115,7 +115,7 @@ class BackendAPIClient:
             url = f"{self.base_url}{endpoint}"
             response = requests.delete(url, headers=self.headers, timeout=self.timeout)
             if response.status_code in [200, 204]:
-                return {}
+                return response.json() if response.text else {"status": "success"}
             else:
                 logger.warning(f"DELETE request failed for {endpoint}: {response.status_code}")
                 return None

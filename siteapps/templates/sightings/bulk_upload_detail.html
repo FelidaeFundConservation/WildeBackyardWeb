@@ -166,6 +166,15 @@
                            class="btn btn-outline-light btn-sm">
                             <i class="bi bi-arrow-left"></i> Back to History
                         </a>
+                        <form method="post"
+                              action="{% url 'sightings:bulk_upload_delete' upload.id %}"
+                              onsubmit="return confirm('Delete this upload and remove unshared associated sightings? This cannot be undone.');"
+                              class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i> Delete Upload
+                            </button>
+                        </form>
                     </div>
                 </div>
                 <!-- Flash messages from GPX upload -->
