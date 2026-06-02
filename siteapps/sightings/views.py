@@ -753,3 +753,34 @@ def rename_bulk_upload(request, pk):
     if result is None:
         return JsonResponse({"error": "Failed to rename session."}, status=502)
     return JsonResponse(result)
+
+
+@login_required
+def delete_bulk_upload(request, pk):
+    """Delete a bulk upload session via backend API."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    api_token = request.session.get("backend_api_token")
+    if not api_token:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    api_client = BackendAPIClient(auth_token=api_token)
+    result = api_client.delete(f"/v1/socialmedia/api/bulk-upload/{pk}/")
+    if result is None:
+        messages.error(request, "Failed to delete this bulk upload.")
+        return redirect("sightings:bulk_upload_detail", pk=pk)
+
+    deleted_post_count = result.get("deleted_post_count", 0)
+    retained_shared_post_count = result.get("retained_shared_post_count", 0)
+    messages.success(
+        request,
+        (
+            "Bulk upload deleted. "
+            f"Removed {deleted_post_count} unshared sighting"
+            f"{'s' if deleted_post_count != 1 else ''}; "
+            f"kept {retained_shared_post_count} shared sighting"
+            f"{'s' if retained_shared_post_count != 1 else ''}."
+        ),
+    )
+    return redirect("sightings:bulk_upload_history")

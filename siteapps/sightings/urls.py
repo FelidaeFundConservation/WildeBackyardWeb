@@ -28,4 +28,5 @@ urlpatterns = [
     path("bulk-upload/<uuid:pk>/gpx/", views.upload_bulk_upload_gpx, name="bulk_upload_gpx"),
     path("bulk-upload/<uuid:pk>/bird-calls/", views.upload_bulk_upload_bird_calls, name="bulk_upload_bird_calls"),
     path("bulk-upload/<uuid:pk>/rename/", views.rename_bulk_upload, name="bulk_upload_rename"),
+    path("bulk-upload/<uuid:pk>/delete/", views.delete_bulk_upload, name="bulk_upload_delete"),
 ]
