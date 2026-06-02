@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 from .base import *  # noqa
@@ -45,9 +46,10 @@ DATABASES = {"default": env.db("CLOUD_SQL_DATABASE_URL_STAGING")}
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=3600)  # noqa: F405
 
 # Enable Cloud SQL connection when on App Engine
-import os
 if os.getenv("GAE_APPLICATION", None):
-    DATABASES["default"]["HOST"] = f"/cloudsql/{env.str('CLOUD_SQL_CONNECTION_NAME', default='wildepod-339517:us-west2:wildepoddb')}"
+    DATABASES["default"][
+        "HOST"
+    ] = f"/cloudsql/{env.str('CLOUD_SQL_CONNECTION_NAME', default='wildepod-339517:us-west2:wildepoddb')}"
 
 # Make Google OAuth optional for staging
 GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
