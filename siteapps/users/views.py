@@ -88,20 +88,11 @@ class RegisterView(View):
         success, result = api_client.register_user(email, password, name)
 
         if success:
-            # Auto-login after successful registration
-            user = authenticate(request, email=email, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(
-                    request, f"Welcome to WildeBackyard, {user.name}! Please check your email to verify your account."
-                )
-                return redirect("home:home")
-            else:
-                # Registration succeeded but auto-login failed
-                messages.success(
-                    request, "Registration successful! Please check your email to verify your account, then log in."
-                )
-                return redirect("users:login")
+            messages.success(
+                request,
+                "Registration successful! Please check your email to verify your account, then log in.",
+            )
+            return redirect("users:login")
         else:
             # Display the specific error from the API
             messages.error(request, result)
