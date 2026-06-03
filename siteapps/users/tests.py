@@ -87,41 +87,26 @@ class RegisterViewTests(TestCase):
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(any("8 character" in m.lower() or "short" in m.lower() or "least" in m.lower() for m in msgs))
 
-    @patch("siteapps.users.views.authenticate")
     @patch("siteapps.users.views.BackendAPIClient")
-    def test_successful_registration_auto_login(self, mock_client_class, mock_auth):
-        new_user = make_user("fresh@example.com")
+    def test_successful_registration_redirects_to_login_without_auto_login(self, mock_client_class):
         mock_api = MagicMock()
         mock_api.register_user.return_value = (True, {"email": "fresh@example.com"})
         mock_client_class.return_value = mock_api
-        mock_auth.return_value = new_user
-
-        with patch("siteapps.users.views.login"):
-            response = self.client.post(
-                self.url,
-                {
-                    "email": "fresh@example.com",
-                    "password": "pass12345",
-                    "password_confirm": "pass12345",
-                    "name": "Fresh",
-                },
-            )
-        self.assertRedirects(response, reverse("home:home"), fetch_redirect_response=False)
-
-    @patch("siteapps.users.views.authenticate")
-    @patch("siteapps.users.views.BackendAPIClient")
-    def test_successful_registration_auto_login_fails(self, mock_client_class, mock_auth):
-        """Registration success but auto-login fails -> redirect to login."""
-        mock_api = MagicMock()
-        mock_api.register_user.return_value = (True, {"email": "nologin@example.com"})
-        mock_client_class.return_value = mock_api
-        mock_auth.return_value = None
 
         response = self.client.post(
             self.url,
-            {"email": "nologin@example.com", "password": "pass12345", "password_confirm": "pass12345"},
+            {
+                "email": "fresh@example.com",
+                "password": "pass12345",
+                "password_confirm": "pass12345",
+                "name": "Fresh",
+            },
         )
+
         self.assertRedirects(response, reverse("users:login"), fetch_redirect_response=False)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        msgs = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("verify your account" in m.lower() or "verify your email" in m.lower() for m in msgs))
 
     @patch("siteapps.users.views.BackendAPIClient")
     def test_registration_api_failure_shows_error(self, mock_client_class):
