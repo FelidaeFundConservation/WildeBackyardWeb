@@ -131,10 +131,10 @@
         </style>
     </head>
     <body class="d-flex flex-column h-100">
-        <header class="pb-4">
-            <nav class="navbar navbar-light navbar-expand-lg justify-content-center p-0 pt-1">
+        <header class="pb-4 shadow">
+            <nav class="navbar navbar-dark navbar-expand-lg p-0 pt-1">
                 <div class="container-fluid">
-                    <a class="navbar-brand d-flex w-50 me-auto" href="{% url 'home:home' %}">
+                    <a class="navbar-brand d-flex align-items-center" href="{% url 'home:home' %}">
                         <img class="img-fluid ms-2 ms-sm-3 ms-lg-4 pb-1"
                              src="{% static 'images/logo.webp' %}"
                              style="height: 60px"
@@ -147,70 +147,72 @@
                             }
                         </style>
                     </a>
-                    <button class="navbar-toggler"
+                    <button class="navbar-toggler text-white border-light"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#collapsingNavbar"
                             aria-controls="#collapsingNavbar"
                             aria-expanded="false"
                             aria-label="Toggle navigation">
-                        <i class="bi bi-list"></i>
+                        <i class="bi bi-list fs-3"></i>
                     </button>
-                    <div class="navbar-collapse collapse w-100" id="collapsingNavbar">
-                        <ul class="navbar-nav ms-auto w-100 justify-content-end text-center gap-2">
+                    <div class="navbar-collapse collapse" id="collapsingNavbar">
+                        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1 py-3 py-lg-0">
                             {% if user.is_authenticated and user.is_active %}
-                                <li class="nav-item mx-1 {% block nav_home %}{% endblock nav_home %} bevel">
-                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item {% block nav_home %}{% endblock nav_home %}">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        aria-current="page"
                                        href="{% url 'home:home' %}">Home</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-success bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'socialmedia:feed' %}">Feed</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-primary bg-opacity-75 rounded px-4 py-2"
-                                       href="{% url 'sightings:create' %}">Report Sighting</a>
-                                </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-info bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'sightings:map' %}">Sightings Map</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-warning bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'home:instructions' %}">Instructions</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'users:profile' %}">Profile</a>
                                 </li>
                                 {% if user.is_staff %}
-                                    <li class="nav-item mx-1 bevel">
-                                        <a class="nav-link fs-5 text-white bg-secondary bg-opacity-75 rounded px-4 py-2"
+                                    <li class="nav-item">
+                                        <a class="nav-link text-warning fw-medium px-3 py-2"
                                            href="{{ BACKEND_ADMIN_URL }}"
                                            target="_blank"
                                            rel="noopener noreferrer">Admin</a>
                                     </li>
                                 {% endif %}
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-danger bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link text-white-50 fw-medium px-3 py-2"
                                        href="{% url 'users:logout' %}">Logout</a>
                                 </li>
+                                <li class="nav-item ms-lg-2 my-2 my-lg-0">
+                                    <a class="btn btn-primary fw-semibold text-white rounded-pill px-3 w-100"
+                                       href="{% url 'sightings:create' %}">
+                                        <i class="bi bi-camera-fill me-1"></i>Report Sighting
+                                    </a>
+                                </li>
                             {% else %}
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-success bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'socialmedia:feed' %}">Feed</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-warning bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'home:instructions' %}">Instructions</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item">
+                                    <a class="nav-link link-light link-opacity-75 link-opacity-100-hover fw-medium px-3 py-2"
                                        href="{% url 'users:register' %}">Register</a>
                                 </li>
-                                <li class="nav-item mx-1 bevel">
-                                    <a class="nav-link fs-5 text-white bg-dark bg-opacity-75 rounded px-4 py-2"
+                                <li class="nav-item ms-lg-2 my-2 my-lg-0">
+                                    <a class="btn btn-primary fw-semibold text-white rounded-pill px-3 w-100"
                                        href="{% url 'users:login' %}">Sign In</a>
                                 </li>
                             {% endif %}
