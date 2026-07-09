@@ -1551,6 +1551,15 @@ function useCurrentDateTime() {
 // via DataTransfer so individual files can be removed after selection.
 let selectedMediaFiles = [];
 
+// Bumped every time the staged selection changes (add or remove). EXIF
+// extraction is asynchronous (FileReader -> Image.onload -> EXIF.getData),
+// so a slow extraction for a photo the user has since deleted/replaced can
+// otherwise resolve *after* a newer, faster extraction (or a delete) has
+// already run — silently reapplying stale camera/location/date data. Each
+// extraction call is stamped with the generation it started in and checks
+// it's still current before writing anything.
+let mediaGeneration = 0;
+
 // Whether camera_model / lat+lng currently hold values auto-filled from a
 // photo's EXIF data (vs. typed/picked by the user or loaded from a saved
 // location/device). Lets us safely clear stale EXIF values when the source
@@ -1579,40 +1588,55 @@ function setDateLocked(locked) {
   if (hint) hint.classList.toggle('d-none', !locked);
 }
 
+// Rebuilds the real #media_files input's FileList from selectedMediaFiles —
+// browsers only let you replace .files wholesale (via DataTransfer), not
+// append to it, so every mutation of the staged list goes through here.
+function syncMediaInput() {
+  const input = document.getElementById('media_files');
+  const dt = new DataTransfer();
+  selectedMediaFiles.forEach(file => dt.items.add(file));
+  input.files = dt.files;
+  if (selectedMediaFiles.length === 0) {
+    input.value = '';
+  }
+}
+
 function previewMultipleMedia(input) {
   if (!input.files || input.files.length === 0) {
-    selectedMediaFiles = [];
-    renderMediaPreviews();
+    // Dialog was cancelled — leave whatever's already staged untouched.
     return;
   }
 
   const maxSize = 500 * 1024 * 1024; // 500MB per file
+  const newFiles = Array.from(input.files);
 
-  // Validate number of files (use dynamically loaded limit)
-  if (input.files.length > maxSightingImages) {
-    alert(`You can only upload up to ${maxSightingImages} files at once.`);
-    input.value = '';
-    selectedMediaFiles = [];
-    renderMediaPreviews();
-    return;
-  }
-
-  // Validate file sizes up front so a bad file doesn't leave a half-built preview
-  for (const file of input.files) {
+  // Validate sizes up front so a bad file never gets merged in.
+  for (const file of newFiles) {
     if (file.size > maxSize) {
       alert(`File "${file.name}" is too large. Maximum size is 500MB.`);
-      input.value = '';
-      selectedMediaFiles = [];
-      renderMediaPreviews();
+      syncMediaInput(); // restore the input to the still-valid selection
       return;
     }
   }
 
-  selectedMediaFiles = Array.from(input.files);
+  // Opening the file picker again only ever hands back the files chosen in
+  // that dialog — merge them with whatever's already staged (instead of
+  // replacing it) so picking photos one at a time actually accumulates
+  // toward the limit, rather than each pick replacing the last.
+  const room = Math.max(maxSightingImages - selectedMediaFiles.length, 0);
+  if (newFiles.length > room) {
+    alert(`You can upload up to ${maxSightingImages} files total.${selectedMediaFiles.length ? ` You already have ${selectedMediaFiles.length}, so only ${room} more can be added right now.` : ''}`);
+  }
+  selectedMediaFiles = selectedMediaFiles.concat(newFiles.slice(0, room));
+
+  syncMediaInput();
   renderMediaPreviews();
 }
 
 function renderMediaPreviews() {
+  mediaGeneration++;
+  const thisGeneration = mediaGeneration;
+
   const preview = document.getElementById('mediaPreview');
   preview.innerHTML = '';
 
@@ -1671,7 +1695,7 @@ function renderMediaPreviews() {
 
         // Extract EXIF from first image only
         if (index === 0) {
-          extractExifGPS(e.target.result);
+          extractExifGPS(e.target.result, thisGeneration);
         }
       } else if (file.type.startsWith('video/')) {
         const sizeInfo = `${(file.size / (1024*1024)).toFixed(2)}MB`;
@@ -1700,15 +1724,7 @@ function renderMediaPreviews() {
 // #media_files input via DataTransfer so the removal is reflected on submit.
 function removeMediaFile(index) {
   selectedMediaFiles.splice(index, 1);
-
-  const input = document.getElementById('media_files');
-  const dt = new DataTransfer();
-  selectedMediaFiles.forEach(file => dt.items.add(file));
-  input.files = dt.files;
-  if (selectedMediaFiles.length === 0) {
-    input.value = '';
-  }
-
+  syncMediaInput();
   renderMediaPreviews();
 }
 
@@ -1717,7 +1733,7 @@ function previewMedia(input) {
   previewMultipleMedia(input);
 }
 
-function extractExifGPS(dataUrl) {
+function extractExifGPS(dataUrl, generation) {
   // Check if EXIF library is loaded
   if (typeof EXIF === 'undefined') {
     console.warn('EXIF library not loaded, skipping GPS extraction');
@@ -1731,6 +1747,12 @@ function extractExifGPS(dataUrl) {
   img.onload = function() {
     try {
       EXIF.getData(img, function() {
+        // The staged selection may have changed (file removed/replaced)
+        // while this async extraction was still in flight — if so, this
+        // result is for a file that's no longer relevant, so bail out
+        // rather than writing stale data over whatever's current now.
+        if (generation !== mediaGeneration) return;
+
         // What we found, for the "detected from your photo" summary panel —
         // shown regardless of whether each piece could auto-fill a field, so
         // the user always sees what was actually read off the file itself.
@@ -1866,15 +1888,15 @@ function showExifSummary(summary) {
 
   const cameraLine = summary.camera
     ? `<i class="bi bi-camera2 me-1"></i>${summary.camera}${summary.recognizedAsSaved ? ' <span class="badge bg-secondary">matched saved device</span>' : ''}`
-    : `<i class="bi bi-camera2 me-1"></i><span class="text-muted">Camera not detected — you can enter it in the Device step</span>`;
+    : `<i class="bi bi-camera2 me-1"></i><span class="text-muted">No device info found. You can manually add it later.</span>`;
 
   const dateLine = summary.dateTime
     ? `<i class="bi bi-calendar3 me-1"></i>${summary.dateTime}`
-    : `<i class="bi bi-calendar3 me-1"></i><span class="text-muted">Date/time not detected — you can enter it in the Time &amp; Place step</span>`;
+    : `<i class="bi bi-calendar3 me-1"></i><span class="text-muted">Missing date and time? No problem, just set them in the next step.</span>`;
 
   const gpsLine = summary.gpsFound
     ? `<i class="bi bi-geo-alt me-1"></i>${summary.gpsText}`
-    : `<i class="bi bi-geo-alt me-1"></i><span class="text-muted">We couldn't find a location tag in this file. No worries; you can easily pin it on the map in the next step!</span>`;
+    : `<i class="bi bi-geo-alt me-1"></i><span class="text-muted">We couldn't find a location tag. Feel free to pin it on the map next!</span>`;
 
   box.className = `alert ${summary.gpsFound ? 'alert-success' : 'alert-info'} mt-2 small mb-0`;
   box.innerHTML = `
