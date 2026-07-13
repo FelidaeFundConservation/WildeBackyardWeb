@@ -582,24 +582,10 @@ def convert_base64_bytes(media_bytes_base64, is_video=False):
 
 
 def create_media(media_bytes, content_hash, request, is_video=False):
-    _ = "MP4" if is_video else "JPEG"
-
-    # blob_service_client = BlobServiceClient(
-    # account_url=f"https://{settings.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/",
-    # credential=DefaultAzureCredential(),
-    # )
-
-    # blob_client = blob_service_client.get_blob_client(
-    # container=settings.AZURE_STORAGE_CONTAINER_NAME, blob=f"{content_hash}.{file_extension}"
-    # )
-
-    # blob_client.upload_blob(media_bytes, blob_type="BlockBlob")
-
     return Media.objects.create(
         content_hash=content_hash,
         uploaded_by=request.user,
         is_video=is_video,
-        # file_cloud_path=blob_client.url,  # Azure blob disabled
     )
 
 
