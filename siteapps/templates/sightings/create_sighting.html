@@ -700,6 +700,21 @@
                                     <input type="hidden" id="location_accuracy_meters" name="location_accuracy_meters" value="5">
                                 </div>
                             </div>
+                            <hr class="opacity-25 my-4">
+                            <div class="form-check" id="privacyConsentWrap">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="privacy_accepted"
+                                       name="privacy_accepted"
+                                       value="1"
+                                       required
+                                       onchange="updatePublishAvailability()">
+                                <label class="form-check-label" for="privacy_accepted">
+                                    I have read and agree to the
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#privacyPolicyModal">WildeBackyard Privacy Policy</a>,
+                                    including how the location of this sighting is stored and shared.
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -877,6 +892,39 @@
             </div>
         </div>
     </div>
+    <!-- Privacy policy — opened from the consent checkbox on the final step so the
+         user can read it without navigating away and losing the filled-in form. -->
+    <div class="modal fade"
+         id="privacyPolicyModal"
+         tabindex="-1"
+         aria-labelledby="privacyPolicyModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="privacyPolicyModalLabel">
+                        <i class="bi bi-shield-lock me-2"></i>WildeBackyard Privacy Policy
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">{% include "components/privacy_policy_content.html" %}</div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="privacyModalAgreeBtn"
+                            data-bs-dismiss="modal">
+                        <i class="bi bi-check-lg"></i> I Agree
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
 // -------------------------------------------------------
 // Taxon icons by group (MIT-licensed silhouettes from iNaturalist)
@@ -932,6 +980,7 @@ function showWizardStep(step) {
 
   if (step === WIZARD_TOTAL_STEPS) {
     renderPreview();
+    updatePublishAvailability();
   }
 
   currentWizardStep = step;
@@ -941,6 +990,36 @@ function showWizardStep(step) {
     window.scrollTo({ top: Math.max(progressEl.offsetTop - 20, 0), behavior: 'smooth' });
   }
 }
+
+// -------------------------------------------------------
+// Privacy policy consent
+// -------------------------------------------------------
+function privacyAccepted() {
+  const cb = document.getElementById('privacy_accepted');
+  return !!cb && cb.checked;
+}
+
+// Publish stays disabled until the policy is accepted, so the requirement is
+// visible before the user tries to submit rather than as a rejection after.
+function updatePublishAvailability() {
+  const publishBtn = document.getElementById('wizardPublishBtn');
+  if (!publishBtn) return;
+  const accepted = privacyAccepted();
+  publishBtn.disabled = !accepted;
+  publishBtn.title = accepted ? '' : 'Please accept the Privacy Policy to publish';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const agreeBtn = document.getElementById('privacyModalAgreeBtn');
+  if (agreeBtn) {
+    agreeBtn.addEventListener('click', function () {
+      const cb = document.getElementById('privacy_accepted');
+      if (cb) cb.checked = true;
+      updatePublishAvailability();
+    });
+  }
+  updatePublishAvailability();
+});
 
 function validateStep(step) {
   const container = document.querySelector(`.wizard-step[data-step="${step}"]`);
@@ -1321,11 +1400,16 @@ document.getElementById('sightingForm').addEventListener('submit', async functio
 
   const requiredFields = Array.from(document.querySelectorAll('#sightingForm [required]'));
   for (const field of requiredFields) {
-    if (!field.value || !field.value.toString().trim()) {
+    // A checkbox always reports value "on", so it has to be judged on `checked`.
+    const missing = field.type === 'checkbox'
+      ? !field.checked
+      : (!field.value || !field.value.toString().trim());
+    if (missing) {
       const stepEl = field.closest('.wizard-step');
       const step = stepEl ? parseInt(stepEl.dataset.step, 10) : null;
       if (step) showWizardStep(step);
       field.focus();
+      field.reportValidity();
       return;
     }
   }
@@ -2471,6 +2555,17 @@ async function bulkSubmitSelected() {
     return;
   }
 
+  // Bulk upload posts to the same endpoint as the wizard, so it needs the same consent.
+  if (!privacyAccepted()) {
+    showWizardStep(WIZARD_TOTAL_STEPS);
+    const cb = document.getElementById('privacy_accepted');
+    if (cb) {
+      cb.focus();
+      cb.reportValidity();
+    }
+    return;
+  }
+
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
   const total = bulkFiles.length;
   let done = 0;
@@ -2581,6 +2676,7 @@ async function bulkSubmitSelected() {
       formData.append('speciesnet_predictions', JSON.stringify(prediction));
     }
     formData.append('is_bulk_upload', '1');
+    formData.append('privacy_accepted', '1');
     if (bulkUploadId) {
       formData.append('bulk_upload_id', bulkUploadId);
     }

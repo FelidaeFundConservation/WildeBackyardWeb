@@ -93,6 +93,7 @@ class CreateSightingViewTests(TestCase):
                 "encounter_date": "2024-01-01",
                 "location_latitude": "45.0",
                 "location_longitude": "-93.0",
+                "privacy_accepted": "1",
             },
         )
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
@@ -113,6 +114,7 @@ class CreateSightingViewTests(TestCase):
                 "post_title": "Bird sighting",
                 "location_latitude": "45.0",
                 "location_longitude": "-93.0",
+                "privacy_accepted": "1",
             },
         )
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
@@ -132,6 +134,7 @@ class CreateSightingViewTests(TestCase):
             {
                 "post_title": "Bird",
                 "encounter_date": "2024-01-01",
+                "privacy_accepted": "1",
             },
         )
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
@@ -163,6 +166,7 @@ class CreateSightingViewTests(TestCase):
                 "privacy_setting": "public",
                 "location_accuracy_meters": "5",
                 "species_list": ["Robin"],
+                "privacy_accepted": "1",
             },
         )
         self.assertRedirects(response, reverse("socialmedia:feed"), fetch_redirect_response=False)
@@ -184,6 +188,7 @@ class CreateSightingViewTests(TestCase):
                 "encounter_date": "2024-01-01",
                 "location_latitude": "45.5",
                 "location_longitude": "-122.7",
+                "privacy_accepted": "1",
             },
         )
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
@@ -205,12 +210,50 @@ class CreateSightingViewTests(TestCase):
                 "encounter_date": "2024-01-01",
                 "location_latitude": "not_a_number",
                 "location_longitude": "-93.0",
+                "privacy_accepted": "1",
             },
         )
         msgs = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
             any("latitude" in m.lower() or "invalid" in m.lower() or "longitude" in m.lower() for m in msgs)
         )
+
+    @patch("siteapps.sightings.views.BackendAPIClient")
+    @patch("siteapps.sightings.views.reverse_geocode_with_nominatim")
+    def test_post_without_privacy_consent_is_rejected(self, mock_geocode, mock_client_class):
+        self._login_with_token()
+        mock_geocode.return_value = None
+        mock_api = MagicMock()
+        mock_api.get.return_value = {"species_names": []}
+        mock_client_class.return_value = mock_api
+
+        response = self.client.post(
+            self.url,
+            {
+                "post_title": "Bird sighting",
+                "encounter_date": "2024-01-01",
+                "encounter_time": "10:00",
+                "location_latitude": "45.5",
+                "location_longitude": "-122.7",
+                "privacy_setting": "public",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_api.post.assert_not_called()
+        msgs = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("privacy policy" in m.lower() for m in msgs))
+
+    def test_form_renders_privacy_consent_checkbox(self):
+        self._login_with_token()
+        response = self.client.get(self.url)
+        self.assertContains(response, 'name="privacy_accepted"')
+        self.assertContains(response, "privacyPolicyModal")
+        # The policy text itself is inlined in the modal, not just linked.
+        self.assertContains(response, "1. Information We Collect")
+        self.assertContains(response, "Last Updated:")
+        # A template placeholder must never reach a consent-gated document.
+        self.assertNotContains(response, "[Insert Contact Email]")
 
 
 class MySightingsViewTests(TestCase):
