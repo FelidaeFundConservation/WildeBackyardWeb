@@ -337,6 +337,16 @@ class BackendAPIClient:
             logger.error(f"Backend API connection error during password reset: {e}")
             return False
 
+    def confirm_email(self, key):
+        """Confirm a user's email in the backend using an allauth confirmation key."""
+        try:
+            url = f"{self.base_url}/v1/account/confirm-email/{key}/"
+            response = requests.get(url, timeout=self.timeout, allow_redirects=False)
+            return response.status_code in [200, 302]
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Backend API connection error during email confirmation: {e}")
+            return False
+
     def change_password(self, old_password, new_password1, new_password2):
         """
         Change the authenticated user's password via the Backend API.
