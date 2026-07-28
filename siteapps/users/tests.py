@@ -258,6 +258,35 @@ class DeleteAccountViewTests(TestCase):
             response = self.client.post(self.url, {"confirmation": user.name})
         self.assertRedirects(response, reverse("home:home"), fetch_redirect_response=False)
 
+
+class VerifyEmailViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch("siteapps.users.views.BackendAPIClient")
+    def test_verify_email_success_redirects_to_login_with_success_message(self, mock_client_class):
+        mock_api = MagicMock()
+        mock_api.confirm_email.return_value = True
+        mock_client_class.return_value = mock_api
+
+        response = self.client.get(reverse("users:verify_email", kwargs={"key": "abc123"}))
+
+        self.assertRedirects(response, reverse("users:login"), fetch_redirect_response=False)
+        msgs = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("verified" in m.lower() for m in msgs))
+
+    @patch("siteapps.users.views.BackendAPIClient")
+    def test_verify_email_failure_redirects_to_login_with_error_message(self, mock_client_class):
+        mock_api = MagicMock()
+        mock_api.confirm_email.return_value = False
+        mock_client_class.return_value = mock_api
+
+        response = self.client.get(reverse("users:verify_email", kwargs={"key": "bad-key"}))
+
+        self.assertRedirects(response, reverse("users:login"), fetch_redirect_response=False)
+        msgs = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("invalid" in m.lower() or "expired" in m.lower() for m in msgs))
+
     @patch("siteapps.users.views.BackendAPIClient")
     def test_failed_deletion_shows_error(self, mock_client_class):
         user = self._login_user()
