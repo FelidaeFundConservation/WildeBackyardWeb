@@ -131,6 +131,10 @@ STORAGES = {
     },
 }
 
+# In staging deploys we do not ship collected staticfiles artifacts,
+# so allow WhiteNoise to serve files discovered via STATICFILES_DIRS.
+WHITENOISE_USE_FINDERS = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
