@@ -23,6 +23,8 @@ env:
   GCP_REGION: us-central1
   ENVIRONMENT: staging
   PYTHON_VERSION: '3.12'
+  STAGING_WEB_SERVICE: staging-web
+  STAGING_BACKEND_SERVICE: staging-api
   
 jobs:
   test:
@@ -37,7 +39,7 @@ jobs:
       DJANGO_SETTINGS_MODULE: config.settings.local
       DJANGO_ADMIN_URL: admin/
       # Backend API URL for staging
-      BACKEND_API_URL: https://wildebackyard-api-dot-wildepod-339517.wl.r.appspot.com
+      BACKEND_API_URL: ${{ secrets.BACKEND_API_URL_STAGING || format('https://{0}-dot-{1}.wl.r.appspot.com', env.STAGING_BACKEND_SERVICE, secrets.GCP_PROJECT_ID) }}
     
     steps:
     - name: Checkout code
@@ -202,9 +204,60 @@ jobs:
           # Attempt to collect static files (dummy DB URL not needed for collectstatic)
           python manage.py collectstatic --noinput --settings=config.settings.staging || echo "Static collection skipped"
 
+      - name: Build staging deploy config
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          CLOUD_SQL_DATABASE_URL_STAGING: ${{ secrets.CLOUD_SQL_DATABASE_URL_STAGING }}
+          CLOUD_SQL_CONNECTION_NAME_STAGING: ${{ secrets.CLOUD_SQL_CONNECTION_NAME_STAGING }}
+          BACKEND_API_URL_STAGING: ${{ secrets.BACKEND_API_URL_STAGING }}
+          STAGING_WEB_SERVICE: ${{ env.STAGING_WEB_SERVICE }}
+          STAGING_BACKEND_SERVICE: ${{ env.STAGING_BACKEND_SERVICE }}
+          GCP_PROJECT_ID: ${{ env.GCP_PROJECT_ID }}
+        run: |
+          if [ -z "$DJANGO_SECRET_KEY" ]; then
+            echo "Error: DJANGO_SECRET_KEY secret is required for staging deploy"
+            exit 1
+          fi
+          if [ -z "$CLOUD_SQL_DATABASE_URL_STAGING" ]; then
+            echo "Error: CLOUD_SQL_DATABASE_URL_STAGING secret is required for staging deploy"
+            exit 1
+          fi
+
+          CONNECTION_NAME=${CLOUD_SQL_CONNECTION_NAME_STAGING:-wildepod-339517:us-west2:wildepoddb}
+          BACKEND_URL=${BACKEND_API_URL_STAGING:-https://${STAGING_BACKEND_SERVICE}-dot-${GCP_PROJECT_ID}.wl.r.appspot.com}
+
+          cat > app.staging.generated.yaml <<EOF
+          runtime: python310
+          service: ${STAGING_WEB_SERVICE}
+          instance_class: F1
+
+          entrypoint: gunicorn -t 300 -b :\$PORT config.wsgi.staging:application
+
+          beta_settings:
+            cloud_sql_instances: ${CONNECTION_NAME}
+
+          env_variables:
+            DJANGO_SETTINGS_MODULE: "config.settings.staging"
+            PYTHON_ENV: "staging"
+            DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
+            CLOUD_SQL_CONNECTION_NAME: "${CONNECTION_NAME}"
+            CLOUD_SQL_DATABASE_URL_STAGING: "${CLOUD_SQL_DATABASE_URL_STAGING}"
+            BACKEND_API_URL: "${BACKEND_URL}"
+
+          automatic_scaling:
+            min_idle_instances: 0
+            max_idle_instances: 2
+            min_pending_latency: 1000ms
+            max_pending_latency: 3000ms
+            max_concurrent_requests: 50
+          EOF
+
+          python -c "import yaml; yaml.safe_load(open('app.staging.generated.yaml'))"
+          echo "✓ Generated app.staging.generated.yaml"
+
       - name: Deploy to App Engine
         run: |
-          gcloud app deploy app.yaml \
+          gcloud app deploy app.staging.generated.yaml \
             --project=$GCP_PROJECT_ID \
             --verbosity=debug \
             --no-promote \
@@ -214,6 +267,6 @@ jobs:
         id: deployment
         run: |
           VERSION=$(echo $GITHUB_SHA | cut -c1-7)
-          URL="https://${VERSION}-dot-staging-dot-${GCP_PROJECT_ID}.appspot.com"
+          URL="https://${VERSION}-dot-${STAGING_WEB_SERVICE}-dot-${GCP_PROJECT_ID}.wl.r.appspot.com"
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
