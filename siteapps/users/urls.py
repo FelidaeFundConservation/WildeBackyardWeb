@@ -11,6 +11,7 @@ from .views import (
     RegisterView,
     ResendVerificationView,
     UpdateDefaultLicenseView,
+    VerifyEmailView,
 )
 
 app_name = "users"
@@ -25,5 +26,6 @@ urlpatterns = [
     path("profile/update-default-license/", UpdateDefaultLicenseView.as_view(), name="update_default_license"),
     path("profile/delete-account/", DeleteAccountView.as_view(), name="delete_account"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="password_reset"),
+    path("verify-email/<str:key>/", VerifyEmailView.as_view(), name="verify_email"),
     path("resend-verification/", ResendVerificationView.as_view(), name="resend_verification"),
 ]
