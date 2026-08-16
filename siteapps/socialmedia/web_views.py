@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 
 from siteapps.users.api_client import BackendAPIClient
 
@@ -45,7 +46,10 @@ def _normalize_post(post):
     post["media_url"] = media.get("url")
     post["is_video"] = media.get("is_video", False)
     post["user_name"] = post.get("created_by")
-    post["created"] = post.get("encounter_datetime")
+    # API returns "created" as an ISO string; the |date: template filter silently
+    # renders "" for a raw string, so it must be parsed into a datetime here.
+    raw_created = post.get("created")
+    post["created"] = parse_datetime(raw_created) if isinstance(raw_created, str) else raw_created
     additional = post.get("additional_info") or {}
     post["camera_model"] = additional.get("camera_model")
     post["iucn_habitat_lvl1"] = additional.get("iucn_habitat_lvl1_name")
@@ -674,7 +678,7 @@ def load_more_posts(request):
             "media_url": media_url,
             "is_video": is_video,
             "user_name": post.get("created_by"),
-            "created": post.get("encounter_datetime"),
+            "created": post.get("created"),
             "geocoded_location": post.get("geocoded_location"),
             "likes_count": post.get("likes_count", 0),
             "comments_count": post.get("comments_count", 0),

@@ -1,6 +1,7 @@
 """Tests for siteapps/socialmedia/web_views.py"""
 
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from django.contrib.messages import get_messages
@@ -25,6 +26,9 @@ FAKE_POST = {
     "species": [{"name": "Robin"}],
     "media": {"url": "https://example.com/img.jpg", "is_video": False},
     "created_by": "testuser",
+    # Deliberately distinct from encounter_datetime so tests can catch _normalize_post
+    # falling back to the wrong field (see WildeBackyardBackend serialize_post).
+    "created": "2024-01-01T09:15:00Z",
     "encounter_datetime": "2024-01-01T12:00:00Z",
     "additional_info": {"camera_model": "Canon", "habitat_type": "Forest"},
     "geocoded_location": "Portland, OR",
@@ -73,6 +77,11 @@ class FeedViewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context["posts"]), 1)
+        # Must reflect the post's actual creation time, not encounter_datetime.
+        self.assertEqual(
+            response.context["posts"][0]["created"],
+            datetime(2024, 1, 1, 9, 15, tzinfo=timezone.utc),
+        )
 
     @patch("siteapps.socialmedia.web_views.BackendAPIClient")
     def test_species_filter_passed_to_api(self, mock_client_class):
@@ -545,6 +554,9 @@ class LoadMorePostsViewTests(TestCase):
         data = response.json()
         self.assertIn("posts", data)
         self.assertFalse(data["has_more"])
+        # JSON endpoint passes the raw ISO string through (JS parses it), and it
+        # must be the post's actual creation time, not encounter_datetime.
+        self.assertEqual(data["posts"][0]["created"], "2024-01-01T09:15:00Z")
 
     @patch("siteapps.socialmedia.web_views.BackendAPIClient")
     def test_api_failure_returns_500(self, mock_client_class):
