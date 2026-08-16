@@ -10,8 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 import socket
 from pathlib import Path
+from urllib.parse import quote_plus
+
+from google.cloud import secretmanager
 
 from .base import *  # noqa
 from .base import env
@@ -48,9 +52,41 @@ SITE_ID = 1
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+
+def _get_db_password() -> str:
+    """Retrieve the database password from Google Secret Manager.
+
+    On App Engine, the default service account is used automatically.
+    Falls back to the DATABASE_PASSWORD env var for local development.
+    """
+    try:
+        client = secretmanager.SecretManagerServiceClient()
+        name = "projects/wildepod-339517/secrets/wildebackyard_api_db_password/versions/latest"
+        response = client.access_secret_version(request={"name": name})
+        return response.payload.data.decode("UTF-8")
+    except Exception:
+        # Fallback for local dev / environments without Secret Manager access
+        return env.str("DATABASE_PASSWORD", default="")
+
+
 # DATABASES
 # ------------------------------------------------------------------------------
-DATABASES = {"default": env.db("DATABASE_URL_PROD")}
+DB_USER = env.str("DB_USER", default="wildepod_wildebackyard_api_user")
+DB_NAME = env.str("DB_NAME", default="wildebackyard_api_prod")
+CLOUD_SQL_CONNECTION_NAME = env.str(
+    "CLOUD_SQL_CONNECTION_NAME",
+    default="wildepod-339517:us-west2:wildepoddb",
+)
+DB_PASSWORD = _get_db_password()
+
+# Construct the database URL and parse with django-environ
+_encoded_password = quote_plus(DB_PASSWORD)
+DATABASE_URL = (
+    f"postgres://{DB_USER}:{_encoded_password}"
+    f"@/{DB_NAME}?host=/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
+)
+
+DATABASES = {"default": env.db_url(DATABASE_URL)}
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=3600)  # noqa: F405
 
 # Password validation

@@ -13,7 +13,8 @@ env_variables:
   PYTHON_ENV: "production"
   DJANGO_SECRET_KEY: "TEMPORARY_SECRET_KEY_CHANGE_IN_PRODUCTION"
   CLOUD_SQL_CONNECTION_NAME: "wildepod-339517:us-west2:wildepoddb"
-  DATABASE_URL_PROD: "postgres://wildepod_wildebackyard_api_user:%2FnoABg6yCIUL5IMmueBRyYcqPMwvouxPBPXRbI%2BP%2BMU%3D@/wildebackyard_api_prod?host=/cloudsql/wildepod-339517:us-west2:wildepoddb"
+  DB_USER: "wildepod_wildebackyard_api_user"
+  DB_NAME: "wildebackyard_api_prod"
   BACKEND_API_URL: "https://wildebackyard-api-dot-wildepod-339517.wl.r.appspot.com"
 
 automatic_scaling:
@@ -22,3 +23,4 @@ automatic_scaling:
   min_pending_latency: 1000ms
   max_pending_latency: 3000ms
   max_concurrent_requests: 50
+
