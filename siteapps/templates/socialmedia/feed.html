@@ -1,5 +1,6 @@
 {% extends "_base.html" %}
 {% load static %}
+{% load humanize %}
 {% block title %}
     Wildlife Feed - WildeBackyard
 {% endblock title %}
@@ -337,10 +338,13 @@
                                 {% endif %}
                                 <div class="card-body">
                                     <h5 class="card-title">{{ post.title }}</h5>
+                                    <p class="card-text mb-1">
+                                        <i class="bi bi-calendar-event"></i>
+                                        <strong>{{ post.created|date:"M j, Y, g:i A" }}</strong>
+                                        <span class="text-muted small">({{ post.created|naturaltime }})</span>
+                                    </p>
                                     <p class="card-text text-muted small">
                                         <i class="bi bi-person"></i> {{ post.user_name|default:"Anonymous" }}
-                                        <span class="mx-2">•</span>
-                                        <i class="bi bi-calendar"></i> {{ post.created|date:"M d, Y" }}
                                     </p>
                                     {% if post.body %}<p class="card-text">{{ post.body|truncatewords:30 }}</p>{% endif %}
                                     {% if post.geocoded_location %}
@@ -408,11 +412,30 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function formatDate(dateString) {
+function formatRelativeTime(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    if (isNaN(date.getTime())) return '';
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`;
+    const years = Math.floor(days / 365);
+    return `${years} year${years !== 1 ? 's' : ''} ago`;
+}
+
+function formatAbsoluteDateTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    return date.toLocaleString('en-US', options);
 }
 
 function truncateWords(text, wordLimit) {
@@ -474,10 +497,13 @@ function createPostCard(post) {
                 ${mediaHtml}
                 <div class="card-body">
                     <h5 class="card-title">${escapeHtml(post.title)}</h5>
+                    <p class="card-text mb-1">
+                        <i class="bi bi-calendar-event"></i>
+                        <strong>${formatAbsoluteDateTime(post.created)}</strong>
+                        <span class="text-muted small">(${formatRelativeTime(post.created)})</span>
+                    </p>
                     <p class="card-text text-muted small">
                         <i class="bi bi-person"></i> ${escapeHtml(post.user_name || 'Anonymous')}
-                        <span class="mx-2">•</span>
-                        <i class="bi bi-calendar"></i> ${formatDate(post.created)}
                     </p>
                     ${bodyHtml}
                     ${locationHtml}

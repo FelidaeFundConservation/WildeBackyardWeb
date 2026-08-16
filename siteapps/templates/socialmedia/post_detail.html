@@ -1,5 +1,6 @@
 {% extends "_base.html" %}
 {% load static %}
+{% load humanize %}
 {% block title %}
     {{ post.title }} - WildeBackyard
 {% endblock title %}
@@ -69,10 +70,15 @@
                     <div class="card-body">
                         <h1 class="card-title">{{ post.title }}</h1>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="text-muted">
-                                <i class="bi bi-person-circle"></i> <strong>{{ post.user_name|default:"Anonymous" }}</strong>
-                                <span class="mx-2">•</span>
-                                <i class="bi bi-calendar"></i> {{ post.created|date:"F d, Y \a\t g:i A" }}
+                            <div>
+                                <div>
+                                    <i class="bi bi-calendar-event"></i>
+                                    <strong>{{ post.created|date:"F j, Y, g:i A" }}</strong>
+                                    <span class="text-muted small">({{ post.created|naturaltime }})</span>
+                                </div>
+                                <div class="text-muted">
+                                    <i class="bi bi-person-circle"></i> {{ post.user_name|default:"Anonymous" }}
+                                </div>
                             </div>
                             {% if user.is_authenticated %}
                                 <div class="btn-group">
