@@ -67,6 +67,12 @@ class CreateSightingView(View):
             messages.error(request, "Authentication required.")
             return redirect("users:login")
 
+        # Consent is enforced here as well as in the form, so a direct POST
+        # cannot skip it.
+        if not request.POST.get("privacy_accepted"):
+            messages.error(request, "You must accept the Privacy Policy before publishing a sighting.")
+            return self.get(request)
+
         # Extract form data and transform to camelCase format for backend API
         encounter_date = request.POST.get("encounter_date")
         encounter_time = request.POST.get("encounter_time", "12:00")
@@ -139,6 +145,8 @@ class CreateSightingView(View):
             data["obfuscationKilometers"] = obfuscation_km
         elif data.get("privacySetting") == "obscured":
             data["obfuscationKilometers"] = 2  # Default 2km when obscured and not explicitly set
+        if request.POST.get("device_type"):
+            data["deviceType"] = request.POST.get("device_type")
         if request.POST.get("camera_model"):
             data["cameraModel"] = request.POST.get("camera_model")
         if request.POST.get("camera_deployment_date"):
