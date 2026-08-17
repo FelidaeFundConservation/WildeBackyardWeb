@@ -1,3 +1,6 @@
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """Tests for users views, auth backend, and BackendAPIClient."""
 
 from unittest.mock import MagicMock, patch

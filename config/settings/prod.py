@@ -1,3 +1,6 @@
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """
 Django settings for project_restoration project.
 

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 # Start WildeBackyard Web Server
 
 cd "$(dirname "$0")"
