@@ -1,3 +1,6 @@
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
