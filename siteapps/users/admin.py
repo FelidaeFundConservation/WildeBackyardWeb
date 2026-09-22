@@ -1,3 +1,6 @@
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
