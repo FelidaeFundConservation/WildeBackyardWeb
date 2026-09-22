@@ -37,6 +37,191 @@
     content: " *";
     color: red;
   }
+  .date-field-locked {
+    background-color: #e9ecef !important;
+    color: #495057;
+  }
+  .media-remove-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+    color: rgba(255, 255, 255, 0.75);
+    opacity: 0.55;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+  }
+  .media-remove-btn i {
+    font-size: 0.8rem;
+  }
+  .media-remove-btn:hover,
+  .media-remove-btn:focus {
+    opacity: 1;
+    background: rgba(220, 53, 69, 0.85);
+    color: #fff;
+  }
+
+  /* ---------------- Wizard progress bar ---------------- */
+  .wizard-progress {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+  }
+  .wizard-progress .wp-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    cursor: default;
+  }
+  .wizard-progress .wp-step.completed {
+    cursor: pointer;
+  }
+  .wizard-progress .wp-step .wp-circle {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #fff;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 2;
+  }
+  .wizard-progress .wp-step .wp-label {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    text-align: center;
+    color: #fff;
+    font-weight: 500;
+    max-width: 6rem;
+  }
+  .wizard-progress .wp-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 1.25rem;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+    z-index: 1;
+  }
+  .wizard-progress .wp-step.active .wp-circle {
+    background: var(--primary-light, #69a68a);
+    border-color: var(--primary-light, #69a68a);
+    box-shadow: 0 0 0 4px rgba(105,166,138,0.3);
+  }
+  .wizard-progress .wp-step.completed .wp-circle {
+    background: var(--primary-dark, #34483f);
+    border-color: var(--primary-dark, #34483f);
+  }
+  .wizard-progress .wp-step.completed:not(:last-child)::after {
+    background: var(--primary-dark, #34483f);
+  }
+  .wizard-progress .wp-step .wp-check { display: none; }
+  .wizard-progress .wp-step.completed .wp-num { display: none; }
+  .wizard-progress .wp-step.completed .wp-check { display: inline; }
+  .wizard-step { animation: wizardFadeIn 0.25s ease; }
+  @keyframes wizardFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .preview-card {
+    background: #f3f8f5;
+    border: 1px solid var(--primary-light, #69a68a);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  /* Feed-style preview card — mirrors the sighting feed card layout so
+     Preview & Publish reads like the real post: media on top, then title,
+     byline, description and location, all editable in place. */
+  .feed-preview-card {
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+  }
+  .feed-card-media {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    background: #dcdfe1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8a9096;
+    overflow: hidden;
+  }
+  .feed-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .feed-video-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .feed-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+  }
+  .feed-card-body {
+    padding: 1.25rem;
+  }
+  .feed-title-input {
+    border: none;
+    padding: 0.15rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .feed-title-input:focus {
+    box-shadow: none;
+    outline: 1px dashed var(--primary-light, #69a68a);
+    outline-offset: 2px;
+  }
+  .feed-description-input {
+    border: none;
+    padding: 0.15rem 0;
+    resize: vertical;
+    color: #333;
+  }
+  .feed-description-input:focus {
+    box-shadow: none;
+    outline: 1px dashed var(--primary-light, #69a68a);
+    outline-offset: 2px;
+  }
     </style>
 {% endblock header_includes %}
 {% block content %}
@@ -53,312 +238,491 @@
                         </div>
                     {% endfor %}
                 {% endif %}
+
+                <!-- Wizard Progress Indicator -->
+                <div class="wizard-progress" id="wizardProgress">
+                    <div class="wp-step active" data-wp-step="1" onclick="goToWizardStep(1)">
+                        <div class="wp-circle"><span class="wp-num">1</span><i class="bi bi-check-lg wp-check"></i></div>
+                        <div class="wp-label">Media</div>
+                    </div>
+                    <div class="wp-step" data-wp-step="2" onclick="goToWizardStep(2)">
+                        <div class="wp-circle"><span class="wp-num">2</span><i class="bi bi-check-lg wp-check"></i></div>
+                        <div class="wp-label">Time &amp; Place</div>
+                    </div>
+                    <div class="wp-step" data-wp-step="3" onclick="goToWizardStep(3)">
+                        <div class="wp-circle"><span class="wp-num">3</span><i class="bi bi-check-lg wp-check"></i></div>
+                        <div class="wp-label">Species</div>
+                    </div>
+                    <div class="wp-step" data-wp-step="4" onclick="goToWizardStep(4)">
+                        <div class="wp-circle"><span class="wp-num">4</span><i class="bi bi-check-lg wp-check"></i></div>
+                        <div class="wp-label">Device</div>
+                    </div>
+                    <div class="wp-step" data-wp-step="5" onclick="goToWizardStep(5)">
+                        <div class="wp-circle"><span class="wp-num">5</span><i class="bi bi-check-lg wp-check"></i></div>
+                        <div class="wp-label">Preview</div>
+                    </div>
+                </div>
+                <p class="text-center text-white mb-4" id="wizardStepCaption">Step 1 of 5 — Media Upload</p>
+
                 <form method="post" enctype="multipart/form-data" id="sightingForm">
                     {% csrf_token %}
-                    <!-- Media Upload Section -->
-                    <div class="form-section">
-                        <h3>
-                            <i class="bi bi-camera"></i> Media Upload
-                        </h3>
-                        <div class="mb-3">
-                            <label for="media_files" class="form-label">Photos or Videos</label>
-                            <input type="file"
-                                   class="form-control"
-                                   id="media_files"
-                                   name="media_files"
-                                   accept="image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo"
-                                   onchange="previewMultipleMedia(this)"
-                                   multiple>
-                            <small id="mediaHelpText" class="text-muted">Upload up to 5 images or videos (max 500MB each). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
-                        </div>
-                        <div id="mediaPreview" class="row g-2"></div>
-                    </div>
-                    <!-- Species Selection Section -->
-                    <div class="form-section">
-                        <h3>
-                            <i class="bi bi-search"></i> Species Identification
-                        </h3>
-                        <p class="text-muted mb-3">
-                            Add up to 5 species observed in this sighting. The first entry is the primary identification.
-                        </p>
-                        <div id="species-container">
-                            <!-- Species rows added by JS -->
-                        </div>
-                        <div class="d-flex align-items-center gap-3 mt-2">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary"
-                                    id="add-species-btn"
-                                    onclick="addSpeciesRow()">
-                                <i class="bi bi-plus-circle"></i> Add Another Species
-                            </button>
-                            <small class="text-muted" id="species-count-hint">1 of 5 max</small>
+
+                    <!-- ============ STEP 1: Media ============ -->
+                    <div class="wizard-step" data-step="1">
+                        <div class="form-section">
+                            <h3>
+                                <i class="bi bi-camera"></i> Media Upload
+                            </h3>
+                            <div class="mb-3">
+                                <label for="media_files" class="form-label">Photos or Videos</label>
+                                <input type="file"
+                                       class="form-control"
+                                       id="media_files"
+                                       name="media_files"
+                                       accept="image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                                       onchange="previewMultipleMedia(this)"
+                                       multiple>
+                                <small id="mediaHelpText" class="text-muted">Upload up to 5 images or videos (max 500MB each). Supported formats: JPEG, PNG, MP4, WebM, MOV, AVI</small>
+                            </div>
+                            <div id="mediaPreview" class="row g-2"></div>
+                            <div id="exifSummary" class="d-none"></div>
                         </div>
                     </div>
-                    <!-- Location Section -->
-                    <div class="form-section">
-                        <h3 class="required-field">
-                            <i class="bi bi-geo-alt"></i> Location
-                        </h3>
-                        <div class="mb-3">
-                            <label for="saved_location" class="form-label">Use Saved Location</label>
-                            <select class="form-select"
-                                    id="saved_location"
-                                    name="saved_location"
-                                    onchange="loadSavedLocation()">
-                                <option value="">-- Enter new location below --</option>
-                            </select>
-                            <small class="text-muted">Select a previously saved location or enter coordinates manually below. <a href="{% url 'sightings:manage_locations' %}">Manage saved locations</a></small>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="location_latitude" class="form-label required-field">Latitude</label>
-                                <input type="number"
-                                       step="any"
-                                       class="form-control"
-                                       id="location_latitude"
-                                       name="location_latitude"
-                                       required>
+
+                    <!-- ============ STEP 2: Time & Place ============ -->
+                    <div class="wizard-step d-none" data-step="2">
+                        <div class="form-section">
+                            <h3 class="required-field">
+                                <i class="bi bi-geo-alt"></i> Time &amp; Place
+                            </h3>
+                            <div class="mb-3">
+                                <label class="form-label d-block">Where is this?</label>
+                                <div class="btn-group mb-2" role="group" aria-label="Location source">
+                                    <input type="radio" class="btn-check" name="location_mode" id="location_mode_saved" checked onchange="locationModeUserChosen = true; setLocationMode('saved')">
+                                    <label class="btn btn-outline-primary btn-sm" for="location_mode_saved">Saved Location</label>
+                                    <input type="radio" class="btn-check" name="location_mode" id="location_mode_new" onchange="locationModeUserChosen = true; setLocationMode('new')">
+                                    <label class="btn btn-outline-primary btn-sm" for="location_mode_new">New Location</label>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="location_longitude" class="form-label required-field">Longitude</label>
-                                <input type="number"
-                                       step="any"
-                                       class="form-control"
-                                       id="location_longitude"
-                                       name="location_longitude"
-                                       required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary"
-                                    onclick="getCurrentLocation()">
-                                <i class="bi bi-crosshair"></i> Use Current Location
-                            </button>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary"
-                                    onclick="pickLocationOnMap()">
-                                <i class="bi bi-map"></i> Pick on Map
-                            </button>
-                        </div>
-                        <div id="map" class="mb-3"></div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="privacy_setting" class="form-label">Privacy Setting</label>
-                                <select class="form-select" id="privacy_setting" name="privacy_setting">
-                                    <option value="public">Public (Exact Location)</option>
-                                    <option value="obscured" selected>Approximate (Obfuscated)</option>
-                                    <option value="private">Hidden (No Location Shown)</option>
+                            <div id="saved_location_wrap" class="mb-3">
+                                <label for="saved_location" class="form-label">Use Saved Location</label>
+                                <select class="form-select"
+                                        id="saved_location"
+                                        name="saved_location"
+                                        onchange="loadSavedLocation()">
+                                    <option value="">-- Select a saved location --</option>
                                 </select>
+                                <small class="text-muted">Select a previously saved location, or switch to "New Location" to enter one manually. <a href="{% url 'sightings:manage_locations' %}">Manage saved locations</a></small>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="obfuscation_kilometers" class="form-label">Obfuscation Radius (km)</label>
+                            <div id="new_location_wrap" class="d-none mb-3">
+                                <div class="mb-2">
+                                    <label for="new_location_name" class="form-label small">
+                                        Name this location <span class="text-muted">(optional)</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="new_location_name"
+                                           placeholder="e.g., My Backyard"
+                                           maxlength="100">
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="save_new_location">
+                                    <label class="form-check-label" for="save_new_location">Save this location for next time</label>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="location_latitude" class="form-label required-field">Latitude</label>
+                                    <input type="number"
+                                           step="any"
+                                           class="form-control"
+                                           id="location_latitude"
+                                           name="location_latitude"
+                                           required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="location_longitude" class="form-label required-field">Longitude</label>
+                                    <input type="number"
+                                           step="any"
+                                           class="form-control"
+                                           id="location_longitude"
+                                           name="location_longitude"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        onclick="getCurrentLocation()">
+                                    <i class="bi bi-crosshair"></i> Use Current Location
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        onclick="pickLocationOnMap()">
+                                    <i class="bi bi-map"></i> Pick on Map
+                                </button>
+                            </div>
+                            <div id="map" class="mb-3"></div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="encounter_date" class="form-label required-field">Date</label>
+                                    <input type="date"
+                                           class="form-control"
+                                           id="encounter_date"
+                                           name="encounter_date"
+                                           required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="encounter_time" class="form-label">Time</label>
+                                    <input type="time"
+                                           class="form-control"
+                                           id="encounter_time"
+                                           name="encounter_time">
+                                </div>
+                            </div>
+                            <small id="dateLockedHint" class="text-muted d-block mb-2 d-none">
+                                <i class="bi bi-lock-fill"></i> Auto-filled from your media. Camera clock off? Adjust it below.
+                            </small>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary mb-3"
+                                    id="useCurrentDateTimeBtn"
+                                    onclick="useCurrentDateTime()">
+                                <i class="bi bi-clock"></i> Use Current Date/Time
+                            </button>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="timestamp_offset_toggle"
+                                       onchange="toggleTimestampOffset()">
+                                <label class="form-check-label" for="timestamp_offset_toggle">
+                                    My camera clock was incorrect (fix time drift)
+                                </label>
+                            </div>
+                            <div id="timestamp_offset_fields" class="d-none">
+                                <p class="text-muted small mb-2">If your camera time was incorrect, record the error here:</p>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="incorrect_date" class="form-label small">Incorrect Date (DD/MM/YYYY)</label>
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               id="incorrect_date"
+                                               name="incorrect_date"
+                                               placeholder="e.g., 15/03/2026"
+                                               pattern="\d{2}/\d{2}/\d{4}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="correct_date" class="form-label small">Correct Date (DD/MM/YYYY)</label>
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               id="correct_date"
+                                               name="correct_date"
+                                               placeholder="e.g., 16/03/2026"
+                                               pattern="\d{2}/\d{2}/\d{4}">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mt-2">
+                                    <div class="col-md-6">
+                                        <label for="incorrect_time" class="form-label small">Incorrect Time (HH:MM)</label>
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               id="incorrect_time"
+                                               name="incorrect_time"
+                                               placeholder="e.g., 14:30"
+                                               pattern="\d{2}:\d{2}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="correct_time" class="form-label small">Correct Time (HH:MM)</label>
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               id="correct_time"
+                                               name="correct_time"
+                                               placeholder="e.g., 16:45"
+                                               pattern="\d{2}:\d{2}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ STEP 3: Species ============ -->
+                    <div class="wizard-step d-none" data-step="3">
+                        <div class="form-section">
+                            <h3>
+                                <i class="bi bi-search"></i> Species Identification
+                            </h3>
+                            <div class="mb-3">
+                                <label for="sighting_type" class="form-label">Sighting Type</label>
+                                <select class="form-select" id="sighting_type" name="sighting_type">
+                                    <option value="">Loading...</option>
+                                </select>
+                                <small class="text-muted">How did you observe this wildlife?</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="animal_count" class="form-label">Number of Animals</label>
                                 <input type="number"
-                                       step="0.1"
                                        class="form-control"
-                                       id="obfuscation_kilometers"
-                                       name="obfuscation_kilometers"
-                                       value="5"
+                                       id="animal_count"
+                                       name="animal_count"
                                        min="1"
-                                       max="10">
+                                       max="9999"
+                                       value="1">
+                                <small class="text-muted">How many individual animals were visible?</small>
+                            </div>
+                            <p class="text-muted mb-3">
+                                Add up to 5 species observed in this sighting. The first entry is the primary identification.
+                            </p>
+                            <div id="species-container">
+                                <!-- Species rows added by JS -->
+                            </div>
+                            <div class="d-flex align-items-center gap-3 mt-2 mb-3" id="species-add-row">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        id="add-species-btn"
+                                        onclick="addSpeciesRow()">
+                                    <i class="bi bi-plus-circle"></i> Add Another Species
+                                </button>
+                                <small class="text-muted" id="species-count-hint">1 of 5 max</small>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="species_unsure_toggle"
+                                       onchange="toggleSpeciesUnsure()">
+                                <label class="form-check-label" for="species_unsure_toggle">
+                                    I'm not sure what species this is
+                                </label>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="location_accuracy_meters" class="form-label">Location Accuracy (meters)</label>
-                            <input type="number"
-                                   class="form-control"
-                                   id="location_accuracy_meters"
-                                   name="location_accuracy_meters"
-                                   value="5"
-                                   readonly>
-                        </div>
                     </div>
-                    <!-- Encounter Date/Time Section -->
-                    <div class="form-section">
-                        <h3 class="required-field">
-                            <i class="bi bi-calendar"></i> When Did You See It?
-                        </h3>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="encounter_date" class="form-label required-field">Date</label>
-                                <input type="date"
+
+                    <!-- ============ STEP 4: Device & Credit ============ -->
+                    <div class="wizard-step d-none" data-step="4">
+                        <div class="form-section">
+                            <h3>
+                                <i class="bi bi-camera2"></i> Device &amp; Credit
+                            </h3>
+                            <div class="mb-3">
+                                <label class="form-label d-block">What captured this sighting?</label>
+                                <div class="btn-group flex-wrap" role="group" aria-label="Device type">
+                                    <input type="radio" class="btn-check" name="device_type" id="device_type_camera" value="camera" onchange="exifOwnsDeviceType = false; setDeviceType('camera'); rememberCurrentDeviceType();">
+                                    <label class="btn btn-outline-primary btn-sm" for="device_type_camera">Camera</label>
+                                    <input type="radio" class="btn-check" name="device_type" id="device_type_phone" value="phone" onchange="exifOwnsDeviceType = false; setDeviceType('phone'); rememberCurrentDeviceType();">
+                                    <label class="btn btn-outline-primary btn-sm" for="device_type_phone">Phone</label>
+                                    <input type="radio" class="btn-check" name="device_type" id="device_type_home_camera" value="home_camera" onchange="exifOwnsDeviceType = false; setDeviceType('home_camera'); rememberCurrentDeviceType();">
+                                    <label class="btn btn-outline-primary btn-sm" for="device_type_home_camera">Home Camera</label>
+                                    <input type="radio" class="btn-check" name="device_type" id="device_type_trail_camera" value="trail_camera" onchange="exifOwnsDeviceType = false; setDeviceType('trail_camera'); rememberCurrentDeviceType();">
+                                    <label class="btn btn-outline-primary btn-sm" for="device_type_trail_camera">Trail Camera</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label d-block">Device Source</label>
+                                <div class="btn-group mb-2" role="group" aria-label="Device source">
+                                    <input type="radio" class="btn-check" name="device_mode" id="device_mode_new" checked onchange="setDeviceMode('new')">
+                                    <label class="btn btn-outline-secondary btn-sm" for="device_mode_new">Add New Device</label>
+                                    <input type="radio" class="btn-check" name="device_mode" id="device_mode_saved" onchange="setDeviceMode('saved')">
+                                    <label class="btn btn-outline-secondary btn-sm" for="device_mode_saved">Use Saved Device</label>
+                                </div>
+                                <div id="saved_device_wrap" class="d-none mb-2">
+                                    <select class="form-select" id="saved_device_select" onchange="applySavedDevice()">
+                                        <option value="">-- Select a saved device --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3" id="camera_model_wrap">
+                                <label for="camera_model" class="form-label">Camera Model</label>
+                                <input type="text"
                                        class="form-control"
-                                       id="encounter_date"
-                                       name="encounter_date"
-                                       required>
+                                       id="camera_model"
+                                       name="camera_model"
+                                       placeholder="e.g., Canon EOS 5D Mark IV">
+                                <small class="text-muted">Detected automatically from photo EXIF data when available.</small>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="encounter_time" class="form-label">Time</label>
-                                <input type="time"
-                                       class="form-control"
-                                       id="encounter_time"
-                                       name="encounter_time">
+                            <hr class="opacity-25 my-4">
+                            <div class="mb-3">
+                                <label for="license_code" class="form-label">License</label>
+                                <select class="form-select" id="license_code" name="license_code">
+                                    <option value="cc0"
+                                            {% if default_license == "cc0" or not default_license %}selected{% endif %}>
+                                        CC0 — Public Domain Dedication (most permissive)
+                                    </option>
+                                    <option value="cc-by" {% if default_license == "cc-by" %}selected{% endif %}>CC BY — Attribution</option>
+                                    <option value="cc-by-sa"
+                                            {% if default_license == "cc-by-sa" %}selected{% endif %}>
+                                        CC BY-SA — Attribution-ShareAlike
+                                    </option>
+                                    <option value="cc-by-nd"
+                                            {% if default_license == "cc-by-nd" %}selected{% endif %}>
+                                        CC BY-ND — Attribution-NoDerivatives
+                                    </option>
+                                    <option value="cc-by-nc"
+                                            {% if default_license == "cc-by-nc" %}selected{% endif %}>
+                                        CC BY-NC — Attribution-NonCommercial
+                                    </option>
+                                    <option value="cc-by-nc-sa"
+                                            {% if default_license == "cc-by-nc-sa" %}selected{% endif %}>
+                                        CC BY-NC-SA — Attribution-NonCommercial-ShareAlike
+                                    </option>
+                                    <option value="cc-by-nc-nd"
+                                            {% if default_license == "cc-by-nc-nd" %}selected{% endif %}>
+                                        CC BY-NC-ND — Attribution-NonCommercial-NoDerivatives
+                                    </option>
+                                    <option value="all-rights-reserved"
+                                            {% if default_license == "all-rights-reserved" %}selected{% endif %}>
+                                        All Rights Reserved
+                                    </option>
+                                </select>
+                                <small class="text-muted">License applied to this sighting's data and media. Your default is set on your <a href="{% url 'users:profile' %}">profile page</a>.</small>
                             </div>
-                        </div>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-secondary"
-                                onclick="useCurrentDateTime()">
-                            <i class="bi bi-clock"></i> Use Current Date/Time
-                        </button>
-                    </div>
-                    <!-- Post Content Section -->
-                    <div class="form-section">
-                        <h3 class="required-field">
-                            <i class="bi bi-pencil"></i> Description
-                        </h3>
-                        <div class="mb-3">
-                            <label for="post_title" class="form-label required-field">Title</label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="post_title"
-                                   name="post_title"
-                                   maxlength="200"
-                                   required
-                                   placeholder="Give your sighting a descriptive title">
-                            <small class="text-muted"><span id="titleCount">0</span>/200 characters</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="post_body" class="form-label">Details</label>
-                            <textarea class="form-control"
-                                      id="post_body"
-                                      name="post_body"
-                                      rows="5"
-                                      maxlength="2000"
-                                      placeholder="Describe what you saw, behavior, habitat, etc."></textarea>
-                            <small class="text-muted"><span id="bodyCount">0</span>/2000 characters</small>
-                        </div>
-                    </div>
-                    <!-- Additional Information Section -->
-                    <div class="form-section">
-                        <h3>
-                            <i class="bi bi-info-circle"></i> Additional Information
-                        </h3>
-                        <div class="mb-3">
-                            <label for="sighting_type" class="form-label">Sighting Type</label>
-                            <select class="form-select" id="sighting_type" name="sighting_type">
-                                <option value="">Loading...</option>
-                            </select>
-                            <small class="text-muted">How did you observe this wildlife?</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="animal_count" class="form-label">Number of Animals</label>
-                            <input type="number"
-                                   class="form-control"
-                                   id="animal_count"
-                                   name="animal_count"
-                                   min="1"
-                                   max="9999"
-                                   value="1">
-                            <small class="text-muted">How many individual animals were visible?</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="camera_model" class="form-label">Camera Model</label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="camera_model"
-                                   name="camera_model"
-                                   placeholder="e.g., Canon EOS 5D Mark IV">
-                        </div>
-                        <div class="mb-3">
-                            <label for="camera_deployment_date" class="form-label">Camera Deployment Date</label>
-                            <input type="date"
-                                   class="form-control"
-                                   id="camera_deployment_date"
-                                   name="camera_deployment_date">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Timestamp Offset Details</label>
-                            <p class="text-muted small mb-2">If your camera time was incorrect, record the error here:</p>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label for="incorrect_date" class="form-label small">Incorrect Date (DD/MM/YYYY)</label>
+                            <div id="new_device_save_wrap" class="mb-3">
+                                <div class="mb-2">
+                                    <label for="new_device_name" class="form-label small">
+                                        Name this device <span class="text-muted">(optional)</span>
+                                    </label>
                                     <input type="text"
                                            class="form-control form-control-sm"
-                                           id="incorrect_date"
-                                           name="incorrect_date"
-                                           placeholder="e.g., 15/03/2026"
-                                           pattern="\d{2}/\d{2}/\d{4}">
+                                           id="new_device_name"
+                                           placeholder="e.g., Backyard Trail Cam"
+                                           maxlength="100">
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="correct_date" class="form-label small">Correct Date (DD/MM/YYYY)</label>
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           id="correct_date"
-                                           name="correct_date"
-                                           placeholder="e.g., 16/03/2026"
-                                           pattern="\d{2}/\d{2}/\d{4}">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="save_new_device">
+                                    <label class="form-check-label" for="save_new_device">Save this device for next time</label>
                                 </div>
                             </div>
-                            <div class="row g-2 mt-2">
-                                <div class="col-md-6">
-                                    <label for="incorrect_time" class="form-label small">Incorrect Time (HH:MM)</label>
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           id="incorrect_time"
-                                           name="incorrect_time"
-                                           placeholder="e.g., 14:30"
-                                           pattern="\d{2}:\d{2}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="correct_time" class="form-label small">Correct Time (HH:MM)</label>
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           id="correct_time"
-                                           name="correct_time"
-                                           placeholder="e.g., 16:45"
-                                           pattern="\d{2}:\d{2}">
+                            <div id="installed_device_fields" class="d-none">
+                                <div class="mb-3">
+                                    <label for="camera_deployment_date" class="form-label">Camera Deployment Date</label>
+                                    <input type="date"
+                                           class="form-control"
+                                           id="camera_deployment_date"
+                                           name="camera_deployment_date">
                                 </div>
                             </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="license_code" class="form-label">License</label>
-                            <select class="form-select" id="license_code" name="license_code">
-                                <option value="cc0"
-                                        {% if default_license == "cc0" or not default_license %}selected{% endif %}>
-                                    CC0 — Public Domain Dedication (most permissive)
-                                </option>
-                                <option value="cc-by" {% if default_license == "cc-by" %}selected{% endif %}>CC BY — Attribution</option>
-                                <option value="cc-by-sa"
-                                        {% if default_license == "cc-by-sa" %}selected{% endif %}>
-                                    CC BY-SA — Attribution-ShareAlike
-                                </option>
-                                <option value="cc-by-nd"
-                                        {% if default_license == "cc-by-nd" %}selected{% endif %}>
-                                    CC BY-ND — Attribution-NoDerivatives
-                                </option>
-                                <option value="cc-by-nc"
-                                        {% if default_license == "cc-by-nc" %}selected{% endif %}>
-                                    CC BY-NC — Attribution-NonCommercial
-                                </option>
-                                <option value="cc-by-nc-sa"
-                                        {% if default_license == "cc-by-nc-sa" %}selected{% endif %}>
-                                    CC BY-NC-SA — Attribution-NonCommercial-ShareAlike
-                                </option>
-                                <option value="cc-by-nc-nd"
-                                        {% if default_license == "cc-by-nc-nd" %}selected{% endif %}>
-                                    CC BY-NC-ND — Attribution-NonCommercial-NoDerivatives
-                                </option>
-                                <option value="all-rights-reserved"
-                                        {% if default_license == "all-rights-reserved" %}selected{% endif %}>
-                                    All Rights Reserved
-                                </option>
-                            </select>
-                            <small class="text-muted">License applied to this sighting's data and media. Your default is set on your <a href="{% url 'users:profile' %}">profile page</a>.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="attribution_override" class="form-label">
-                                Attribution Name <span class="text-muted">(optional)</span>
-                            </label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="attribution_override"
-                                   name="attribution_override"
-                                   placeholder="Leave blank to use your display name">
-                            <small class="text-muted">Custom name to use for attribution (e.g. your organization). Leave blank to use your display name.</small>
                         </div>
                     </div>
+
+                    <!-- ============ STEP 5: Preview & Publish ============ -->
+                    <div class="wizard-step d-none" data-step="5">
+                        <div class="form-section">
+                            <h3 class="required-field">
+                                <i class="bi bi-eye"></i> Preview &amp; Publish
+                            </h3>
+                            <div class="preview-card feed-preview-card" id="previewCard">
+                                <div class="feed-card-media" id="previewMediaThumb">
+                                    <i class="bi bi-image" style="font-size:3rem;"></i>
+                                </div>
+                                <div class="feed-card-body">
+                                    <label for="post_title" class="form-label small text-muted required-field mb-1">Title</label>
+                                    <input type="text"
+                                           class="form-control feed-title-input"
+                                           id="post_title"
+                                           name="post_title"
+                                           maxlength="200"
+                                           required
+                                           placeholder="Give your sighting a descriptive title">
+                                    <small class="text-muted d-block mb-2"><span id="titleCount">0</span>/200 characters</small>
+                                    <div class="feed-card-byline text-muted small mb-2">
+                                        <i class="bi bi-person"></i> <span id="previewAuthor">You</span>
+                                        <span class="mx-1">&middot;</span>
+                                        <i class="bi bi-calendar3"></i> <span id="previewWhen">Not specified</span>
+                                    </div>
+                                    <label for="post_body" class="form-label small text-muted mb-1">Description</label>
+                                    <textarea class="form-control feed-description-input"
+                                              id="post_body"
+                                              name="post_body"
+                                              rows="3"
+                                              maxlength="2000"
+                                              placeholder="Describe what you saw, behavior, habitat, etc."></textarea>
+                                    <small class="text-muted d-block mb-2"><span id="bodyCount">0</span>/2000 characters</small>
+                                    <div class="feed-card-location text-muted small">
+                                        <i class="bi bi-geo-alt"></i> <span id="previewLocation">Not specified</span>
+                                    </div>
+                                    <div class="feed-card-meta text-muted small mt-1">
+                                        <span id="previewSpecies">Species not specified</span>
+                                        <span class="mx-1">&middot;</span>
+                                        <span id="previewCamera">Camera not specified</span>
+                                        <span class="mx-1">&middot;</span>
+                                        <span id="previewLicense">&mdash;</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="privacy_setting" class="form-label">Public Setting</label>
+                                    <select class="form-select" id="privacy_setting" name="privacy_setting" onchange="updateObfuscationVisibility()">
+                                        <option value="public">Public (Exact Location)</option>
+                                        <option value="obscured" selected>Approximate (Obfuscated)</option>
+                                        <option value="private">Hidden (No Location Shown)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="attribution_override" class="form-label">
+                                        Display Name <span class="text-muted">(optional)</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="attribution_override"
+                                           name="attribution_override"
+                                           placeholder="Leave blank to use your display name">
+                                </div>
+                            </div>
+                            <hr class="opacity-25 my-4">
+                            <div class="row" id="obfuscation_accuracy_wrap">
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <label for="obfuscation_radius_display" class="form-label mb-0" id="obfuscationRadiusLabel">Obfuscation Radius (km)</label>
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Distance units">
+                                            <input type="radio" class="btn-check" name="distance_unit" id="distance_unit_metric" checked onchange="setDistanceUnit('metric')">
+                                            <label class="btn btn-outline-secondary btn-sm" for="distance_unit_metric">km / m</label>
+                                            <input type="radio" class="btn-check" name="distance_unit" id="distance_unit_imperial" onchange="setDistanceUnit('imperial')">
+                                            <label class="btn btn-outline-secondary btn-sm" for="distance_unit_imperial">mi / ft</label>
+                                        </div>
+                                    </div>
+                                    <input type="number"
+                                           step="0.1"
+                                           class="form-control"
+                                           id="obfuscation_radius_display"
+                                           value="5"
+                                           min="1"
+                                           max="10"
+                                           oninput="onObfuscationDisplayChange()">
+                                    <input type="hidden" id="obfuscation_kilometers" name="obfuscation_kilometers" value="5">
+                                    <small class="text-muted">Used only when Public Setting is Approximate.</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="location_accuracy_display" class="form-label" id="locationAccuracyLabel">Location Accuracy (m)</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="location_accuracy_display"
+                                           value="5"
+                                           readonly>
+                                    <input type="hidden" id="location_accuracy_meters" name="location_accuracy_meters" value="5">
+                                </div>
+                            </div>
+                            <hr class="opacity-25 my-4">
+                            <div class="form-check" id="privacyConsentWrap">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="privacy_accepted"
+                                       name="privacy_accepted"
+                                       value="1"
+                                       required
+                                       onchange="updatePublishAvailability()">
+                                <label class="form-check-label" for="privacy_accepted">
+                                    I have read and agree to the
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#privacyPolicyModal">WildeBackyard Privacy Policy</a>,
+                                    including how the location of this sighting is stored and shared.
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     {% if is_expert %}
-                        <!-- Expert Bulk Upload Section -->
+                        <!-- Expert Bulk Upload Section — independent power tool, not part of the guided steps above -->
+                        <p class="text-center text-white-50 small mb-2">
+                            <i class="bi bi-info-circle"></i> Optional expert tool below — works independently of the steps above.
+                        </p>
                         <div class="form-section border border-warning">
                             <h3>
                                 <i class="bi bi-folder2-open text-warning"></i> Bulk Upload <span class="badge bg-warning text-dark ms-2" style="font-size:0.6em;">Expert</span>
@@ -510,17 +874,54 @@
                             <div id="bulk_done_row" class="d-none alert alert-success py-2"></div>
                         </div>
                     {% endif %}
-                    <!-- Submit Button -->
-                    <div class="text-center mb-4">
-                        <button type="submit" class="btn btn-primary btn-lg px-5">
-                            <i class="bi bi-check-circle"></i> Submit Sighting
+
+                    <!-- Wizard Navigation -->
+                    <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-lg px-4 d-none" id="wizardBackBtn" onclick="wizardBack()">
+                            <i class="bi bi-arrow-left"></i> Back
                         </button>
-                        <a href="{% url 'home:home' %}"
-                           class="btn btn-outline-secondary btn-lg px-5 ms-2">
-                            <i class="bi bi-x-circle"></i> Cancel
-                        </a>
+                        <a href="{% url 'home:home' %}" class="btn btn-link text-white-50">Cancel</a>
+                        <button type="button" class="btn btn-primary btn-lg px-4" id="wizardNextBtn" onclick="wizardNext()">
+                            Next <i class="bi bi-arrow-right"></i>
+                        </button>
+                        <button type="button" class="btn btn-success btn-lg px-5 d-none" id="wizardPublishBtn">
+                            <i class="bi bi-check-circle"></i> Publish Sighting
+                        </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    <!-- Privacy policy — opened from the consent checkbox on the final step so the
+         user can read it without navigating away and losing the filled-in form. -->
+    <div class="modal fade"
+         id="privacyPolicyModal"
+         tabindex="-1"
+         aria-labelledby="privacyPolicyModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="privacyPolicyModalLabel">
+                        <i class="bi bi-shield-lock me-2"></i>WildeBackyard Privacy Policy
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">{% include "components/privacy_policy_content.html" %}</div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="privacyModalAgreeBtn"
+                            data-bs-dismiss="modal">
+                        <i class="bi bi-check-lg"></i> I Agree
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -539,6 +940,484 @@ const TAXON_ICON_DEFAULT = '{% static "img/taxa/unknown-32px.png" %}';
 function taxonIconUrl(iconicTaxonName) {
     return TAXON_ICONS[iconicTaxonName] || TAXON_ICON_DEFAULT;
 }
+
+// -------------------------------------------------------
+// Multi-step wizard navigation
+// -------------------------------------------------------
+const WIZARD_TOTAL_STEPS = 5;
+const WIZARD_STEP_LABELS = {
+  1: 'Media Upload',
+  2: 'Time & Place',
+  3: 'Species',
+  4: 'Device & Credit',
+  5: 'Preview & Publish',
+};
+let currentWizardStep = 1;
+
+function showWizardStep(step) {
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    el.classList.toggle('d-none', parseInt(el.dataset.step, 10) !== step);
+  });
+
+  document.querySelectorAll('#wizardProgress .wp-step').forEach(el => {
+    const n = parseInt(el.dataset.wpStep, 10);
+    el.classList.toggle('active', n === step);
+    el.classList.toggle('completed', n < step);
+  });
+
+  const caption = document.getElementById('wizardStepCaption');
+  if (caption) caption.textContent = `Step ${step} of ${WIZARD_TOTAL_STEPS} — ${WIZARD_STEP_LABELS[step]}`;
+
+  document.getElementById('wizardBackBtn').classList.toggle('d-none', step === 1);
+  document.getElementById('wizardNextBtn').classList.toggle('d-none', step === WIZARD_TOTAL_STEPS);
+
+  // Only make the Publish button a real submit button while on the final
+  // step, so pressing Enter in an earlier step's text field can never
+  // trigger an implicit native form submission.
+  const publishBtn = document.getElementById('wizardPublishBtn');
+  publishBtn.classList.toggle('d-none', step !== WIZARD_TOTAL_STEPS);
+  publishBtn.type = (step === WIZARD_TOTAL_STEPS) ? 'submit' : 'button';
+
+  if (step === WIZARD_TOTAL_STEPS) {
+    renderPreview();
+    updatePublishAvailability();
+  }
+
+  currentWizardStep = step;
+
+  const progressEl = document.getElementById('wizardProgress');
+  if (progressEl) {
+    window.scrollTo({ top: Math.max(progressEl.offsetTop - 20, 0), behavior: 'smooth' });
+  }
+}
+
+// -------------------------------------------------------
+// Privacy policy consent
+// -------------------------------------------------------
+function privacyAccepted() {
+  const cb = document.getElementById('privacy_accepted');
+  return !!cb && cb.checked;
+}
+
+// Publish stays disabled until the policy is accepted, so the requirement is
+// visible before the user tries to submit rather than as a rejection after.
+function updatePublishAvailability() {
+  const publishBtn = document.getElementById('wizardPublishBtn');
+  if (!publishBtn) return;
+  const accepted = privacyAccepted();
+  publishBtn.disabled = !accepted;
+  publishBtn.title = accepted ? '' : 'Please accept the Privacy Policy to publish';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const agreeBtn = document.getElementById('privacyModalAgreeBtn');
+  if (agreeBtn) {
+    agreeBtn.addEventListener('click', function () {
+      const cb = document.getElementById('privacy_accepted');
+      if (cb) cb.checked = true;
+      updatePublishAvailability();
+    });
+  }
+  updatePublishAvailability();
+});
+
+function validateStep(step) {
+  const container = document.querySelector(`.wizard-step[data-step="${step}"]`);
+  if (!container) return true;
+  const requiredFields = container.querySelectorAll('[required]');
+  for (const field of requiredFields) {
+    if (!field.reportValidity()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function wizardNext() {
+  if (!validateStep(currentWizardStep)) return;
+  if (currentWizardStep < WIZARD_TOTAL_STEPS) {
+    showWizardStep(currentWizardStep + 1);
+  }
+}
+
+function wizardBack() {
+  if (currentWizardStep > 1) {
+    showWizardStep(currentWizardStep - 1);
+  }
+}
+
+function goToWizardStep(step) {
+  // Only allow jumping back to an already-completed step from the progress bar.
+  if (step < currentWizardStep) {
+    showWizardStep(step);
+  }
+}
+
+function toggleTimestampOffset() {
+  const box = document.getElementById('timestamp_offset_toggle');
+  document.getElementById('timestamp_offset_fields').classList.toggle('d-none', !box.checked);
+}
+
+// -------------------------------------------------------
+// Step 5: only show Obfuscation Radius / Location Accuracy when the chosen
+// Public Setting is "Approximate" — they're meaningless for Public (exact)
+// or Hidden (no location shown at all).
+// -------------------------------------------------------
+function updateObfuscationVisibility() {
+  const privacy = document.getElementById('privacy_setting').value;
+  document.getElementById('obfuscation_accuracy_wrap').classList.toggle('d-none', privacy !== 'obscured');
+}
+
+// -------------------------------------------------------
+// Step 4: saved-device toggle
+// -------------------------------------------------------
+function setDeviceMode(mode) {
+  const savedWrap = document.getElementById('saved_device_wrap');
+  const newSaveWrap = document.getElementById('new_device_save_wrap');
+  const cameraModelWrap = document.getElementById('camera_model_wrap');
+  const cameraModelField = document.getElementById('camera_model');
+  if (mode === 'saved') {
+    savedWrap.classList.remove('d-none');
+    newSaveWrap.classList.add('d-none');
+    // The saved-device dropdown already shows the camera model — don't ask
+    // for it a second time. The hidden input still carries its value.
+    cameraModelWrap.classList.add('d-none');
+    cameraModelField.readOnly = true;
+  } else {
+    savedWrap.classList.add('d-none');
+    newSaveWrap.classList.remove('d-none');
+    cameraModelWrap.classList.remove('d-none');
+    cameraModelField.readOnly = false;
+    document.getElementById('saved_device_select').value = '';
+  }
+}
+
+function applySavedDevice() {
+  const select = document.getElementById('saved_device_select');
+  const opt = select.options[select.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('camera_model').value = opt.dataset.cameraModel || '';
+    document.getElementById('camera_deployment_date').value = opt.dataset.cameraDeploymentDate || '';
+    exifOwnsCameraModel = false;
+
+    const rememberedType = recallDeviceType(opt.dataset.cameraModel || '');
+    if (rememberedType) {
+      maybeAutoSelectDeviceType(rememberedType);
+    }
+  }
+}
+
+// -------------------------------------------------------
+// Remember which device type a given camera model was last tagged as, so a
+// future photo from the same camera can default to it. Purely local (no
+// server-side field exists for this) — a best-effort convenience only.
+// -------------------------------------------------------
+const DEVICE_TYPE_MEMORY_KEY = 'wb_device_type_by_camera_model';
+
+function rememberDeviceType(cameraModel, type) {
+  if (!cameraModel || !type) return;
+  try {
+    const map = JSON.parse(localStorage.getItem(DEVICE_TYPE_MEMORY_KEY) || '{}');
+    map[cameraModel.trim().toLowerCase()] = type;
+    localStorage.setItem(DEVICE_TYPE_MEMORY_KEY, JSON.stringify(map));
+  } catch (e) { /* localStorage unavailable — ignore */ }
+}
+
+function recallDeviceType(cameraModel) {
+  if (!cameraModel) return null;
+  try {
+    const map = JSON.parse(localStorage.getItem(DEVICE_TYPE_MEMORY_KEY) || '{}');
+    return map[cameraModel.trim().toLowerCase()] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Called on every manual device-type click so we learn from deliberate
+// user choices (never from our own auto-picks).
+function rememberCurrentDeviceType() {
+  const cameraModel = document.getElementById('camera_model').value.trim();
+  const checked = document.querySelector('input[name="device_type"]:checked');
+  if (cameraModel && checked) {
+    rememberDeviceType(cameraModel, checked.value);
+  }
+}
+
+// Finds an existing saved location that already has this exact camera
+// model attached, so a recognized device/camera can auto-switch to
+// "Use Saved Device" instead of being treated as new.
+function findSavedDeviceByCameraModel(cameraModel) {
+  if (!cameraModel) return null;
+  const normalized = cameraModel.trim().toLowerCase();
+  return savedLocations.find(loc => (loc.camera_model || '').trim().toLowerCase() === normalized) || null;
+}
+
+function selectSavedDevice(loc) {
+  document.getElementById('device_mode_saved').checked = true;
+  setDeviceMode('saved');
+  const select = document.getElementById('saved_device_select');
+  const option = Array.from(select.options).find(o => o.value === String(loc.id));
+  if (option) {
+    select.value = option.value;
+  }
+  document.getElementById('camera_model').value = loc.camera_model || '';
+  document.getElementById('camera_deployment_date').value = loc.camera_deployment_date || '';
+}
+
+// -------------------------------------------------------
+// Step 5: live preview
+// -------------------------------------------------------
+function renderPreview() {
+  const thumbWrap = document.getElementById('previewMediaThumb');
+  const firstImg = document.querySelector('#mediaPreview img');
+  const firstVideo = document.querySelector('#mediaPreview video');
+  if (firstImg) {
+    thumbWrap.innerHTML = `<img src="${firstImg.src}" alt="Preview">`;
+  } else if (firstVideo) {
+    thumbWrap.innerHTML = `
+      <span class="feed-video-badge"><i class="bi bi-play-fill"></i> Video</span>
+      <span class="feed-play-btn"><i class="bi bi-play-fill"></i></span>
+    `;
+  } else {
+    thumbWrap.innerHTML = `<i class="bi bi-image" style="font-size:3rem;"></i>`;
+  }
+
+  const speciesInputs = Array.from(document.querySelectorAll('input[name="species_list"]'))
+    .map(i => i.value.trim())
+    .filter(Boolean);
+  document.getElementById('previewSpecies').textContent = speciesInputs.length ? speciesInputs.join(', ') : 'Species not specified';
+
+  const date = document.getElementById('encounter_date').value;
+  const time = document.getElementById('encounter_time').value;
+  document.getElementById('previewWhen').textContent = date ? `${date}${time ? ' ' + time : ''}` : 'Not specified';
+
+  const lat = document.getElementById('location_latitude').value;
+  const lng = document.getElementById('location_longitude').value;
+  document.getElementById('previewLocation').textContent = (lat && lng) ? `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : 'Not specified';
+
+  const camera = document.getElementById('camera_model').value;
+  document.getElementById('previewCamera').textContent = camera || 'Camera not specified';
+
+  const licenseSelect = document.getElementById('license_code');
+  const licenseOpt = licenseSelect.options[licenseSelect.selectedIndex];
+  document.getElementById('previewLicense').textContent = licenseOpt ? licenseOpt.text : '—';
+
+  const attribution = document.getElementById('attribution_override').value.trim();
+  document.getElementById('previewAuthor').textContent = attribution || 'You';
+}
+
+// -------------------------------------------------------
+// Step 5: Obfuscation Radius / Location Accuracy unit toggle. The backend
+// fields (obfuscation_kilometers, location_accuracy_meters) always store
+// metric values — these are hidden inputs kept in sync by a separate,
+// user-facing display field that can show km/m or mi/ft.
+// -------------------------------------------------------
+const KM_PER_MILE = 1.609344;
+const METERS_PER_FOOT = 0.3048;
+let currentDistanceUnit = 'metric';
+
+function setDistanceUnit(unit) {
+  currentDistanceUnit = unit;
+  const isImperial = unit === 'imperial';
+
+  const kmField = document.getElementById('obfuscation_kilometers');
+  const radiusDisplay = document.getElementById('obfuscation_radius_display');
+  const kmValue = parseFloat(kmField.value) || 0;
+  radiusDisplay.value = isImperial ? (kmValue / KM_PER_MILE).toFixed(1) : kmValue.toFixed(1);
+  radiusDisplay.min = isImperial ? (1 / KM_PER_MILE).toFixed(2) : 1;
+  radiusDisplay.max = isImperial ? (10 / KM_PER_MILE).toFixed(2) : 10;
+  document.getElementById('obfuscationRadiusLabel').textContent = isImperial ? 'Obfuscation Radius (mi)' : 'Obfuscation Radius (km)';
+
+  refreshAccuracyDisplay();
+  document.getElementById('locationAccuracyLabel').textContent = isImperial ? 'Location Accuracy (ft)' : 'Location Accuracy (m)';
+}
+
+// Location Accuracy is a readonly, auto-detected value (from "Use Current
+// Location") — this just mirrors it into the currently selected display
+// unit whenever the underlying meters value changes.
+function refreshAccuracyDisplay() {
+  const isImperial = currentDistanceUnit === 'imperial';
+  const metersField = document.getElementById('location_accuracy_meters');
+  const accuracyDisplay = document.getElementById('location_accuracy_display');
+  const metersValue = parseFloat(metersField.value) || 0;
+  accuracyDisplay.value = isImperial ? Math.round(metersValue / METERS_PER_FOOT) : Math.round(metersValue);
+}
+
+// The radius display field is user-editable — convert whatever's typed back
+// into km for the hidden field that actually gets submitted.
+function onObfuscationDisplayChange() {
+  const display = document.getElementById('obfuscation_radius_display');
+  const kmField = document.getElementById('obfuscation_kilometers');
+  const value = parseFloat(display.value) || 0;
+  kmField.value = (currentDistanceUnit === 'imperial' ? value * KM_PER_MILE : value).toFixed(3);
+}
+
+// -------------------------------------------------------
+// Step 3: "not sure of species" toggle
+// -------------------------------------------------------
+function toggleSpeciesUnsure() {
+  const unsure = document.getElementById('species_unsure_toggle').checked;
+  document.getElementById('species-container').classList.toggle('d-none', unsure);
+  document.getElementById('species-add-row').classList.toggle('d-none', unsure);
+  if (unsure) {
+    // Clear any partially entered species so nothing stale gets submitted
+    document.querySelectorAll('input[name="species_list"]').forEach(i => { i.value = ''; });
+  }
+}
+
+// -------------------------------------------------------
+// Step 4: device type toggle — Camera Deployment Date only makes sense for
+// installed/deployed devices (Home Camera, Trail Camera). Device Source
+// (new vs. saved) and Camera Model apply to all four device types.
+// -------------------------------------------------------
+function setDeviceType(type) {
+  const showInstalledFields = (type === 'home_camera' || type === 'trail_camera');
+  document.getElementById('installed_device_fields').classList.toggle('d-none', !showInstalledFields);
+}
+
+// Auto-picks a device type from EXIF (e.g. Apple's Make tag -> "Phone"),
+// but only if the user hasn't already made their own choice — a prior
+// auto-pick (exifOwnsDeviceType) is fine to override, a deliberate click isn't.
+function maybeAutoSelectDeviceType(type) {
+  const anySelected = document.querySelector('input[name="device_type"]:checked');
+  if (anySelected && !exifOwnsDeviceType) return;
+  const radio = document.getElementById(`device_type_${type}`);
+  if (!radio) return;
+  radio.checked = true;
+  setDeviceType(type);
+  exifOwnsDeviceType = true;
+}
+
+// -------------------------------------------------------
+// Step 2: "Saved Location" vs "New Location" toggle
+// -------------------------------------------------------
+// Once the user has clicked either button, their choice sticks — the
+// "no saved locations yet" default below only applies before that.
+let locationModeUserChosen = false;
+
+function setLocationMode(mode) {
+  const isSaved = mode === 'saved';
+  document.getElementById('saved_location_wrap').classList.toggle('d-none', !isSaved);
+  document.getElementById('new_location_wrap').classList.toggle('d-none', isSaved);
+}
+
+// If "New Location" is selected and the user checked "Save this location
+// for next time", persist it via the existing saved-locations API before
+// the sighting itself is submitted.
+async function maybeSaveNewLocation() {
+  const newModeRadio = document.getElementById('location_mode_new');
+  if (!newModeRadio.checked) return;
+
+  const saveCheckbox = document.getElementById('save_new_location');
+  if (!saveCheckbox || !saveCheckbox.checked) return;
+
+  const lat = parseFloat(document.getElementById('location_latitude').value);
+  const lng = parseFloat(document.getElementById('location_longitude').value);
+  if (isNaN(lat) || isNaN(lng)) return;
+
+  const name = document.getElementById('new_location_name').value.trim()
+    || `Saved Location ${new Date().toLocaleDateString()}`;
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  try {
+    await fetch('/sightings/api/backend/locations/create/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        name: name,
+        description: null,
+        latitude: lat,
+        longitude: lng,
+        camera_model: null,
+        camera_serial_number: null,
+        camera_deployment_date: null,
+        camera_timestamp_offset_error_details: null,
+      }),
+    });
+  } catch (e) {
+    // Non-critical — proceed with the sighting submission even if saving the location failed.
+  }
+}
+
+// If "Add New Device" is selected (any of the four device types) and the
+// user checked "Save this device for next time", persist it the same way —
+// camera devices are just saved locations with camera fields attached,
+// there's no separate "device" concept on the backend.
+async function maybeSaveNewDevice() {
+  const newModeRadio = document.getElementById('device_mode_new');
+  if (!newModeRadio.checked) return;
+
+  const saveCheckbox = document.getElementById('save_new_device');
+  if (!saveCheckbox || !saveCheckbox.checked) return;
+
+  const cameraModel = document.getElementById('camera_model').value.trim();
+  if (!cameraModel) return;
+
+  const lat = parseFloat(document.getElementById('location_latitude').value);
+  const lng = parseFloat(document.getElementById('location_longitude').value);
+  if (isNaN(lat) || isNaN(lng)) return;
+
+  const name = document.getElementById('new_device_name').value.trim() || cameraModel;
+  const deploymentDate = document.getElementById('camera_deployment_date').value || null;
+  const deviceTypeRadio = document.querySelector('input[name="device_type"]:checked');
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  try {
+    await fetch('/sightings/api/backend/locations/create/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        name: name,
+        description: null,
+        latitude: lat,
+        longitude: lng,
+        camera_model: cameraModel,
+        camera_serial_number: null,
+        camera_deployment_date: deploymentDate,
+        camera_timestamp_offset_error_details: null,
+      }),
+    });
+  } catch (e) {
+    // Non-critical — proceed with the sighting submission even if saving the device failed.
+  }
+
+  if (deviceTypeRadio) {
+    rememberDeviceType(cameraModel, deviceTypeRadio.value);
+  }
+}
+
+// Final safety net: even though Next-button validation should catch this,
+// required fields living in a d-none ancestor are exempt from native
+// constraint validation, so re-check everything before the real submit.
+document.getElementById('sightingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const requiredFields = Array.from(document.querySelectorAll('#sightingForm [required]'));
+  for (const field of requiredFields) {
+    // A checkbox always reports value "on", so it has to be judged on `checked`.
+    const missing = field.type === 'checkbox'
+      ? !field.checked
+      : (!field.value || !field.value.toString().trim());
+    if (missing) {
+      const stepEl = field.closest('.wizard-step');
+      const step = stepEl ? parseInt(stepEl.dataset.step, 10) : null;
+      if (step) showWizardStep(step);
+      field.focus();
+      field.reportValidity();
+      return;
+    }
+  }
+
+  await maybeSaveNewLocation();
+  await maybeSaveNewDevice();
+  this.submit();
+});
 
 // -------------------------------------------------------
 // Multi-species typeahead (up to 5)
@@ -680,8 +1559,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   map.addControl(new maplibregl.NavigationControl());
 
-  // Set today's date as default
-  document.getElementById('encounter_date').valueAsDate = new Date();
+  // Date/time starts blank and editable — it only gets set (and locked) once
+  // a photo/video's own date is extracted; see extractExifGPS/setDateLocked.
+  setDateLocked(false);
 
   // Initialize first species row
   addSpeciesRow();
@@ -694,6 +1574,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('post_body').addEventListener('input', function() {
     document.getElementById('bodyCount').textContent = this.value.length;
   });
+
+  updateObfuscationVisibility();
+
+  // Kick off the wizard on step 1
+  showWizardStep(1);
 });
 
 function getCurrentLocation() {
@@ -706,6 +1591,8 @@ function getCurrentLocation() {
       document.getElementById('location_latitude').value = lat.toFixed(6);
       document.getElementById('location_longitude').value = lng.toFixed(6);
       document.getElementById('location_accuracy_meters').value = accuracy;
+      refreshAccuracyDisplay();
+      exifOwnsLocation = false;
 
       updateMapMarker(lng, lat);
       map.flyTo({center: [lng, lat], zoom: 14});
@@ -724,6 +1611,7 @@ function pickLocationOnMap() {
 
     document.getElementById('location_latitude').value = lat.toFixed(6);
     document.getElementById('location_longitude').value = lng.toFixed(6);
+    exifOwnsLocation = false;
 
     updateMapMarker(lng, lat);
   });
@@ -740,70 +1628,188 @@ function useCurrentDateTime() {
   const now = new Date();
   document.getElementById('encounter_date').valueAsDate = now;
   document.getElementById('encounter_time').value = now.toTimeString().slice(0, 5);
+  exifOwnsDate = false;
+}
+
+// Source of truth for staged media files — kept in sync with #media_files
+// via DataTransfer so individual files can be removed after selection.
+let selectedMediaFiles = [];
+
+// Bumped every time the staged selection changes (add or remove). EXIF
+// extraction is asynchronous (FileReader -> Image.onload -> EXIF.getData),
+// so a slow extraction for a photo the user has since deleted/replaced can
+// otherwise resolve *after* a newer, faster extraction (or a delete) has
+// already run — silently reapplying stale camera/location/date data. Each
+// extraction call is stamped with the generation it started in and checks
+// it's still current before writing anything.
+let mediaGeneration = 0;
+
+// Whether camera_model / lat+lng currently hold values auto-filled from a
+// photo's EXIF data (vs. typed/picked by the user or loaded from a saved
+// location/device). Lets us safely clear stale EXIF values when the source
+// file is removed or replaced, without ever touching a user's own input.
+let exifOwnsCameraModel = false;
+let exifOwnsLocation = false;
+let exifOwnsDeviceType = false;
+let exifOwnsDate = false;
+
+// When a photo/video's own date+time was found, the date/time fields become
+// unchangeable (the Timestamp Offset checkbox is how the user corrects for
+// a wrong camera clock instead) and "Use Current Date/Time" is hidden, since
+// it wouldn't make sense to offer "now" as an alternative to a known,
+// extracted capture time. With nothing detected, fields stay blank/editable
+// and the button stays available.
+function setDateLocked(locked) {
+  const dateField = document.getElementById('encounter_date');
+  const timeField = document.getElementById('encounter_time');
+  const btn = document.getElementById('useCurrentDateTimeBtn');
+  const hint = document.getElementById('dateLockedHint');
+  dateField.readOnly = locked;
+  timeField.readOnly = locked;
+  dateField.classList.toggle('date-field-locked', locked);
+  timeField.classList.toggle('date-field-locked', locked);
+  if (btn) btn.classList.toggle('d-none', locked);
+  if (hint) hint.classList.toggle('d-none', !locked);
+}
+
+// Rebuilds the real #media_files input's FileList from selectedMediaFiles —
+// browsers only let you replace .files wholesale (via DataTransfer), not
+// append to it, so every mutation of the staged list goes through here.
+function syncMediaInput() {
+  const input = document.getElementById('media_files');
+  const dt = new DataTransfer();
+  selectedMediaFiles.forEach(file => dt.items.add(file));
+  input.files = dt.files;
+  if (selectedMediaFiles.length === 0) {
+    input.value = '';
+  }
 }
 
 function previewMultipleMedia(input) {
+  if (!input.files || input.files.length === 0) {
+    // Dialog was cancelled — leave whatever's already staged untouched.
+    return;
+  }
+
+  const maxSize = 500 * 1024 * 1024; // 500MB per file
+  const newFiles = Array.from(input.files);
+
+  // Validate sizes up front so a bad file never gets merged in.
+  for (const file of newFiles) {
+    if (file.size > maxSize) {
+      alert(`File "${file.name}" is too large. Maximum size is 500MB.`);
+      syncMediaInput(); // restore the input to the still-valid selection
+      return;
+    }
+  }
+
+  // Opening the file picker again only ever hands back the files chosen in
+  // that dialog — merge them with whatever's already staged (instead of
+  // replacing it) so picking photos one at a time actually accumulates
+  // toward the limit, rather than each pick replacing the last.
+  const room = Math.max(maxSightingImages - selectedMediaFiles.length, 0);
+  if (newFiles.length > room) {
+    alert(`You can upload up to ${maxSightingImages} files total.${selectedMediaFiles.length ? ` You already have ${selectedMediaFiles.length}, so only ${room} more can be added right now.` : ''}`);
+  }
+  selectedMediaFiles = selectedMediaFiles.concat(newFiles.slice(0, room));
+
+  syncMediaInput();
+  renderMediaPreviews();
+}
+
+function renderMediaPreviews() {
+  mediaGeneration++;
+  const thisGeneration = mediaGeneration;
+
   const preview = document.getElementById('mediaPreview');
   preview.innerHTML = '';
 
-  if (input.files && input.files.length > 0) {
-    const maxSize = 500 * 1024 * 1024; // 500MB per file
-
-    // Validate number of files (use dynamically loaded limit)
-    if (input.files.length > maxSightingImages) {
-      alert(`You can only upload up to ${maxSightingImages} files at once.`);
-      input.value = '';
-      return;
-    }
-
-    // Process each file
-    Array.from(input.files).forEach((file, index) => {
-      // Validate file size
-      if (file.size > maxSize) {
-        alert(`File "${file.name}" is too large. Maximum size is 500MB.`);
-        input.value = '';
-        return;
-      }
-
-      const reader = new FileReader();
-      const colDiv = document.createElement('div');
-      colDiv.className = 'col-md-4 col-sm-6';
-      colDiv.id = `preview-${index}`;
-
-      reader.onload = function(e) {
-        let mediaHtml = '';
-        if (file.type.startsWith('image/')) {
-          mediaHtml = `
-            <div class="position-relative">
-              <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover; width: 100%;" alt="Preview ${index + 1}">
-              <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
-            </div>
-            <small class="text-muted d-block text-truncate">${file.name}</small>
-          `;
-
-          // Extract EXIF from first image only
-          if (index === 0) {
-            extractExifGPS(e.target.result);
-          }
-        } else if (file.type.startsWith('video/')) {
-          const sizeInfo = `${(file.size / (1024*1024)).toFixed(2)}MB`;
-          mediaHtml = `
-            <div class="position-relative">
-              <video controls class="rounded" style="max-height: 200px; width: 100%;" preload="metadata">
-                <source src="${e.target.result}" type="${file.type}">
-              </video>
-              <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
-            </div>
-            <small class="text-muted d-block text-truncate">${file.name} (${sizeInfo})</small>
-          `;
-        }
-        colDiv.innerHTML = mediaHtml;
-      };
-
-      preview.appendChild(colDiv);
-      reader.readAsDataURL(file);
-    });
+  // The staged file selection just changed (new pick, or a removal) — clear
+  // any camera/location values that came from a previous file's EXIF data
+  // so stale metadata can't linger after that file is gone. Re-extraction
+  // below will repopulate them from whichever file is now first, if any.
+  if (exifOwnsCameraModel) {
+    document.getElementById('camera_model').value = '';
+    // Also undo a possible auto-selected saved device from the removed file.
+    document.getElementById('device_mode_new').checked = true;
+    setDeviceMode('new');
+    exifOwnsCameraModel = false;
   }
+  if (exifOwnsLocation) {
+    document.getElementById('location_latitude').value = '';
+    document.getElementById('location_longitude').value = '';
+    exifOwnsLocation = false;
+    if (typeof marker !== 'undefined' && marker) {
+      marker.remove();
+      marker = null;
+    }
+  }
+  if (exifOwnsDeviceType) {
+    document.querySelectorAll('input[name="device_type"]').forEach(r => { r.checked = false; });
+    document.getElementById('installed_device_fields').classList.add('d-none');
+    exifOwnsDeviceType = false;
+  }
+  if (exifOwnsDate) {
+    document.getElementById('encounter_date').value = '';
+    document.getElementById('encounter_time').value = '';
+    setDateLocked(false);
+    exifOwnsDate = false;
+  }
+  document.getElementById('exifSummary').classList.add('d-none');
+
+  selectedMediaFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    const colDiv = document.createElement('div');
+    colDiv.className = 'col-md-4 col-sm-6';
+    colDiv.id = `preview-${index}`;
+
+    reader.onload = function(e) {
+      let mediaHtml = '';
+      if (file.type.startsWith('image/')) {
+        mediaHtml = `
+          <div class="position-relative">
+            <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover; width: 100%;" alt="Preview ${index + 1}">
+            <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
+            <button type="button" class="btn btn-sm media-remove-btn position-absolute top-0 end-0 m-2" onclick="removeMediaFile(${index})" title="Remove this file">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <small class="text-muted d-block text-truncate">${file.name}</small>
+        `;
+
+        // Extract EXIF from first image only
+        if (index === 0) {
+          extractExifGPS(e.target.result, thisGeneration);
+        }
+      } else if (file.type.startsWith('video/')) {
+        const sizeInfo = `${(file.size / (1024*1024)).toFixed(2)}MB`;
+        mediaHtml = `
+          <div class="position-relative">
+            <video controls class="rounded" style="max-height: 200px; width: 100%;" preload="metadata">
+              <source src="${e.target.result}" type="${file.type}">
+            </video>
+            <span class="position-absolute top-0 start-0 badge bg-primary m-2">${index + 1}</span>
+            <button type="button" class="btn btn-sm media-remove-btn position-absolute top-0 end-0 m-2" onclick="removeMediaFile(${index})" title="Remove this file">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <small class="text-muted d-block text-truncate">${file.name} (${sizeInfo})</small>
+        `;
+      }
+      colDiv.innerHTML = mediaHtml;
+    };
+
+    preview.appendChild(colDiv);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Removes one staged file (e.g. picked by mistake) and rebuilds the real
+// #media_files input via DataTransfer so the removal is reflected on submit.
+function removeMediaFile(index) {
+  selectedMediaFiles.splice(index, 1);
+  syncMediaInput();
+  renderMediaPreviews();
 }
 
 // Legacy function for backwards compatibility
@@ -811,7 +1817,7 @@ function previewMedia(input) {
   previewMultipleMedia(input);
 }
 
-function extractExifGPS(dataUrl) {
+function extractExifGPS(dataUrl, generation) {
   // Check if EXIF library is loaded
   if (typeof EXIF === 'undefined') {
     console.warn('EXIF library not loaded, skipping GPS extraction');
@@ -825,6 +1831,17 @@ function extractExifGPS(dataUrl) {
   img.onload = function() {
     try {
       EXIF.getData(img, function() {
+        // The staged selection may have changed (file removed/replaced)
+        // while this async extraction was still in flight — if so, this
+        // result is for a file that's no longer relevant, so bail out
+        // rather than writing stale data over whatever's current now.
+        if (generation !== mediaGeneration) return;
+
+        // What we found, for the "detected from your photo" summary panel —
+        // shown regardless of whether each piece could auto-fill a field, so
+        // the user always sees what was actually read off the file itself.
+        const summary = { camera: null, dateTime: null, gpsText: null, gpsFound: false, recognizedAsSaved: false };
+
         const lat = EXIF.getTag(this, 'GPSLatitude');
         const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
         const lng = EXIF.getTag(this, 'GPSLongitude');
@@ -834,18 +1851,71 @@ function extractExifGPS(dataUrl) {
         const make = (EXIF.getTag(this, 'Make') || '').replace(/\0/g, '').trim() || null;
         const model = (EXIF.getTag(this, 'Model') || '').replace(/\0/g, '').trim() || null;
         if (make || model) {
+          // Combine make + model, avoiding duplicate words. Many cameras
+          // (e.g. Nikon: Make="NIKON CORPORATION", Model="NIKON D3500")
+          // repeat only the brand's first word, not the full make string,
+          // so a plain startsWith() check doesn't catch the overlap.
+          let cameraString = '';
+          const makeStr = (make || '').trim();
+          const modelStr = (model || '').trim();
+          if (makeStr && modelStr) {
+            const makeFirstWord = makeStr.split(/\s+/)[0].toLowerCase();
+            cameraString = modelStr.toLowerCase().includes(makeFirstWord)
+              ? modelStr
+              : `${makeStr} ${modelStr}`;
+          } else {
+            cameraString = modelStr || makeStr;
+          }
+          summary.camera = cameraString;
+
           const cameraModelField = document.getElementById('camera_model');
           if (cameraModelField && cameraModelField.value === '') {
-            // Combine make + model, avoiding duplicate words (e.g. "Canon Canon EOS 5D")
-            let cameraString = '';
-            const makeStr = (make || '').trim();
-            const modelStr = (model || '').trim();
-            if (makeStr && modelStr && !modelStr.toLowerCase().startsWith(makeStr.toLowerCase())) {
-              cameraString = `${makeStr} ${modelStr}`;
+            // Recognize this exact camera as an already-saved device first —
+            // if found, switch straight to "Use Saved Device" instead of
+            // treating it as new.
+            const matchedDevice = findSavedDeviceByCameraModel(cameraString);
+            if (matchedDevice) {
+              selectSavedDevice(matchedDevice);
+              summary.recognizedAsSaved = true;
             } else {
-              cameraString = modelStr || makeStr;
+              cameraModelField.value = cameraString;
+              const newDeviceNameField = document.getElementById('new_device_name');
+              if (newDeviceNameField && newDeviceNameField.value === '') {
+                newDeviceNameField.value = cameraString;
+              }
             }
-            cameraModelField.value = cameraString;
+            exifOwnsCameraModel = true;
+
+            // Recall a device type we've learned for this camera before;
+            // fall back to the Apple -> Phone heuristic if we haven't.
+            const rememberedType = recallDeviceType(cameraString);
+            if (rememberedType) {
+              maybeAutoSelectDeviceType(rememberedType);
+            } else if (make && make.trim().toLowerCase() === 'apple') {
+              maybeAutoSelectDeviceType('phone');
+            }
+          }
+        }
+
+        // Extract when the photo was actually taken. If found, the date/time
+        // fields get locked to it (see setDateLocked) rather than left open
+        // for editing — a wrong camera clock is corrected via the Timestamp
+        // Offset option instead of overwriting the extracted value.
+        const rawDate = EXIF.getTag(this, 'DateTimeOriginal')
+                     || EXIF.getTag(this, 'DateTimeDigitized')
+                     || EXIF.getTag(this, 'DateTime');
+        if (rawDate && rawDate.length >= 19) {
+          const isoDate = rawDate.substring(0, 10).replace(/:/g, '-');
+          const isoTime = rawDate.substring(11, 16);
+          summary.dateTime = `${isoDate} ${isoTime}`;
+
+          const dateField = document.getElementById('encounter_date');
+          const timeField = document.getElementById('encounter_time');
+          if (dateField && timeField && dateField.value === '') {
+            dateField.value = isoDate;
+            timeField.value = isoTime;
+            exifOwnsDate = true;
+            setDateLocked(true);
           }
         }
 
@@ -859,48 +1929,67 @@ function extractExifGPS(dataUrl) {
               latitude < -90 || latitude > 90 ||
               longitude < -180 || longitude > 180) {
             console.warn('Invalid GPS coordinates extracted from EXIF:', {latitude, longitude});
-            return;
+          } else {
+            summary.gpsFound = true;
+            summary.gpsText = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+            // Only populate if fields are empty
+            const latField = document.getElementById('location_latitude');
+            const lngField = document.getElementById('location_longitude');
+
+            if (latField.value === '') {
+              latField.value = latitude.toFixed(6);
+              exifOwnsLocation = true;
+            }
+            if (lngField.value === '') {
+              lngField.value = longitude.toFixed(6);
+              exifOwnsLocation = true;
+            }
+
+            // Update map with EXIF location (only if map is initialized)
+            if (typeof map !== 'undefined' && map) {
+              updateMapMarker(longitude, latitude);
+              map.flyTo({center: [longitude, latitude], zoom: 14});
+            }
           }
-
-          // Only populate if fields are empty
-          const latField = document.getElementById('location_latitude');
-          const lngField = document.getElementById('location_longitude');
-
-          if (latField.value === '') {
-            latField.value = latitude.toFixed(6);
-          }
-          if (lngField.value === '') {
-            lngField.value = longitude.toFixed(6);
-          }
-
-          // Update map with EXIF location (only if map is initialized)
-          if (typeof map !== 'undefined' && map) {
-            updateMapMarker(longitude, latitude);
-            map.flyTo({center: [longitude, latitude], zoom: 14});
-          }
-
-          // Show notification
-          const preview = document.getElementById('mediaPreview');
-          const notification = document.createElement('div');
-          notification.className = 'alert alert-success mt-2';
-
-          const icon = document.createElement('i');
-          icon.className = 'bi bi-check-circle';
-          notification.appendChild(icon);
-
-          const message = document.createTextNode(' GPS coordinates extracted from image EXIF data');
-          notification.appendChild(message);
-
-          preview.appendChild(notification);
-
-          // Remove notification after 5 seconds
-          setTimeout(() => notification.remove(), 5000);
         }
+
+        showExifSummary(summary);
       });
     } catch (error) {
-      console.error('Error extracting EXIF GPS data:', error);
+      console.error('Error extracting EXIF data:', error);
     }
   };
+}
+
+// Persistent (not auto-dismissing) summary of whatever was actually read
+// from the photo's EXIF data, shown right under the media preview so the
+// user can see at a glance what was auto-filled without hunting through
+// later steps — the whole point being to cut down on manual re-entry.
+function showExifSummary(summary) {
+  const box = document.getElementById('exifSummary');
+  if (!box) return;
+
+  const cameraLine = summary.camera
+    ? `<i class="bi bi-camera2 me-1"></i>${summary.camera}${summary.recognizedAsSaved ? ' <span class="badge bg-secondary">matched saved device</span>' : ''}`
+    : `<i class="bi bi-camera2 me-1"></i><span class="text-muted">No device info found. You can manually add it later.</span>`;
+
+  const dateLine = summary.dateTime
+    ? `<i class="bi bi-calendar3 me-1"></i>${summary.dateTime}`
+    : `<i class="bi bi-calendar3 me-1"></i><span class="text-muted">Missing date and time? No problem, just set them in the next step.</span>`;
+
+  const gpsLine = summary.gpsFound
+    ? `<i class="bi bi-geo-alt me-1"></i>${summary.gpsText}`
+    : `<i class="bi bi-geo-alt me-1"></i><span class="text-muted">We couldn't find a location tag. Feel free to pin it on the map next!</span>`;
+
+  box.className = `alert ${summary.gpsFound ? 'alert-success' : 'alert-info'} mt-2 small mb-0`;
+  box.innerHTML = `
+    <div class="fw-semibold mb-1"><i class="bi bi-magic me-1"></i>Media info detected</div>
+    <div>${cameraLine}</div>
+    <div>${dateLine}</div>
+    <div>${gpsLine}</div>
+  `;
+  box.classList.remove('d-none');
 }
 
 function convertDMSToDD(dms, ref) {
@@ -958,6 +2047,18 @@ document.getElementById('location_longitude').addEventListener('change', functio
     map.flyTo({center: [lng, lat], zoom: 14});
   }
 });
+
+// A manual keystroke means the user now owns this value — don't let a later
+// file removal clear it out from under them.
+document.getElementById('location_latitude').addEventListener('input', function() { exifOwnsLocation = false; });
+document.getElementById('location_longitude').addEventListener('input', function() { exifOwnsLocation = false; });
+document.getElementById('camera_model').addEventListener('input', function() { exifOwnsCameraModel = false; });
+// Readonly normally blocks this, but some browsers still let the native
+// date-picker icon change a "readonly" date input — if that happens, treat
+// it as a deliberate override and fully unlock rather than leaving things
+// in a half-locked state.
+document.getElementById('encounter_date').addEventListener('input', function() { exifOwnsDate = false; setDateLocked(false); });
+document.getElementById('encounter_time').addEventListener('input', function() { exifOwnsDate = false; setDateLocked(false); });
 
 // Global variable to store saved locations
 let savedLocations = [];
@@ -1069,6 +2170,36 @@ async function loadSavedLocations() {
         option.dataset.cameraTimestampOffset = loc.camera_timestamp_offset_error_details || '';
         select.appendChild(option);
       });
+
+      // Also populate the Step 4 "saved device" dropdown with any saved
+      // location that has a camera model attached.
+      const deviceSelect = document.getElementById('saved_device_select');
+      if (deviceSelect) {
+        while (deviceSelect.options.length > 1) {
+          deviceSelect.remove(1);
+        }
+        savedLocations.filter(loc => loc.camera_model).forEach(loc => {
+          const opt = document.createElement('option');
+          opt.value = loc.id;
+          opt.textContent = loc.name ? `${loc.camera_model} — ${loc.name}` : loc.camera_model;
+          opt.dataset.cameraModel = loc.camera_model || '';
+          opt.dataset.cameraDeploymentDate = loc.camera_deployment_date || '';
+          deviceSelect.appendChild(opt);
+        });
+      }
+
+      // Default to whichever tab makes sense for this account: straight to
+      // "New Location" if nothing's saved yet, otherwise "Saved Location" —
+      // but never override a choice the user already made themselves.
+      if (!locationModeUserChosen) {
+        if (savedLocations.length === 0) {
+          document.getElementById('location_mode_new').checked = true;
+          setLocationMode('new');
+        } else {
+          document.getElementById('location_mode_saved').checked = true;
+          setLocationMode('saved');
+        }
+      }
     }
   } catch (error) {
     console.error('Error loading saved locations:', error);
@@ -1086,6 +2217,7 @@ function loadSavedLocation() {
 
     document.getElementById('location_latitude').value = lat;
     document.getElementById('location_longitude').value = lng;
+    exifOwnsLocation = false;
 
     updateMapMarker(lng, lat);
     map.flyTo({center: [lng, lat], zoom: 14});
@@ -1094,6 +2226,7 @@ function loadSavedLocation() {
     const cameraModelField = document.getElementById('camera_model');
     if (selectedOption.dataset.cameraModel !== undefined) {
       cameraModelField.value = selectedOption.dataset.cameraModel;
+      exifOwnsCameraModel = false;
     }
     const deploymentField = document.getElementById('camera_deployment_date');
     if (selectedOption.dataset.cameraDeploymentDate !== undefined) {
@@ -1257,7 +2390,19 @@ function readExifDate(file) {
       const model = (EXIF.getTag(this, 'Model') || '').replace(/\0/g, '').trim();
       // Filter out placeholder strings that indicate no real camera info
       const _isUnknown = (s) => !s || /^(unknown|n\/a|none|-|na)$/i.test(s.trim());
-      const cameraModel = [make, model].filter(s => s && !_isUnknown(s)).join(' ').trim() || null;
+      const validMake = make && !_isUnknown(make) ? make : '';
+      const validModel = model && !_isUnknown(model) ? model : '';
+      // Avoid duplicating the brand name (e.g. Nikon: Make="NIKON CORPORATION",
+      // Model="NIKON D3500" — only the first word overlaps, not the full make).
+      let cameraModel = null;
+      if (validMake && validModel) {
+        const makeFirstWord = validMake.split(/\s+/)[0].toLowerCase();
+        cameraModel = validModel.toLowerCase().includes(makeFirstWord)
+          ? validModel
+          : `${validMake} ${validModel}`;
+      } else {
+        cameraModel = validModel || validMake || null;
+      }
 
       // Extract GPS coordinates
       let lat = null;
@@ -1410,6 +2555,17 @@ async function bulkSubmitSelected() {
     return;
   }
 
+  // Bulk upload posts to the same endpoint as the wizard, so it needs the same consent.
+  if (!privacyAccepted()) {
+    showWizardStep(WIZARD_TOTAL_STEPS);
+    const cb = document.getElementById('privacy_accepted');
+    if (cb) {
+      cb.focus();
+      cb.reportValidity();
+    }
+    return;
+  }
+
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
   const total = bulkFiles.length;
   let done = 0;
@@ -1520,6 +2676,7 @@ async function bulkSubmitSelected() {
       formData.append('speciesnet_predictions', JSON.stringify(prediction));
     }
     formData.append('is_bulk_upload', '1');
+    formData.append('privacy_accepted', '1');
     if (bulkUploadId) {
       formData.append('bulk_upload_id', bulkUploadId);
     }
