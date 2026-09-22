@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
