@@ -1,5 +1,6 @@
 {% extends "_base.html" %}
 {% load static %}
+{% load humanize %}
 {% block title %}
     Wildlife Feed - WildeBackyard
 {% endblock title %}
@@ -340,7 +341,7 @@
                                     <p class="card-text text-muted small">
                                         <i class="bi bi-person"></i> {{ post.user_name|default:"Anonymous" }}
                                         <span class="mx-2">•</span>
-                                        <i class="bi bi-calendar"></i> {{ post.created|date:"M d, Y" }}
+                                        <i class="bi bi-calendar"></i> {{ post.created|naturaltime }}
                                     </p>
                                     {% if post.body %}<p class="card-text">{{ post.body|truncatewords:30 }}</p>{% endif %}
                                     {% if post.geocoded_location %}
@@ -410,9 +411,28 @@ function escapeHtml(text) {
 
 function formatDate(dateString) {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    const diffSeconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+    if (diffSeconds < 1) return 'now';
+
+    // Mirrors Django's humanize naturaltime filter (used for the initial page load)
+    // so posts loaded via infinite scroll read the same way.
+    const DAY = 86400;
+    const steps = [
+        [60, 1, 'a second ago', 'seconds'],
+        [3600, 60, 'a minute ago', 'minutes'],
+        [DAY, 3600, 'an hour ago', 'hours'],
+        [DAY * 7, DAY, '1 day ago', 'days'],
+        [DAY * 30, DAY * 7, '1 week ago', 'weeks'],
+        [DAY * 365, DAY * 30, '1 month ago', 'months'],
+        [Infinity, DAY * 365, '1 year ago', 'years'],
+    ];
+
+    for (const [limit, divisor, singular, unit] of steps) {
+        if (diffSeconds < limit) {
+            const n = Math.floor(diffSeconds / divisor);
+            return n <= 1 ? singular : `${n} ${unit} ago`;
+        }
+    }
 }
 
 function truncateWords(text, wordLimit) {
