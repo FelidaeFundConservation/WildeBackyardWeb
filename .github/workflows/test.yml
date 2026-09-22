@@ -22,6 +22,7 @@ env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: us-central1
   ENVIRONMENT: staging
+  STAGING_APP_NAME: ${{ vars.STAGING_APP_NAME || 'wildebackyard-web-staging' }}
   PYTHON_VERSION: '3.12'
   
 jobs:
@@ -214,6 +215,6 @@ jobs:
         id: deployment
         run: |
           VERSION=$(echo $GITHUB_SHA | cut -c1-7)
-          URL="https://${VERSION}-dot-staging-dot-${GCP_PROJECT_ID}.appspot.com"
+          URL="https://${VERSION}-dot-${STAGING_APP_NAME}-dot-${GCP_PROJECT_ID}.appspot.com"
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT

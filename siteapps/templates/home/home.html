@@ -4,56 +4,32 @@
 {% block title %}Wilde Backyard Home{% endblock %}
 {% block content %}
     {% #card heading="Welcome To Wilde Backyard" size=4 weight="bold" %}
-    <div class="hero-block d-flex align-items-center w-100 mb-5">
+    <div class="hero-block w-100 mb-4">
         <div class="container py-2">
-            <div class="row align-items-stretch">
+            <div class="row align-items-stretch g-4">
                 <div class="col-lg-7 col-md-6 text-start">
-                    {% #card classes="bg-white bg-opacity-75 p-4 rounded" %}
+                    {% #card classes="bg-white bg-opacity-75 p-4 rounded h-100" %}
                     <h1 class="fw-bold">
                         <i class="bi bi-tree"></i> Share A Sighting Now
                     </h1>
                     <p class="mt-3 lead">
                         Seen something interesting? Share, connect, and discuss with others through our sightings feed.
                     </p>
-                    <div class="my-2">
+                    <div class="mt-4">
                         {% if user.is_authenticated %}
-                            <a class="btn btn-success d-flex w-100 bevel align-items-center justify-content-center text-black"
-                               style="padding: 1.035rem 1.15rem;
-                                      font-size: 1.035rem"
+                            <a class="btn btn-primary btn-lg d-flex w-100 align-items-center justify-content-center py-3 fs-5 fw-bold"
                                href="{% url 'sightings:create' %}">
                                 <i class="bi bi-journal-plus me-2"></i>
-                                <strong>Submit Sighting Information</strong>
+                                Submit Sighting Information
                             </a>
                         {% else %}
-                            <a class="btn btn-outline-primary d-flex w-100 bevel align-items-center justify-content-center text-black"
-                               style="padding: 1.035rem 1.15rem;
-                                      font-size: 1.035rem"
+                            <a class="btn btn-outline-primary btn-lg d-flex w-100 align-items-center justify-content-center py-3 fs-5 fw-bold"
                                href="{% url 'users:register' %}">
                                 <i class="bi bi-journal-plus me-2"></i>
-                                <strong>Register to Submit Sightings</strong>
+                                Register to Submit Sightings
                             </a>
                         {% endif %}
                     </div>
-                    <div class="my-2">
-                        <a class="btn btn-outline-secondary d-flex w-100 bevel align-items-center justify-content-center text-black"
-                           style="padding: 1.035rem 1.15rem;
-                                  font-size: 1.035rem"
-                           href="{% url 'socialmedia:feed' %}">
-                            <i class="bi bi-grid me-2"></i>
-                            <strong>Browse Wildlife Feed</strong>
-                        </a>
-                    </div>
-                    {% if user.is_authenticated %}
-                        <div class="my-2">
-                            <a class="btn btn-outline-info d-flex w-100 bevel align-items-center justify-content-center text-black"
-                               style="padding: 1.035rem 1.15rem;
-                                      font-size: 1.035rem"
-                               href="{% url 'sightings:map' %}">
-                                <i class="bi bi-map me-2"></i>
-                                <strong>View Sightings Map</strong>
-                            </a>
-                        </div>
-                    {% endif %}
                     {% /card %}
                 </div>
                 <div class="col-lg-5 col-md-6 text-center d-flex">
@@ -62,6 +38,68 @@
                         <img src="{% static 'images/feature.webp' %}"
                              alt="[Hero image description]"
                              class="h-100 w-100 object-fit-cover">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h2 class="h4 fw-bold mb-3">
+                        <i class="bi bi-compass text-primary"></i> Quick Start
+                    </h2>
+                    <div class="row row-cols-2 g-3 mb-3 text-center">
+                        <div class="col">
+                            <i class="bi bi-camera-fill fs-2 text-secondary d-block mb-2"></i>
+                            <div class="text-body-secondary small mb-1">01</div>
+                            <strong class="d-block">Snap a photo</strong>
+                            <div class="text-muted small">of the animal, tracks, or scat.</div>
+                        </div>
+                        <div class="col">
+                            <i class="bi bi-geo-alt-fill fs-2 text-secondary d-block mb-2"></i>
+                            <div class="text-body-secondary small mb-1">02</div>
+                            <strong class="d-block">Set the location</strong>
+                            <div class="text-muted small">using GPS, the map, or a saved spot.</div>
+                        </div>
+                        <div class="col">
+                            <i class="bi bi-search fs-2 text-secondary d-block mb-2"></i>
+                            <div class="text-body-secondary small mb-1">03</div>
+                            <strong class="d-block">Identify the species</strong>
+                            <div class="text-muted small">with our autocomplete search.</div>
+                        </div>
+                        <div class="col">
+                            <i class="bi bi-shield-lock-fill fs-2 text-secondary d-block mb-2"></i>
+                            <div class="text-body-secondary small mb-1">04</div>
+                            <strong class="d-block">Choose a privacy level</strong>
+                            <div class="text-muted small">to protect sensitive locations.</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'home:instructions' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-right-circle"></i> Full Instructions
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h2 class="h4 fw-bold mb-3">
+                        <i class="bi bi-grid text-primary"></i> Recent Activity
+                    </h2>
+                    <p class="text-muted">
+                        Browse what the community has been spotting — recent sightings, discussions, and species identifications all live in the feed.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'socialmedia:feed' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-right-circle"></i> Full Feed
+                        </a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'sightings:map' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-arrow-right-circle"></i> Sightings Map
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

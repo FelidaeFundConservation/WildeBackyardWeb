@@ -1,3 +1,6 @@
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 import logging
 
 import requests
@@ -293,6 +296,26 @@ class ChangePasswordView(LoginRequiredMixin, View):
             messages.error(request, error_message or "Failed to change password.")
 
         return redirect("users:profile")
+
+
+class VerifyEmailView(View):
+    """Accept email verification links on the web app and confirm in backend."""
+
+    def get(self, request, key):
+        api_client = BackendAPIClient()
+        success = api_client.confirm_email(key)
+
+        if success:
+            messages.success(request, "Your email has been verified. You can now log in.")
+        else:
+            messages.error(
+                request,
+                "We could not verify that link. It may be invalid or expired. Please request a new verification email.",
+            )
+
+        if request.user.is_authenticated:
+            return redirect("users:profile")
+        return redirect("users:login")
 
 
 class ResendVerificationView(LoginRequiredMixin, View):
