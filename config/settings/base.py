@@ -309,6 +309,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Fundraise Up donation widget. The account key is public (it ships in page source);
+# leave it empty to keep the widget and Donate button off.
+FUNDRAISEUP_ACCOUNT_KEY = env("FUNDRAISEUP_ACCOUNT_KEY", default="")
+FUNDRAISEUP_FORM = env("FUNDRAISEUP_FORM", default="donate")
+
 
 # Application definition
 
@@ -415,6 +420,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "siteapps.home.context_processors.backend_admin_url",
+                "siteapps.home.context_processors.fundraiseup",
             ],
             "builtins": ["slippers.templatetags.slippers"],
         },

@@ -129,6 +129,7 @@
         z-index: -2;
     }
         </style>
+        {% include '_fundraiseup.html' %}
     </head>
     <body class="d-flex flex-column h-100">
         <header class="pb-4 shadow">
@@ -214,6 +215,14 @@
                                 <li class="nav-item ms-lg-2 my-2 my-lg-0">
                                     <a class="btn btn-primary fw-semibold text-white rounded-pill px-3 w-100"
                                        href="{% url 'users:login' %}">Sign In</a>
+                                </li>
+                            {% endif %}
+                            {% if fundraiseup_account_key %}
+                                <li class="nav-item ms-lg-2 my-2 my-lg-0">
+                                    <a class="btn btn-outline-light fw-semibold rounded-pill px-3 w-100"
+                                       href="#?form={{ fundraiseup_form|urlencode }}">
+                                        Donate
+                                    </a>
                                 </li>
                             {% endif %}
                         </ul>
